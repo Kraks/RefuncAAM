@@ -132,7 +132,8 @@
   from a concrete small-step abstract machine. Recent progress applies the same idea on concrete definitional 
   interpreter and obtains a big-step abstracting definitional interpreter (ADI) written in monadic style.
   But the relation between small-step AAM and big-step ADI is not well-studied.
-
+  
+  % Mention Danvy's work
   In this paper, we show their correspondence and a series of transformations from a small-step 
   abstracting abstract machine to a big-step abstracting definitional interpreter. 
   The transformations include fusing, disentangling, 
@@ -192,7 +193,7 @@
 \begin{itemize}
   \item We fill the gap between small-step AAM and big-step ADI by developing a series of systematic transformations from small-step AAM to big-step ADI, and also show that the reversed direction is also possible.
 
-  \item We present an abstract interpreter written in CPS obtained from refunctionalization of small-step AAM. This abstract interpreter naturally has pushdown control-flow property, and we analyze how precise call/return match is obtained by representing evaluation context as a continuation function, as well as how it is lost by representing continuation as a data type in the defining language.
+  \item We present an abstract interpreter written in CPS obtained from refunctionalization of small-step AAM. This abstract interpreter naturally has pushdown control-flow property, and we show how precise call/return match is obtained by representing evaluation context as a continuation function, as well as how it is lost by representing continuation as a data type in the defining language. We also analyze its termination, soundness and complexity property.
 
   \item We show that the correspondence not only exists between concrete abstract machines and evaluator, and also exists for abstracting abstract machines and abstract evaluators. Galois connection?
 \end{itemize}
@@ -202,7 +203,7 @@
 
 \section{Background}
 
-In this section, we first describe the syntax of A-Normal Form (ANF) $\lambda$-calculus and a CESK machine for executing it concretely. Then we review several recent works in control flow analysis: 1) Abstracting Abstract Machine as an abstract counterpart of CESK machine, 2) abstract interpreter written in a monadically-parameterized style, and 3) precise call/return match problem and its solutions.
+In this section, we first describe the syntax of A-Normal Form (ANF) $\lambda$-calculus and a CESK machine for executing it concretely. Then we review several recent works in control flow analysis: 1) Abstracting Abstract Machine as an abstract counterpart of CESK machine, 2) abstract interpreter written in a monadically-parameterized style, and 3) precise call/return match problem and existing solutions.
 
 \subsection{A-Normal Form $\lambda$-Calculus}
 
