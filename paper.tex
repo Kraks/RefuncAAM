@@ -197,28 +197,26 @@
 
 \subsection{Contributions}
 
-theoretical and practical
-
 \begin{itemize}
-  \item We fill the gap between small-step AAM and big-step ADI 
-    by developing a series of systematic transformations from 
-    small-step AAM to big-step ADI, and also the reversed 
-    direction is also possible.
+\item The main contribution of this paper is we fill the gap
+  between small-step AAM and big-step ADI by developing a series of
+  systematic transformations. The correspondence between abstract
+  machines and interpreters exists not only in concrete semantics artifact,
+  but also in abstract semantics artifact.
+  Galois connection?
 
-  \item We present an abstract interpreter written in continuation-passing
-    style that is obtained from refunctionalization of a small-step AAM.
-    This abstract interpreter naturally has pushdown control-flow property, 
-    and we show how precise call/return match is obtained by 
-    representing evaluation context as a continuation function, 
-    as well as how it is lost by representing continuation as a 
-    data type in the defining language.
-    As a form of abstract interpreter, We also analyze its termination,
-    soundness and complexity property.
+\item We present an abstract interpreter obtained from refunctionalizing
+  an small-step abstracting abstract machine. 
+  This abstract interpreter naturally has pushdown control-flow property.
+  We also analyze its termination, soundness and complexity.
 
-  \item We show that the correspondence not only exists between 
-    concrete abstract machines and evaluator, and also exists 
-    for abstracting abstract machines and abstract evaluators. 
-    Galois connection?
+\item Further, we show that defunctionalization and refunctionalization
+  of abstract interpreters play important roles for call stack of analyzed language.
+  Given this insight, we reveal that why small-step AAM has no pushdown
+  control-flow property (if without extra effort), as well as explain
+  that why ADI naturally extends pushdown control-flow property from its
+  defining language.
+
 \end{itemize}
 
 \subsection{Outline}
@@ -231,16 +229,13 @@ We use Scala language to demonstrate the idea and each step of transformations.
 
 In this section, we frist describe the target language we will
 analyze and a concrete CESK machine as operational semantics for it.
-Then we review several recent works in control flow analysis for
+Then we review some recent works in control-flow analysis for
 higher-order languages:
 1) abstracting abstract machines (AAM) as an abstract interpretation
-counterpart of CESK machines,
-2) definitional abstract interpreter written in a monadically-parameterized
-style, and
-3) precise call/return match problem in control-flow analysis and its existing solutions.
-The abstracting abstract machines form the basis of our transformations, and
-monadic abstract interpreter is the end point. In the meanwhile, the precise
-call/return match is obtained during transformation.
+counterpart of CESK machines, and
+2) the precise call/return match problem in control-flow analysis and its existing solutions.
+We will show in section 3 that the abstracting abstract machines form the basis of our transformations,
+and call/return match is obtained during transformation.
 
 \subsection{A-Normal Form $\lambda$-Calculus} \label{anfsyntax}
 
@@ -252,7 +247,7 @@ clarity but without losing simplicty and generality.
 The transformations we will show in the rest of this paper
 also work on abstract machines for plain $\lambda$-calculus.
 
-To begin, we now present the syntax of a call-by-value $\lambda$-calculus language in
+To begin, we now present the concrete syntax of a call-by-value $\lambda$-calculus language in
 administrative normal form (ANF) \cite{flanagan1993essence}.
 
 \begin{verbatim}
@@ -272,7 +267,7 @@ only accepts atomic expressions that appear at the right-hand side of a binding.
 The atomic expressions $ae$ are either a variable, or a literal \texttt{lambda} term, which
 both can be evaluated in a single step.
 
-The abstract syntax tree can be straightforwardly described in Scala as follows:
+The abstract syntax can be straightforwardly described in Scala as follows:
 
 \begin{verbatim}
 sealed trait Expr
@@ -286,6 +281,8 @@ case class Letrec(bds: List[Binding], body: Expr) extends Expr
 \end{verbatim}
 
 \subsection{CESK Machine}
+
+\subsubsection{Machine Components}
 
 \textit{C}ontrol \textit{E}nvionment \textit{S}tore \textit{K}ontinuation (CESK) machine is an
 abstract machine for describing semantics of and evaluating $\lambda$-calculus. (TODO: cite)
@@ -316,10 +313,11 @@ case class State(e: Expr, env: Env, store: Store, k: Kont)
 
 It is worth noting that the continuation class \texttt{Kont} is defined as a list of frames.
 The frame class \texttt{Frame} stores the information of call-site, i.e., the information that
-used to resume the interrupted computation.
+can be used to resume the interrupted computation.
 A \texttt{Frame} constitutes of a variable name \texttt{x} to be bind later, a control expression
 that resumes to, and its environment.
 
+\subsubsection{Single-step Evaluation}
 Before go into describing how the machine evaluates expressions, we firstly define several helper functions.
 As we mentioned in section \ref{anfsyntax}, the atomic expressions are either a variable, or
 a literal \texttt{lambda} term. So the helper function \texttt{atomicEval} handles these two
@@ -379,7 +377,13 @@ Then the successor state is transferred to expression \texttt{e} from the top fr
 which is the body of a \texttt{Let} expression, with the updated environment, store, and
 the rest of stack \texttt{ks}.
 
-To run the program, 
+\subsubsection{Valuation}
+
+To run the program, we use function \texttt{inject} to construct an initial machine
+state given an expression. Then the \texttt{drive} function is used to evaluate
+to a final state by iteratively apply \texttt{step} on current state until we reach a state
+that the control is an atomic expression and the continuation stack is empty.
+And of course, we can extract the value from the final state at last.
 
 \begin{verbatim}
 def drive(s: State): State = s match {
@@ -391,16 +395,160 @@ def inject(e: Expr): State = State(e, Map(), Map(), Nil)
 def eval(e: Expr): State = drive(inject(e))
 \end{verbatim}
 
-\subsection{Abstracting Abstract Machine}
+\subsection{Abstracting Abstract Machine} \label{aam}
 
-\subsection{Monadic Abstract Interpreter}
+store allocated continuation
+binding store, continuation store
+store maps from addresses to a set of values
+store update is a join
+the step function is non-deterministic
+
+\begin{verbatim}
+case class Store[K,V](map: Map[K, Set[V]]) {
+  def apply(addr: K): List[V] = map(addr).toList
+  def update(addr: K, d: Set[V]): Store[K,V] = {
+    val oldd = map.getOrElse(addr, Set())
+    Store[K, V](map ++ Map(addr -> (d ++ oldd)))
+  }
+  def update(addr: K, sd: V): Store[K,V] = update(addr, Set(sd))
+}
+
+type Time = List[Expr]
+
+case class BAddr(x: String, time: Time)
+type Env = Map[String, BAddr]
+
+abstract class Storable 
+case class Clos(v: Lam, env: Env) extends Storable
+type BStore = Store[BAddr, Storable]
+
+abstract class KAddr
+case object Halt extends KAddr
+case class ContAddr(tgt: Expr, time: Time) extends KAddr
+
+case class Frame(x: String, e: Expr, env: Env)
+case class Cont(frame: Frame, kaddr: KAddr)
+type KStore = Store[KAddr, Cont]
+
+case class State(e: Expr, env: Env, bstore: BStore, 
+                 kstore: KStore, k: KAddr, time: Time)
+\end{verbatim}
+
+\begin{verbatim}
+def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
+def allocKont(tgtExpr: Expr, tgtEnv: Env, tgtStore: BStore, time: Time): KAddr = 
+  ContAddr(tgtExpr, time)
+def k: Int = 0
+def tick(s: State): Time = (s.e::s.time).take(k)
+
+def inject(e: Expr): State = 
+  State(e, Map(), 
+        Store[BAddr, Storable](Map()), 
+        Store[KAddr, Cont](Map(Halt -> Set())), 
+        Halt, List())
+
+def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
+  case Var(x) => bstore(env(x)).toSet
+  case lam@Lam(x, body) => Set(Clos(lam, env))
+}
+\end{verbatim}
+
+\begin{verbatim}
+def step(s: State): List[State] = {
+  val newTime = tick(s)
+  s match {
+    case State(Let(x, App(f, ae), e), env, bstore, kstore, kaddr, time) if isAtomic(ae)=>
+      for (Clos(Lam(v, body), c_env) <- atomicEval(f, env, bstore).toList) yield {
+        val baddr = allocBind(v, newTime)
+        val newEnv = c_env + (v -> baddr)
+        val newBStore = bstore.update(baddr, atomicEval(ae, env, bstore))
+        val newKAddr = allocKont(body, c_env, newBStore, newTime)                                                          
+        val newKStore = kstore.update(newKAddr, Cont(Frame(x, e, env), kaddr))
+        State(body, newEnv, newBStore, newKStore, newKAddr, newTime)
+      }
+    case State(ae, env, bstore, kstore, kaddr, time) if isAtomic(ae)=>
+      for (Cont(Frame(x, e, f_env), f_kaddr) <- kstore(kaddr).toList) yield {
+        val baddr = allocBind(x, newTime)
+        val newEnv = f_env + (x -> baddr)
+        val newStore = bstore.update(baddr, atomicEval(ae, env, bstore))
+        State(e, newEnv, newStore, kstore, f_kaddr, newTime)
+      }
+  }
+}
+\end{verbatim}
+
+Comparing with concrete CESK machine, the
+\texttt{drive} function performs a collecting semantics rather than valuation
+semantics. That is, for the purpose of analyzing a program, \texttt{drive}
+collects all the intermediate machine states as program is abstractly executing.
+This is a variant of work list algorithm that always applies \texttt{step}
+function to the first element of \texttt{todo} and adds it to \texttt{seen}
+if there is an unexplored one. If the work list is empty, the function just
+returns the set of explored states up to now.
+
+\begin{verbatim}
+def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
+  case Nil => seen
+  case hd::tl if seen.contains(hd) => drive(tl, seen)
+  case hd::tl => drive(step(hd).toList ++ tl, seen + hd)
+}
+
+def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
+\end{verbatim}
+
+%\subsection{Monadic Abstract Interpreter}
+%Maybe not here?
 
 \subsection{Call/Return Match in Control-Flow Analysis}
 
+describe problem, show some examples, why it is important
+
+In this section, we firstly describe a naive and uncomputable solution to the
+problem; then briefly review several recent research works that enable
+computable and precise call/return match. Even though the first solution is
+uncomputable, but as we will see in section 3, it is the starting point of our
+transformation. 
+
 \subsubsection{AAM with Unbound Stack}
 
+uncomputable solutions
+
+\begin{verbatim}
+case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
+
+def step(s: State): List[State] = {
+  val newTime = tick(s)
+  s match {
+    case State(Let(x, App(f, ae), e), env, bstore, konts, time) =>
+      for (Clos(Lam(v, body), c_env) <- atomicEval(f, env, bstore).toList) yield {
+        val frame = Frame(x, e, env)
+        val baddr = allocBind(v, newTime)
+        val newEnv = c_env + (v -> baddr)
+        val newStore = bstore.update(baddr, atomicEval(ae, env, bstore))
+        State(body, newEnv, newStore, frame::konts, newTime)
+      }
+    case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
+      konts match {
+        case Nil => List()
+        case Frame(x, e, f_env)::konts =>
+          val baddr = allocBind(x, newTime)
+          val newEnv = f_env + (x -> baddr)
+          val newStore = bstore.update(baddr, atomicEval(ae, env, bstore))
+          List(State(e, newEnv, newStore, konts, newTime))
+      }
+  }
+}
+
+\end{verbatim}
+
 \subsubsection{Computable Solutions}
-P4F ANF, not works on direct style,PDCFA,AAC
+
+Recent years, there are great efforts \cite{vardoulakis2010cfa2,
+  earl2012introspective, gilray2016pushdown}
+to achieve precise call/return match based
+on small-step abstracting abstract machines which is we described in section \ref{aam}.
+
+go over existing computable solutions P4F ANF, not works on direct style,PDCFA,AAC
 
 \section{FROM AAM TO ADI}
 
@@ -441,13 +589,15 @@ show that number of continuation is finite.
 
 \subsection{Complexity}
 
-\section{Detour: Shiver's \textit{k}-CFA}
-
 \section{Perspective}
 
 \subsection{Defunctionalization}
 
+specify higher-order definitional interpreters using first-order means (cite)
+
 \subsection{Refunctionalization}
+
+\section{Detour: Shiver's \textit{k}-CFA}
 
 \section{Related Work}
 
