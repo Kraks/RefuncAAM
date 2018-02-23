@@ -51,7 +51,8 @@
 \usepackage{booktabs}   %% For formal tables:
                         %% http://ctan.org/pkg/booktabs
 \usepackage{subcaption} %% For complex figures with subfigures/subcaptions
-                        %% http://ctan.org/pkg/subcaption
+%% http://ctan.org/pkg/subcaption
+\usepackage{syntax}
 
 \begin{document}
 
@@ -128,26 +129,32 @@
 %% Note: \begin{abstract}...\end{abstract} environment must come
 %% before \maketitle command
 \begin{abstract}
-  Abstracting abstract machines (AAM) is a systematic methodology for constructing abstract interpreter
-  from a concrete small-step abstract machine. Recent progress applies the same idea on concrete definitional 
-  interpreter and obtains a big-step abstracting definitional interpreter (ADI) written in monadic style.
-  But the relation between small-step AAM and big-step ADI is not well-studied.
+  Abstracting abstract machines (AAM) is a systematic methodology 
+  for constructing abstract interpreter that derived from a concrete
+  small-step abstract machine. Recent progress applies the same idea 
+  on concrete definitional interpreter and obtains a big-step 
+  abstracting definitional interpreter (ADI) written in monadic style.
+  Danvy shows the correspondence between abstract machines and interpreters.
+  In this paper, we study the relations between small-step AAM and 
+  big-step ADI.
+
+  We show their correspondence and how to syntactically transform a small-step 
+  abstracting abstract machine to a big-step abstracting definitional 
+  interpreter.
+  The transformations include fusing, disentangling, refunctionalizing 
+  and monadification(un-CPS), and all of them properly handle the 
+  collecting semantics and the non-determinism of abstract interpretation. 
+  After each transformation, we also obtain an intermediary form of 
+  abstract interpreter.
+  Remarkably, follow the idea that evaluation contexts are defuntionalized 
+  continuations, we reveal how precise call/return match in control-flow 
+  analysis is obtained by refunctionalizing a small-step abstracting 
+  abstract machine,  % with unbounded stack
+  as well as explain how it been lost by defunctionalizing the higher-order
+  continuations into an algebraic data type. Further, we show how to turn 
+  precise call/return match into computable analysis.
   
-  % Mention Danvy's work
-  In this paper, we show their correspondence and a series of transformations from a small-step 
-  abstracting abstract machine to a big-step abstracting definitional interpreter. 
-  The transformations include fusing, disentangling, 
-  refunctionalizing and then monadification/un-CPS, each of them properly handle the collecting semantics and 
-  the non-determinism of abstract interpretation. 
-  The transformations also uncover several intermediary forms of abstract interpreter.
-  Remarkably, we reveal how computatble precise call/return match in control-flow analysis is obtained by 
-  refunctionalizing a small-step abstracting abstract machine with unbounded stack, 
-  as well as explain how it been lost by defunctionalizing the higher-order continuations into 
-  an algebraic data type.
-  
-  TODO: Shiver's formulation of CFA in denotational style.
-  %Further, from another direction, we show Shiver's original implementation of control-flow analysis
-  %in denotational style can be also transformed into natural semantics by closure conversion.
+  TODO: Maybe something Shiver's formulation of CFA in denotational style. 
  
 \end{abstract}
 
@@ -190,24 +197,199 @@
 
 \subsection{Contributions}
 
+theoretical and practical
+
 \begin{itemize}
-  \item We fill the gap between small-step AAM and big-step ADI by developing a series of systematic transformations from small-step AAM to big-step ADI, and also show that the reversed direction is also possible.
+  \item We fill the gap between small-step AAM and big-step ADI 
+    by developing a series of systematic transformations from 
+    small-step AAM to big-step ADI, and also the reversed 
+    direction is also possible.
 
-  \item We present an abstract interpreter written in CPS obtained from refunctionalization of small-step AAM. This abstract interpreter naturally has pushdown control-flow property, and we show how precise call/return match is obtained by representing evaluation context as a continuation function, as well as how it is lost by representing continuation as a data type in the defining language. We also analyze its termination, soundness and complexity property.
+  \item We present an abstract interpreter written in continuation-passing
+    style that is obtained from refunctionalization of a small-step AAM.
+    This abstract interpreter naturally has pushdown control-flow property, 
+    and we show how precise call/return match is obtained by 
+    representing evaluation context as a continuation function, 
+    as well as how it is lost by representing continuation as a 
+    data type in the defining language.
+    As a form of abstract interpreter, We also analyze its termination,
+    soundness and complexity property.
 
-  \item We show that the correspondence not only exists between concrete abstract machines and evaluator, and also exists for abstracting abstract machines and abstract evaluators. Galois connection?
+  \item We show that the correspondence not only exists between 
+    concrete abstract machines and evaluator, and also exists 
+    for abstracting abstract machines and abstract evaluators. 
+    Galois connection?
 \end{itemize}
-
 
 \subsection{Outline}
 
+\subsection{Style}
+
+We use Scala language to demonstrate the idea and each step of transformations.
+
 \section{Background}
 
-In this section, we first describe the syntax of A-Normal Form (ANF) $\lambda$-calculus and a CESK machine for executing it concretely. Then we review several recent works in control flow analysis: 1) Abstracting Abstract Machine as an abstract counterpart of CESK machine, 2) abstract interpreter written in a monadically-parameterized style, and 3) precise call/return match problem and existing solutions.
+In this section, we frist describe the target language we will
+analyze and a concrete CESK machine as operational semantics for it.
+Then we review several recent works in control flow analysis for
+higher-order languages:
+1) abstracting abstract machines (AAM) as an abstract interpretation
+counterpart of CESK machines,
+2) definitional abstract interpreter written in a monadically-parameterized
+style, and
+3) precise call/return match problem in control-flow analysis and its existing solutions.
+The abstracting abstract machines form the basis of our transformations, and
+monadic abstract interpreter is the end point. In the meanwhile, the precise
+call/return match is obtained during transformation.
 
-\subsection{A-Normal Form $\lambda$-Calculus}
+\subsection{A-Normal Form $\lambda$-Calculus} \label{anfsyntax}
+
+Tranditionally, continuation-passing style is a popular intermediate representation
+for analyzing functional programs because of it exposes control transfer explicitly
+and simplifies the analysis \cite{Shivers:1991:SSC:115865.115884, Shivers:1988:CFA:53990.54007}.
+Here, we choose to use a direct-style intermediate representation as target for
+clarity but without losing simplicty and generality.
+The transformations we will show in the rest of this paper
+also work on abstract machines for plain $\lambda$-calculus.
+
+To begin, we now present the syntax of a call-by-value $\lambda$-calculus language in
+administrative normal form (ANF) \cite{flanagan1993essence}.
+
+\begin{verbatim}
+e \in Exp ::= ae
+            | (let ([x (f ae)]) e)
+            | (letrec ([x ae] ...) e) (TODO: maybe not include letrec?)
+ae \in AExp ::= x
+              | lam
+lam \in Lam ::= (lambda (x) e)
+x ... are variable names
+\end{verbatim}
+
+In ANF, all the function applications must be administrated in a \texttt{let} expression,
+and then bounded to a variable name under current environment.
+We can use \texttt{letrec} to create mutually recursive function bindings. But \texttt{letrec}
+only accepts atomic expressions that appear at the right-hand side of a binding.
+The atomic expressions $ae$ are either a variable, or a literal \texttt{lambda} term, which
+both can be evaluated in a single step.
+
+The abstract syntax tree can be straightforwardly described in Scala as follows:
+
+\begin{verbatim}
+sealed trait Expr
+case class Binding(x: String, e: Expr)
+
+case class Var(x: String) extends Expr
+case class App(e1: Expr, e2: Expr) extends Expr
+case class Lam(x: String, body: Expr) extends Expr
+case class Let(x: String, e: App, body: Expr) extends Expr
+case class Letrec(bds: List[Binding], body: Expr) extends Expr
+\end{verbatim}
 
 \subsection{CESK Machine}
+
+\textit{C}ontrol \textit{E}nvionment \textit{S}tore \textit{K}ontinuation (CESK) machine is an
+abstract machine for describing semantics of and evaluating $\lambda$-calculus. (TODO: cite)
+CESK machine models program execution as state transitions in small-step fashion. As its name suggested,
+a machine state has four components: 1) Control is the expression currently being evaluated.
+2) Environment is the a map that contains the address of a variable that in the lexical
+scope of control.
+3) Store models the heap of a program, and it is also a map but maps from addresses to values.
+The addresses are infinite numbers starting from 0.
+In our toy language, the only catagory of value is closure, i.e., a function paired with an environment.
+4) Continuation represents the program stack.
+
+We show the Scala representations for the components of CESK machine.
+
+\begin{verbatim}
+type Addr = Int
+type Env = Map[String, Addr]
+type Store = Map[Addr, Storable]
+
+abstract class Storable
+case class Clos(v: Lam, env: Env) extends Storable
+
+case class Frame(x: String, e: Expr, env: Env)
+type Kont = List[Frame]
+
+case class State(e: Expr, env: Env, store: Store, k: Kont)
+\end{verbatim}
+
+It is worth noting that the continuation class \texttt{Kont} is defined as a list of frames.
+The frame class \texttt{Frame} stores the information of call-site, i.e., the information that
+used to resume the interrupted computation.
+A \texttt{Frame} constitutes of a variable name \texttt{x} to be bind later, a control expression
+that resumes to, and its environment.
+
+Before go into describing how the machine evaluates expressions, we firstly define several helper functions.
+As we mentioned in section \ref{anfsyntax}, the atomic expressions are either a variable, or
+a literal \texttt{lambda} term. So the helper function \texttt{atomicEval} handles these two
+cases and evaluates atomic expressions to closures in a straightforward way.
+The \texttt{alloc} function generates a fresh address, and always allocates an unique integer under the domain
+of store.
+The \texttt{isAtomic} function is used as a predicate of whether the expression is atomic.
+
+\begin{verbatim}
+def atomicEval(e: Expr, env: Env, store: Store): Storable = e match {
+  case Var(x) => store(env(x))
+  case lam@Lam(x, body) => Clos(lam, env)
+}
+def alloc(store: Store): Addr = store.keys.size + 1
+def isAtomic(e: Expr): Boolean = e.isInstanceOf[Var] || e.isInstanceOf[Lam]
+\end{verbatim}
+
+Now, we can faithfully describe the state transition function \texttt{step},
+that given a machine state, function \texttt{step} determines its successor state.
+
+\begin{verbatim}
+def step(s: State): State = s match {
+  case State(Let(x, App(f, ae), e), env, store, k) if isAtomic(ae) =>
+    val Clos(Lam(v, body), env_c) = atomicEval(f, env, store)
+    val addr = alloc(store)
+    val new_env = env_c + (v -> addr)
+    val new_store = store + (addr -> atomicEval(ae, env, store))
+    val frame = Frame(x, e, env)
+    State(body, new_env, new_store, frame::k)
+  case State(ae, env, store, k) if isAtomic(ae) =>
+    val Frame(x, e, env_k)::ks = k
+    val addr = alloc(store)
+    val new_env = env_k + (x -> addr)
+    val new_store = store + (addr -> atomicEval(ae, env, store))
+    State(e, new_env, new_store, ks)
+}
+\end{verbatim}
+
+The first case is that the control of current state is a \texttt{Let} expression,
+and its right-hand side is an function application.
+By calling function \texttt{atomicEval}, we obtain the closure that callee \texttt{f} stands for.
+The successor state's control then transfers to the \texttt{body} expression of closure,
+with an updated environment and an update store. The new environment is extended
+from closure's environment and mapped \texttt{v} to a fresh address \texttt{addr}.
+The new store also extends with \texttt{addr} mapping to the value of \texttt{ae},
+which is evaluated from \texttt{atomicEval}.
+In the meanwhile, a new frame \texttt{frame} is pushed onto the stack \texttt{k}.
+This \texttt{frame} contains the left-hand side variable name of \texttt{Let},
+the body expression, and the lexical environment of body expression.
+
+The second case for \texttt{step} is the control is transferred to an atomic expression.
+We extract the top frame of continuations firstly.
+The control (that is an atomic expression) of current state is the evaluated term
+that being bind to the variable \texttt{x} from the top frame.
+The environment and store are updated with \texttt{x} mapping to the closure value of \texttt{ae}.
+Then the successor state is transferred to expression \texttt{e} from the top frame,
+which is the body of a \texttt{Let} expression, with the updated environment, store, and
+the rest of stack \texttt{ks}.
+
+To run the program, 
+
+\begin{verbatim}
+def drive(s: State): State = s match {
+  case State(ae, _, _, Nil) if isAtomic(ae) => s
+  case _ => drive(step(s))
+}
+
+def inject(e: Expr): State = State(e, Map(), Map(), Nil)
+def eval(e: Expr): State = drive(inject(e))
+\end{verbatim}
 
 \subsection{Abstracting Abstract Machine}
 
