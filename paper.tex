@@ -246,13 +246,13 @@ and call/return match is obtained during transformation.
 Tranditionally, continuation-passing style (CPS) is a popular intermediate representation
 for analyzing functional programs because of it exposes control transfer explicitly
 and simplifies the analysis \cite{Shivers:1991:SSC:115865.115884, Shivers:1988:CFA:53990.54007}.
-Here, we choose to use a direct-style intermediate representation as target for
-clarity but without losing simplicty and generality.
+Here, we choose to use administrative normal form (ANF) which is a direct-style intermediate representation 
+as target for clarity but without losing simplicty and generality.
 The transformations we will show in the rest of this paper
-also work on abstract machines for plain $\lambda$-calculus languages.
+also work on abstract machines for plain, direct-style $\lambda$-calculus languages.
 
-To begin, we now present the concrete syntax of a call-by-value $\lambda$-calculus language in
-administrative normal form (ANF) \cite{flanagan1993essence}.
+To begin, we now present the concrete syntax of a call-by-value $\lambda$-calculus language 
+in ANF \cite{flanagan1993essence}.
 
 \begin{verbatim}
 e \in Exp ::= ae
@@ -290,7 +290,7 @@ case class Letrec(bds: List[Binding], body: Expr) extends Expr
 
 \textit{C}ontrol \textit{E}nvionment \textit{S}tore \textit{K}ontinuation (CESK) machine is an
 abstract machine for describing semantics of and evaluating $\lambda$-calculus \cite{felleisen1987calculus}.
-CESK machine models program execution as state transitions in small-step fashion. As its name suggested,
+CESK machine models program execution as state transitions in a small-step fashion. As its name suggested,
 a machine state has four components: 1) Control is the expression currently being evaluated.
 2) Environment is the a map that contains the address of a variable that in the lexical
 scope of control.
@@ -319,7 +319,7 @@ It is worth noting that the continuation class \texttt{Kont} is defined as a lis
 The frame class \texttt{Frame} stores the information of call-site, i.e., the information that
 can be used to resume the interrupted computation.
 A \texttt{Frame} constitutes of a variable name \texttt{x} to be bind later, a control expression
-that resumes to, and its environment.
+that resumes to, and its environment. (TODO: mention that frame list vs KArg/KFun)
 
 \subsubsection{Single-step Evaluation}
 Before go into describing how the machine evaluates expressions, we firstly define several helper functions.
@@ -369,8 +369,8 @@ from closure's environment and mapped \texttt{v} to a fresh address \texttt{addr
 The new store also extends with \texttt{addr} mapping to the value of \texttt{ae},
 which is evaluated from \texttt{atomicEval}.
 In the meanwhile, a new frame \texttt{frame} is pushed onto the stack \texttt{k}.
-This \texttt{frame} contains the left-hand side variable name of \texttt{Let},
-the body expression, and the lexical environment of body expression.
+This \texttt{frame} contains the variable name \texttt{x} at left-hand side position of \texttt{Let},
+the body expression of \texttt{Let}, and the lexical environment of the body expression.
 
 The second case for \texttt{step} is the control is transferred to an atomic expression.
 We extract the top frame of continuations firstly.
@@ -384,7 +384,8 @@ the rest of stack \texttt{ks}.
 \subsubsection{Valuation}
 
 To run the program, we use function \texttt{inject} to construct an initial machine
-state given an expression. Then the \texttt{drive} function is used to evaluate
+state given an expression \texttt{e}.
+Then the \texttt{drive} function is used to evaluate
 to a final state by iteratively apply \texttt{step} on current state until we reach a state
 that the control is an atomic expression and the continuation stack is empty.
 And of course, we can extract the value from the final state at last.
@@ -400,8 +401,8 @@ def eval(e: Expr): State = drive(inject(e))
 \end{verbatim}
 
 \subsection{Abstracting Abstract Machine} \label{aam}
-Abstracting abstract machine is a systematic methodology that derives abstract interpreters
-from a concrete abstract machine. TODO
+Abstracting abstract machine is a systematic methodology that derives sound abstract interpreters
+from a concrete abstract machine \cite{van2012systematic, van2010abstracting}. 
 
 There are several notable differences of store between AAM and concrete CESK machine.
 In AAM, the store maps addresses to sets of values, so it stores all possible values
@@ -479,7 +480,7 @@ def inject(e: Expr): State =
         Halt, List())
 
 def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
-  case Var(x) => bstore(env(x)).toSet
+  case Var(x) => bstore(env(x))
   case lam@Lam(x, body) => Set(Clos(lam, env))
 }
 \end{verbatim}
@@ -488,16 +489,19 @@ def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
 def step(s: State): List[State] = {
   val new_time = tick(s)
   s match {
-    case State(Let(x, App(f, ae), e), env, bstore, kstore, kaddr, time) if isAtomic(ae)=>
-      for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
+    case State(Let(x, App(f, ae), e), env, bstore, kstore, kaddr, time) 
+      if isAtomic(ae) =>
+      val closures = atomicEval(f, env, bstore).toList
+      for (Clos(Lam(v, body), env_c) <- closures) yield {
         val baddr = allocBind(v, new_time)
         val new_env = env_c + (v -> baddr)
         val newBStore = bstore.update(baddr, atomicEval(ae, env, bstore))
-        val newKAddr = allocKont(body, env_c, newBStore, new_time)                                                          
+        val newKAddr = allocKont(body, env_c, newBStore, new_time)
         val newKStore = kstore.update(newKAddr, Cont(Frame(x, e, env), kaddr))
         State(body, new_env, newBStore, newKStore, newKAddr, new_time)
       }
-    case State(ae, env, bstore, kstore, kaddr, time) if isAtomic(ae)=>
+    case State(ae, env, bstore, kstore, kaddr, time) 
+      if isAtomic(ae) =>
       for (Cont(Frame(x, e, f_env), f_kaddr) <- kstore(kaddr).toList) yield {
         val baddr = allocBind(x, new_time)
         val new_env = f_env + (x -> baddr)
@@ -511,7 +515,7 @@ def step(s: State): List[State] = {
 Comparing with concrete CESK machine, the
 \texttt{drive} function performs a collecting semantics rather than valuation
 semantics. That is, for the purpose of analyzing a program, \texttt{drive}
-collects all the intermediate machine states as program is abstractly executing.
+collects all the intermediate machine states as the program is abstractly executing.
 The following code shows a variant of work list algorithm that always applies \texttt{step}
 function to the first element of \texttt{todo} and adds it to \texttt{seen} set
 if there is an unexplored one. If the work list is empty, the function just
@@ -530,9 +534,24 @@ def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
 %\subsection{Monadic Abstract Interpreter}
 %Maybe not here?
 
-\subsection{Call/Return Match in Control-Flow Analysis}
+\subsection{Pushdown Control-Flow Analysis}
 
-describe problem, show some examples, why it is important
+Pushdown control-flow is a property in analysis that precisely models
+the runtime call-stack of the analyzed program. 
+A pushdown control-flow analysis provides as exact as runtime return-flow 
+when analyzing the program, but traditional control-flow analysis collapse 
+the state space using finite space abstraction thus cause imprecise stack modeling.
+
+To see the problem, we can consider the following example:
+
+\begin{verbatim}
+(let ([x (id 1)])
+  (let ([y (id 2)])
+    x))
+\end{verbatim}
+
+return flow of \texttt{id} is polluted, and returns to both \texttt{x} and
+\texttt{y}. TODO: explain more
 
 In this section, we firstly describe a naive and uncomputable solution to the
 problem; then briefly review several recent research works that enable
@@ -569,7 +588,6 @@ def step(s: State): List[State] = {
       }
   }
 }
-
 \end{verbatim}
 
 \subsubsection{Computable Solutions}
@@ -603,10 +621,16 @@ by adding monads.
 
 \subsection{Un-CPS: From Refunctionalized AAM to Direct Style}
 
-In another direction, we can transform the refunctionalized AAM to direct style, but explictly use 
+We can transform the refunctionalized AAM to direct style, but explictly use 
 side effects such as assignment and mutation to handle collecting semantics and non-determinism.
 
 \section{Refunctionalized AAM}
+
+\subsection{Store Widening}
+
+\subsection{Higher-Order Controls?}
+
+TODO: analyze programs with call/cc, shift, reset.
 
 \subsection{Precise Call/Return Match}
 
