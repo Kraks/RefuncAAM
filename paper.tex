@@ -197,6 +197,8 @@
 
 \subsection{Contributions}
 
+the essence of abstracting defintional interpreter.
+
 \begin{itemize}
 \item The main contribution of this paper is we fill the gap
   between small-step AAM and big-step ADI by developing a series of
@@ -207,7 +209,9 @@
 
 \item We present an abstract interpreter obtained from refunctionalizing
   an small-step abstracting abstract machine. 
-  This abstract interpreter naturally has pushdown control-flow property.
+  This abstract interpreter naturally has pushdown control-flow property
+  since we represent the evluation context of analyzed language using
+  evluation context of the meta-language.
   We also analyze its termination, soundness and complexity.
 
 \item Further, we show that defunctionalization and refunctionalization
@@ -239,7 +243,7 @@ and call/return match is obtained during transformation.
 
 \subsection{A-Normal Form $\lambda$-Calculus} \label{anfsyntax}
 
-Tranditionally, continuation-passing style is a popular intermediate representation
+Tranditionally, continuation-passing style (CPS) is a popular intermediate representation
 for analyzing functional programs because of it exposes control transfer explicitly
 and simplifies the analysis \cite{Shivers:1991:SSC:115865.115884, Shivers:1988:CFA:53990.54007}.
 Here, we choose to use a direct-style intermediate representation as target for
