@@ -285,7 +285,7 @@ case class Letrec(bds: List[Binding], body: Expr) extends Expr
 \subsubsection{Machine Components}
 
 \textit{C}ontrol \textit{E}nvionment \textit{S}tore \textit{K}ontinuation (CESK) machine is an
-abstract machine for describing semantics of and evaluating $\lambda$-calculus. (TODO: cite)
+abstract machine for describing semantics of and evaluating $\lambda$-calculus \cite{felleisen1987calculus}.
 CESK machine models program execution as state transitions in small-step fashion. As its name suggested,
 a machine state has four components: 1) Control is the expression currently being evaluated.
 2) Environment is the a map that contains the address of a variable that in the lexical
@@ -396,12 +396,23 @@ def eval(e: Expr): State = drive(inject(e))
 \end{verbatim}
 
 \subsection{Abstracting Abstract Machine} \label{aam}
+Abstracting abstract machine is a systematic methodology that derives abstract interpreters
+from a concrete abstract machine. TODO
 
-store allocated continuation
-binding store, continuation store
-store maps from addresses to a set of values
-store update is a join
-the step function is non-deterministic
+There are several notable differences of store between AAM and concrete CESK machine.
+In AAM, the store maps addresses to sets of values, so it stores all possible values
+for a particular address. Thus the dereference an address becomes non-deterministic.
+Also, the store performs a join rather than overwriting when updating elements of the store.
+Third, the continuations are allocated on store instead of formed a linked list.
+
+For clarity, we divide the store into binding store \texttt{BStore} and continuation store \texttt{KStore}. 
+The binding store maps addresses of binding to sets of closure values, and continuation store maps
+continuation addresses to sets of continuations.
+We define a generic class \texttt{Store[K,V]} that performs join when updating elements
+in a store. By parametering \texttt{Store[K,V]} with \texttt{[BAddr, Storable]} and 
+\texttt{[KAddr, Cont]}, we obtain \texttt{BStore} and \texttt{KStore}, perspectively.
+
+Note that the store is monotonic. TODO
 
 \begin{verbatim}
 case class Store[K,V](map: Map[K, Set[V]]) {
@@ -413,14 +424,30 @@ case class Store[K,V](map: Map[K, Set[V]]) {
   def update(addr: K, sd: V): Store[K,V] = update(addr, Set(sd))
 }
 
-type Time = List[Expr]
+type BStore = Store[BAddr, Storable]
+type KStore = Store[KAddr, Cont]
+\end{verbatim}
 
+As a consequence, the components of a state is also changed: 
+the store is divided into binding store and continuation store;
+the continuation stack becomes an address that maps to a set of continuation.
+By dereferencing this address in continuation store, we can retrieve the 
+actually transfer of controls.
+
+\begin{verbatim}
+case class State(e: Expr, env: Env, bstore: BStore, 
+                 kstore: KStore, k: KAddr, time: Time)
+\end{verbatim}
+
+The definitions of closure \texttt{Clos}, stack frame \texttt{Frame}, and 
+environment \texttt{Env} remain the same as concrete CESK machine.
+
+\begin{verbatim}
 case class BAddr(x: String, time: Time)
 type Env = Map[String, BAddr]
 
 abstract class Storable 
 case class Clos(v: Lam, env: Env) extends Storable
-type BStore = Store[BAddr, Storable]
 
 abstract class KAddr
 case object Halt extends KAddr
@@ -428,16 +455,16 @@ case class ContAddr(tgt: Expr, time: Time) extends KAddr
 
 case class Frame(x: String, e: Expr, env: Env)
 case class Cont(frame: Frame, kaddr: KAddr)
-type KStore = Store[KAddr, Cont]
-
-case class State(e: Expr, env: Env, bstore: BStore, 
-                 kstore: KStore, k: KAddr, time: Time)
 \end{verbatim}
+
+To allocate addresses for bindings or continuations, we use \texttt{allocBind}
+and \texttt{allocKont}.
 
 \begin{verbatim}
 def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
 def allocKont(tgtExpr: Expr, tgtEnv: Env, tgtStore: BStore, time: Time): KAddr = 
   ContAddr(tgtExpr, time)
+type Time = List[Expr]
 def k: Int = 0
 def tick(s: State): Time = (s.e::s.time).take(k)
 
@@ -455,23 +482,23 @@ def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
 
 \begin{verbatim}
 def step(s: State): List[State] = {
-  val newTime = tick(s)
+  val new_time = tick(s)
   s match {
     case State(Let(x, App(f, ae), e), env, bstore, kstore, kaddr, time) if isAtomic(ae)=>
-      for (Clos(Lam(v, body), c_env) <- atomicEval(f, env, bstore).toList) yield {
-        val baddr = allocBind(v, newTime)
-        val newEnv = c_env + (v -> baddr)
+      for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
+        val baddr = allocBind(v, new_time)
+        val new_env = env_c + (v -> baddr)
         val newBStore = bstore.update(baddr, atomicEval(ae, env, bstore))
-        val newKAddr = allocKont(body, c_env, newBStore, newTime)                                                          
+        val newKAddr = allocKont(body, env_c, newBStore, new_time)                                                          
         val newKStore = kstore.update(newKAddr, Cont(Frame(x, e, env), kaddr))
-        State(body, newEnv, newBStore, newKStore, newKAddr, newTime)
+        State(body, new_env, newBStore, newKStore, newKAddr, new_time)
       }
     case State(ae, env, bstore, kstore, kaddr, time) if isAtomic(ae)=>
       for (Cont(Frame(x, e, f_env), f_kaddr) <- kstore(kaddr).toList) yield {
-        val baddr = allocBind(x, newTime)
-        val newEnv = f_env + (x -> baddr)
-        val newStore = bstore.update(baddr, atomicEval(ae, env, bstore))
-        State(e, newEnv, newStore, kstore, f_kaddr, newTime)
+        val baddr = allocBind(x, new_time)
+        val new_env = f_env + (x -> baddr)
+        val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+        State(e, new_env, new_store, kstore, f_kaddr, new_time)
       }
   }
 }
@@ -481,8 +508,8 @@ Comparing with concrete CESK machine, the
 \texttt{drive} function performs a collecting semantics rather than valuation
 semantics. That is, for the purpose of analyzing a program, \texttt{drive}
 collects all the intermediate machine states as program is abstractly executing.
-This is a variant of work list algorithm that always applies \texttt{step}
-function to the first element of \texttt{todo} and adds it to \texttt{seen}
+The following code shows a variant of work list algorithm that always applies \texttt{step}
+function to the first element of \texttt{todo} and adds it to \texttt{seen} set
 if there is an unexplored one. If the work list is empty, the function just
 returns the set of explored states up to now.
 
@@ -517,24 +544,24 @@ uncomputable solutions
 case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
 
 def step(s: State): List[State] = {
-  val newTime = tick(s)
+  val new_time = tick(s)
   s match {
     case State(Let(x, App(f, ae), e), env, bstore, konts, time) =>
-      for (Clos(Lam(v, body), c_env) <- atomicEval(f, env, bstore).toList) yield {
+      for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
         val frame = Frame(x, e, env)
-        val baddr = allocBind(v, newTime)
-        val newEnv = c_env + (v -> baddr)
-        val newStore = bstore.update(baddr, atomicEval(ae, env, bstore))
-        State(body, newEnv, newStore, frame::konts, newTime)
+        val baddr = allocBind(v, new_time)
+        val new_env = env_c + (v -> baddr)
+        val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+        State(body, new_env, new_store, frame::konts, new_time)
       }
     case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
       konts match {
         case Nil => List()
         case Frame(x, e, f_env)::konts =>
-          val baddr = allocBind(x, newTime)
-          val newEnv = f_env + (x -> baddr)
-          val newStore = bstore.update(baddr, atomicEval(ae, env, bstore))
-          List(State(e, newEnv, newStore, konts, newTime))
+          val baddr = allocBind(x, new_time)
+          val new_env = f_env + (x -> baddr)
+          val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+          List(State(e, new_env, new_store, konts, new_time))
       }
   }
 }
