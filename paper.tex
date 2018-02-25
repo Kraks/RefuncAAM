@@ -146,7 +146,7 @@
   collecting semantics and the non-determinism of abstract interpretation. 
   After each transformation, we also obtain an intermediary form of 
   abstract interpreter.
-  Remarkably, follow the idea that evaluation contexts are defuntionalized 
+  Remarkably, follow the idea that evaluation contexts are defunctionalized 
   continuations, we reveal how precise call/return match in control-flow 
   analysis is obtained by refunctionalizing a small-step abstracting 
   abstract machine,  % with unbounded stack
@@ -197,7 +197,7 @@
 
 \subsection{Contributions}
 
-the essence of abstracting defintional interpreter.
+the essence of abstracting definitional interpreter.
 
 \begin{itemize}
 \item The main contribution of this paper is we fill the gap
@@ -210,7 +210,7 @@ the essence of abstracting defintional interpreter.
 \item We present an abstract interpreter obtained from refunctionalizing
   an small-step abstracting abstract machine. 
   This abstract interpreter naturally has pushdown control-flow property
-  since we represent the evluation contexts of analyzed language using
+  since we represent the evaluation contexts of analyzed language using
   continuations of the meta-language, and therefore sequentialize the
   analyzing.
   We also analyze its termination, soundness and complexity.
@@ -239,7 +239,7 @@ presenting topic: syntactical transformations of programs.
 
 \section{Background}
 
-In this section, we frist describe the target language we will
+In this section, we first describe the target language we will
 analyze and a concrete CESK machine as operational semantics for it.
 Then we review some recent works in control-flow analysis for
 higher-order languages:
@@ -251,11 +251,11 @@ and call/return match is obtained during transformation.
 
 \subsection{A-Normal Form $\lambda$-Calculus} \label{anfsyntax}
 
-Tranditionally, continuation-passing style (CPS) is a popular intermediate representation
+Traditionally, continuation-passing style (CPS) is a popular intermediate representation
 for analyzing functional programs because of it exposes control transfer explicitly
 and simplifies the analysis \cite{Shivers:1991:SSC:115865.115884, Shivers:1988:CFA:53990.54007}.
 Here, we choose to use administrative normal form (ANF) which is a direct-style intermediate representation 
-as target for clarity but without losing simplicty and generality.
+as target for clarity but without losing simplicity and generality.
 Although we just show the core calculus language, but it can be easily extended
 to support recursive bindings, conditionals, primitive types and operations on primitive types.
 The transformations we will show in the rest of this paper
@@ -305,7 +305,7 @@ a machine state has four components: 1) Control is the expression currently bein
 scope of control.
 3) Store models the heap of a program, and it is also a map but maps from addresses to values.
 The addresses are infinite numbers starting from 0.
-In our toy language, the only catagory of value is closure, i.e., a function paired with an environment.
+In our toy language, the only category of value is closure, i.e., a function paired with an environment.
 4) Continuation represents the program stack.
 
 We show the Scala representations for the components of CESK machine.
@@ -393,7 +393,7 @@ the rest of stack \texttt{ks}.
 \subsubsection{Valuation}
 
 To run the program, we first use function \texttt{inject} to construct an initial machine
-state given an expression \texttt{e}. The initial state contains an emtpy environment, 
+state given an expression \texttt{e}. The initial state contains an empty environment, 
 store and stack.
 \begin{verbatim}
 def inject(e: Expr): State = State(e, Map(), Map(), Nil)
@@ -418,7 +418,7 @@ abstract interpreters for higher-order functional languages from concrete
 abstract machines \cite{van2012systematic, van2010abstracting}. 
 An abstracting abstract machine implements computable abstract semantics that 
 approximates the runtime behaviors of programs.
-Since the state space of concrete execution is possibily infinite,
+Since the state space of concrete execution is possibly infinite,
 so to analyze programs, the key insight of AAM approach is to allocate both bindings
 and continuations on the store, and then bound the addresses space to be finite.
 Thus the approximated machine-state space is finite, and computable.
@@ -504,11 +504,13 @@ type Time = List[Expr]
 \end{verbatim}
 
 As we mentioned previously, the space of addresses is finite in AAM.
-Binding addresses are parameterized by variable names and the time that creates this binding.
+Binding addresses are parameterized by variable names and the time that creates this binding,
+which are both finite.
 Continuation addresses \texttt{KAddr} has two variants: 
 1) \texttt{Halt} which corresponds to the empty stack, and
-2) \texttt{ContAddr} consists of the target expression of callee and the time that
-creates this address. (TODO: why target expression, allocation polyvariance)
+2) \texttt{ContAddr} consists of the entry expression of callee and the time that
+creates this address, and they are also finite. 
+(TODO: why target expression, allocation polyvariance)
 
 \begin{verbatim}
 case class BAddr(x: String, time: Time)
@@ -529,7 +531,6 @@ def allocKont(tgtExpr: Expr, time: Time): KAddr = ContAddr(tgtExpr, time)
 \subsubsection{Single-step Evaluation}
 
 atomicEval returns a set of storable values, i.e., closures.
-
 
 \begin{verbatim}
 
@@ -578,9 +579,9 @@ def tick(s: State): Time = (s.e::s.time).take(k)
 
 To run (analyze) a program, as CESK machine, we use \texttt{inject} to construct
 the initial state given a program. 
-Note that the inital continuation store has a special mapping that maps continuation address
+Note that the initial continuation store has a special mapping that maps continuation address
 \texttt{Halt} to empty set of continuations.
-We also provide an empty program contour as inital time.
+We also provide an empty program contour as initial time.
 \begin{verbatim}
 def inject(e: Expr): State = 
   State(e, Map(), 
@@ -624,16 +625,29 @@ A pushdown control-flow analysis provides as exact as runtime return-flow
 when analyzing the program, but traditional control-flow analysis collapse 
 the state space using finite space abstraction thus cause imprecise stack modeling.
 
-To see the problem, we can consider the following example:
+To see the problem of spurious return-flows, we can consider the following example:
 
 \begin{verbatim}
-(let ([x (id 1)])
-  (let ([y (id 2)])
-    x))
+(let ([id (lambda (z) z)])
+  (let ([x (id 1)])
+    (let ([y (id 2)])
+      x)))
 \end{verbatim}
 
-return flow of \texttt{id} is polluted, and returns to both \texttt{x} and
-\texttt{y}. TODO: explain more
+In traditional $k$-CFA algorithm and the AAM we showed in section \ref{aam}, 
+the return-flow of invocation \texttt{(id 2)} 
+is going to both call-sites \texttt{(id 1)} and \texttt{(id 2)}. Therefore, the
+returned value \texttt{2} for variable \texttt{y} is also propagated to 
+variable \texttt{x} and then imprecise analysis result is arose.
+This return-flow merging is inevitable even we increase the context-sensitivity.
+If we use the monovariant analysis 0CFA, the analyzing result would be \texttt{x} and 
+\texttt{y} point to set \texttt{\{1, 2\}}, because it not distinguished 
+\texttt{z} at different call-sites.
+Under $1$-CFA, the algorithm is able to distinguish that variable \texttt{z} of function
+\texttt{id} has two different values at two call-sites, so variable \texttt{y} 
+would not be polluted by \texttt{1}, but it is still helplessness for distinguish
+return-flows.
+TODO: do need more details to explain this example? (as in P4F paper)
 
 In this section, we firstly describe a simple but uncomputable solution to the
 problem; then briefly review several recent research works that enable
@@ -645,9 +659,21 @@ transformation.
 
 uncomputable solutions
 
+A naive solution to is to use precise call stack modeling as we did in concrete
+CESK machine. Instead of allocating continuations on store and recording an 
+address of continuations, we 
+
+In the definition of state \texttt{State}, continuation store disappears, and
+\texttt{konts} becomes a list of frames. Other components keep the same.
+
 \begin{verbatim}
 case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
+\end{verbatim}
 
+the only non-determinism in our state transition function is when dereferencing
+the callee \texttt{f} from store at a call-site.
+
+\begin{verbatim}
 def step(s: State): List[State] = {
   val new_time = tick(s)
   s match {
@@ -723,7 +749,7 @@ by adding monads.
 
 \subsection{Un-CPS: From Refunctionalized AAM to Direct Style}
 
-We can transform the refunctionalized AAM to direct style, but explictly use 
+We can transform the refunctionalized AAM to direct style, but explicitly use 
 side effects such as assignment and mutation to handle collecting semantics and non-determinism.
 
 \section{Refunctionalized AAM}
