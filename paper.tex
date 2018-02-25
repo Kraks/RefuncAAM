@@ -57,7 +57,7 @@
 \begin{document}
 
 %% Title information
-\title[Short Title]{Pushdown Control-Flow Analysis via Refunctionalization}         %% [Short Title] is optional;
+\title[Short Title]{Pushdown Control-Flow Analysis via Refunctionalization (Functional Pearl)}         %% [Short Title] is optional;
                                         %% when present, will be used in
                                         %% header instead of Full Title.
 \titlenote{with title note}             %% \titlenote is optional;
@@ -210,8 +210,9 @@ the essence of abstracting defintional interpreter.
 \item We present an abstract interpreter obtained from refunctionalizing
   an small-step abstracting abstract machine. 
   This abstract interpreter naturally has pushdown control-flow property
-  since we represent the evluation context of analyzed language using
-  evluation context of the meta-language.
+  since we represent the evluation contexts of analyzed language using
+  continuations of the meta-language, and therefore sequentialize the
+  analyzing.
   We also analyze its termination, soundness and complexity.
 
 \item Further, we show that defunctionalization and refunctionalization
@@ -228,6 +229,13 @@ the essence of abstracting defintional interpreter.
 \subsection{Style}
 
 We use Scala language to demonstrate the idea and each step of transformations.
+There are two main reasons to do so:
+1) The code does not diminish the accuracy of the material
+than formal and mathematical notations, 
+which are heavily used in other papers in static analysis or semantics.
+The Scala code in this paper can be easily back-translated into formal notations.
+2) The code is also executable with only few changes, which make it particularly fit for 
+presenting topic: syntactical transformations of programs.
 
 \section{Background}
 
@@ -284,7 +292,7 @@ case class Let(x: String, e: App, body: Expr) extends Expr
 case class Letrec(bds: List[Binding], body: Expr) extends Expr
 \end{verbatim}
 
-\subsection{CESK Machine}
+\subsection{CESK Machine} \label{cesk}
 
 \subsubsection{Machine Components}
 
@@ -401,20 +409,36 @@ def eval(e: Expr): State = drive(inject(e))
 \end{verbatim}
 
 \subsection{Abstracting Abstract Machine} \label{aam}
-Abstracting abstract machine is a systematic methodology that derives sound abstract interpreters
-from a concrete abstract machine \cite{van2012systematic, van2010abstracting}. 
+Abstracting abstract machine (AAM) is a systematic methodology that derives sound 
+abstract interpreters for higher-order functional languages from concrete 
+abstract machines \cite{van2012systematic, van2010abstracting}. 
+An abstracting abstract machine implements computable abstract semantics that 
+approximates the runtime behaviors of programs.
+Since the state space of concrete execution is possibily infinite,
+so to analyze programs, the key insight of AAM approach is to allocate both bindings
+and continuations on the store, and then bound the addresses space to be finite.
+Thus the approximated machine-state space is finite, and computable.
 
-There are several notable differences of store between AAM and concrete CESK machine.
+In this section, we derive the abstracting abstract machine from concrete
+CESK machines, and also show that how to instantiate
+useful $k$-call-sensitive analysis.
+
+\subsubsection{Machine Components}
+
+Similar with CESK machines, the machine state of the AAM has a control expression,
+an environment, a store and continuation, and in addition with a time-stamp.
+But there are several notable differences of store between AAMs and concrete CESK machines.
 In AAM, the store maps addresses to sets of values, so it stores all possible values
 for a particular address. Thus the dereference an address becomes non-deterministic.
 Also, the store performs a join rather than overwriting when updating elements of the store.
-Third, the continuations are allocated on store instead of formed a linked list.
+Third, the continuations are likewise allocated on store instead of formed a linked list,
+and the continuation in a state then turns into a continuation address.
 
 For clarity, we divide the store into binding store \texttt{BStore} and continuation store \texttt{KStore}. 
-The binding store maps addresses of binding to sets of closure values, and continuation store maps
+The binding store maps binding addresses to sets of closure values, and continuation store maps
 continuation addresses to sets of continuations.
 We define a generic class \texttt{Store[K,V]} that performs join when updating elements
-in a store. By parametering \texttt{Store[K,V]} with \texttt{[BAddr, Storable]} and 
+in a store. By parameterizing \texttt{Store[K,V]} with \texttt{[BAddr, Storable]} and 
 \texttt{[KAddr, Cont]}, we obtain \texttt{BStore} and \texttt{KStore}, perspectively.
 
 Note that the store is monotonic. TODO
@@ -428,56 +452,71 @@ case class Store[K,V](map: Map[K, Set[V]]) {
   }
   def update(addr: K, sd: V): Store[K,V] = update(addr, Set(sd))
 }
-
 type BStore = Store[BAddr, Storable]
 type KStore = Store[KAddr, Cont]
 \end{verbatim}
 
+The co-domain of binding stores is \texttt{Storable} which is the same
+as we defined for CESK machines.
+The co-domain of continuation stores \texttt{Cont} is comprised of 
+a frame \texttt{Frame} and a continuation address \texttt{KAddr}.
+To mimic the runtime call stack, \texttt{KAddr} plays the role of
+representing the remaining stack frames.
+TODO: nondet of cont?
+
+\begin{verbatim}
+abstract class Storable 
+case class Clos(v: Lam, env: Env) extends Storable
+
+case class Frame(x: String, e: Expr, env: Env)
+case class Cont(frame: Frame, kaddr: KAddr)
+\end{verbatim}
+
 As a consequence, the components of a state is also changed: 
 the store is divided into binding store and continuation store;
-the continuation stack becomes an address that maps to a set of continuation.
+the continuation stack becomes an address.
 By dereferencing this address in continuation store, we can retrieve the 
-actually transfer of controls.
+actual transfer of controls. The definition of environment \texttt{Env}
+remains the same.
 
 \begin{verbatim}
 case class State(e: Expr, env: Env, bstore: BStore, 
                  kstore: KStore, k: KAddr, time: Time)
 \end{verbatim}
 
-The definitions of closure \texttt{Clos}, stack frame \texttt{Frame}, and 
-environment \texttt{Env} remain the same as concrete CESK machine.
+Up to now, we did not describe much about the time-stamp \texttt{Time}
+os states and addresses of stores.
+But they are key ingredients to achieve analysis with different sensitivities,
+as well as a finite state space analysis.
+To effectively approximate the runtime behavior, a finite 
+program contour \texttt{time} that encodes the program execution history is introduced.
+Here, we use a list of execution contexts (expressions) to reprent that, and
+as we will see in section \ref{kcfainst}, by using different \texttt{tick}
+function on time we may obtain a family of analyses.
+
+\begin{verbatim}
+type Time = List[Expr]
+\end{verbatim}
+
+Address.
 
 \begin{verbatim}
 case class BAddr(x: String, time: Time)
-type Env = Map[String, BAddr]
-
-abstract class Storable 
-case class Clos(v: Lam, env: Env) extends Storable
 
 abstract class KAddr
 case object Halt extends KAddr
 case class ContAddr(tgt: Expr, time: Time) extends KAddr
-
-case class Frame(x: String, e: Expr, env: Env)
-case class Cont(frame: Frame, kaddr: KAddr)
 \end{verbatim}
+
+\subsubsection{Single-step Evaluation}
 
 To allocate addresses for bindings or continuations, we use \texttt{allocBind}
 and \texttt{allocKont}.
 
 \begin{verbatim}
 def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
-def allocKont(tgtExpr: Expr, tgtEnv: Env, tgtStore: BStore, time: Time): KAddr = 
-  ContAddr(tgtExpr, time)
-type Time = List[Expr]
-def k: Int = 0
-def tick(s: State): Time = (s.e::s.time).take(k)
-
-def inject(e: Expr): State = 
-  State(e, Map(), 
-        Store[BAddr, Storable](Map()), 
-        Store[KAddr, Cont](Map(Halt -> Set())), 
-        Halt, List())
+def allocKont(tgtExpr: Expr, tgtEnv: Env, 
+              tgtStore: BStore, time: Time): KAddr = ContAddr(tgtExpr, time)
 
 def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
   case Var(x) => bstore(env(x))
@@ -495,22 +534,32 @@ def step(s: State): List[State] = {
       for (Clos(Lam(v, body), env_c) <- closures) yield {
         val baddr = allocBind(v, new_time)
         val new_env = env_c + (v -> baddr)
-        val newBStore = bstore.update(baddr, atomicEval(ae, env, bstore))
-        val newKAddr = allocKont(body, env_c, newBStore, new_time)
-        val newKStore = kstore.update(newKAddr, Cont(Frame(x, e, env), kaddr))
-        State(body, new_env, newBStore, newKStore, newKAddr, new_time)
+        val new_bstore = bstore.update(baddr, atomicEval(ae, env, bstore))
+        val new_kaddr = allocKont(body, env_c, new_bstore, new_time)
+        val new_kstore = kstore.update(new_kaddr, Cont(Frame(x, e, env), kaddr))
+        State(body, new_env, new_bstore, new_kstore, new_kaddr, new_time)
       }
     case State(ae, env, bstore, kstore, kaddr, time) 
       if isAtomic(ae) =>
-      for (Cont(Frame(x, e, f_env), f_kaddr) <- kstore(kaddr).toList) yield {
+      val conts = kstore(kaddr).toList
+      for (Cont(Frame(x, e, env_f), f_kaddr) <- conts) yield {
         val baddr = allocBind(x, new_time)
-        val new_env = f_env + (x -> baddr)
+        val new_env = env_f + (x -> baddr)
         val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
         State(e, new_env, new_store, kstore, f_kaddr, new_time)
       }
   }
 }
 \end{verbatim}
+
+\subsubsection{$k$-call-sensitive Instantiation} \label{kcfainst}
+
+\begin{verbatim}
+def k: Int = 0
+def tick(s: State): Time = (s.e::s.time).take(k)
+\end{verbatim}
+
+\subsubsection{Collecting Semantics}
 
 Comparing with concrete CESK machine, the
 \texttt{drive} function performs a collecting semantics rather than valuation
@@ -522,6 +571,12 @@ if there is an unexplored one. If the work list is empty, the function just
 returns the set of explored states up to now.
 
 \begin{verbatim}
+def inject(e: Expr): State = 
+  State(e, Map(), 
+        Store[BAddr, Storable](Map()), 
+        Store[KAddr, Cont](Map(Halt -> Set())), 
+        Halt, List())
+
 def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
   case Nil => seen
   case hd::tl if seen.contains(hd) => drive(tl, seen)
@@ -569,7 +624,7 @@ case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Ti
 def step(s: State): List[State] = {
   val new_time = tick(s)
   s match {
-    case State(Let(x, App(f, ae), e), env, bstore, konts, time) =>
+    case State(Let(x, App(f, ae), e), env, bstore, konts, time) if isAtomic(ae) =>
       for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
         val frame = Frame(x, e, env)
         val baddr = allocBind(v, new_time)
@@ -580,9 +635,9 @@ def step(s: State): List[State] = {
     case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
       konts match {
         case Nil => List()
-        case Frame(x, e, f_env)::konts =>
+        case Frame(x, e, env_f)::konts =>
           val baddr = allocBind(x, new_time)
-          val new_env = f_env + (x -> baddr)
+          val new_env = env_f + (x -> baddr)
           val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
           List(State(e, new_env, new_store, konts, new_time))
       }
@@ -592,14 +647,13 @@ def step(s: State): List[State] = {
 
 \subsubsection{Computable Solutions}
 
-Recent years, there are great efforts \cite{vardoulakis2010cfa2,
-  earl2012introspective, gilray2016pushdown}
+Recent years, there are great efforts \cite{vardoulakis2010cfa2, earl2012introspective, gilray2016pushdown}
 to achieve precise call/return match based
-on small-step abstracting abstract machines which is we described in section \ref{aam}.
+on small-step abstracting abstract machines which is what we described in section \ref{aam}.
 
 go over existing computable solutions P4F ANF, not works on direct style,PDCFA,AAC
 
-\section{FROM AAM TO ADI}
+\section{From AAM to ADI}
 
 We start from the AAM with unbounded stack.
 
