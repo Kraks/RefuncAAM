@@ -130,9 +130,9 @@
 %% before \maketitle command
 \begin{abstract}
   Abstracting abstract machines (AAM) is a systematic methodology 
-  for constructing abstract interpreter that derived from a concrete
-  small-step abstract machine. Recent progress applies the same idea 
-  on concrete definitional interpreter and obtains a big-step 
+  for constructing abstract interpreters that derived from concrete
+  small-step abstract machines. Recent progress applies the same idea 
+  on definitional interpreter and obtains a big-step 
   abstracting definitional interpreter (ADI) written in monadic style.
   Danvy shows the correspondence between abstract machines and interpreters.
   In this paper, we study the relations between small-step AAM and 
@@ -256,8 +256,11 @@ for analyzing functional programs because of it exposes control transfer explici
 and simplifies the analysis \cite{Shivers:1991:SSC:115865.115884, Shivers:1988:CFA:53990.54007}.
 Here, we choose to use administrative normal form (ANF) which is a direct-style intermediate representation 
 as target for clarity but without losing simplicty and generality.
+Although we just show the core calculus language, but it can be easily extended
+to support recursive bindings, conditionals, primitive types and operations on primitive types.
 The transformations we will show in the rest of this paper
 also work on abstract machines for plain, direct-style $\lambda$-calculus languages.
+TODO: add letrec?
 
 To begin, we now present the concrete syntax of a call-by-value $\lambda$-calculus language 
 in ANF \cite{flanagan1993essence}.
@@ -265,7 +268,6 @@ in ANF \cite{flanagan1993essence}.
 \begin{verbatim}
 e \in Exp ::= ae
             | (let ([x (f ae)]) e)
-            | (letrec ([x ae] ...) e) (TODO: maybe not include letrec?)
 ae \in AExp ::= x
               | lam
 lam \in Lam ::= (lambda (x) e)
@@ -289,7 +291,6 @@ case class Var(x: String) extends Expr
 case class App(e1: Expr, e2: Expr) extends Expr
 case class Lam(x: String, body: Expr) extends Expr
 case class Let(x: String, e: App, body: Expr) extends Expr
-case class Letrec(bds: List[Binding], body: Expr) extends Expr
 \end{verbatim}
 
 \subsection{CESK Machine} \label{cesk}
@@ -391,8 +392,13 @@ the rest of stack \texttt{ks}.
 
 \subsubsection{Valuation}
 
-To run the program, we use function \texttt{inject} to construct an initial machine
-state given an expression \texttt{e}.
+To run the program, we first use function \texttt{inject} to construct an initial machine
+state given an expression \texttt{e}. The initial state contains an emtpy environment, 
+store and stack.
+\begin{verbatim}
+def inject(e: Expr): State = State(e, Map(), Map(), Nil)
+\end{verbatim}
+
 Then the \texttt{drive} function is used to evaluate
 to a final state by iteratively apply \texttt{step} on current state until we reach a state
 that the control is an atomic expression and the continuation stack is empty.
@@ -403,8 +409,6 @@ def drive(s: State): State = s match {
   case State(ae, _, _, Nil) if isAtomic(ae) => s
   case _ => drive(step(s))
 }
-
-def inject(e: Expr): State = State(e, Map(), Map(), Nil)
 def eval(e: Expr): State = drive(inject(e))
 \end{verbatim}
 
@@ -456,7 +460,7 @@ type BStore = Store[BAddr, Storable]
 type KStore = Store[KAddr, Cont]
 \end{verbatim}
 
-The co-domain of binding stores is \texttt{Storable} which is the same
+The co-domain of binding stores \texttt{Storable} is the same
 as we defined for CESK machines.
 The co-domain of continuation stores \texttt{Cont} is comprised of 
 a frame \texttt{Frame} and a continuation address \texttt{KAddr}.
@@ -484,9 +488,10 @@ case class State(e: Expr, env: Env, bstore: BStore,
                  kstore: KStore, k: KAddr, time: Time)
 \end{verbatim}
 
-Up to now, we did not describe much about the time-stamp \texttt{Time}
-os states and addresses of stores.
-But they are key ingredients to achieve analysis with different sensitivities,
+\subsubsection{Allocating Addresses}
+Up to now, we did not describe much about the adresses in stores and the 
+time-stamp \texttt{Time}.
+But they are key ingredients to achieve analyses with different sensitivities,
 as well as a finite state space analysis.
 To effectively approximate the runtime behavior, a finite 
 program contour \texttt{time} that encodes the program execution history is introduced.
@@ -498,7 +503,12 @@ function on time we may obtain a family of analyses.
 type Time = List[Expr]
 \end{verbatim}
 
-Address.
+As we mentioned previously, the space of addresses is finite in AAM.
+Binding addresses are parameterized by variable names and the time that creates this binding.
+Continuation addresses \texttt{KAddr} has two variants: 
+1) \texttt{Halt} which corresponds to the empty stack, and
+2) \texttt{ContAddr} consists of the target expression of callee and the time that
+creates this address. (TODO: why target expression, allocation polyvariance)
 
 \begin{verbatim}
 case class BAddr(x: String, time: Time)
@@ -508,15 +518,20 @@ case object Halt extends KAddr
 case class ContAddr(tgt: Expr, time: Time) extends KAddr
 \end{verbatim}
 
-\subsubsection{Single-step Evaluation}
-
-To allocate addresses for bindings or continuations, we use \texttt{allocBind}
-and \texttt{allocKont}.
+We use two helper functions \texttt{allocBind} and \texttt{allocKont} that will be used later
+to allocate binding addresses and continuation addresses.
 
 \begin{verbatim}
 def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
-def allocKont(tgtExpr: Expr, tgtEnv: Env, 
-              tgtStore: BStore, time: Time): KAddr = ContAddr(tgtExpr, time)
+def allocKont(tgtExpr: Expr, time: Time): KAddr = ContAddr(tgtExpr, time)
+\end{verbatim}
+
+\subsubsection{Single-step Evaluation}
+
+atomicEval returns a set of storable values, i.e., closures.
+
+
+\begin{verbatim}
 
 def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
   case Var(x) => bstore(env(x))
@@ -535,7 +550,7 @@ def step(s: State): List[State] = {
         val baddr = allocBind(v, new_time)
         val new_env = env_c + (v -> baddr)
         val new_bstore = bstore.update(baddr, atomicEval(ae, env, bstore))
-        val new_kaddr = allocKont(body, env_c, new_bstore, new_time)
+        val new_kaddr = allocKont(body, new_time)
         val new_kstore = kstore.update(new_kaddr, Cont(Frame(x, e, env), kaddr))
         State(body, new_env, new_bstore, new_kstore, new_kaddr, new_time)
       }
@@ -561,22 +576,31 @@ def tick(s: State): Time = (s.e::s.time).take(k)
 
 \subsubsection{Collecting Semantics}
 
-Comparing with concrete CESK machine, the
-\texttt{drive} function performs a collecting semantics rather than valuation
-semantics. That is, for the purpose of analyzing a program, \texttt{drive}
-collects all the intermediate machine states as the program is abstractly executing.
-The following code shows a variant of work list algorithm that always applies \texttt{step}
-function to the first element of \texttt{todo} and adds it to \texttt{seen} set
-if there is an unexplored one. If the work list is empty, the function just
-returns the set of explored states up to now.
-
+To run (analyze) a program, as CESK machine, we use \texttt{inject} to construct
+the initial state given a program. 
+Note that the inital continuation store has a special mapping that maps continuation address
+\texttt{Halt} to empty set of continuations.
+We also provide an empty program contour as inital time.
 \begin{verbatim}
 def inject(e: Expr): State = 
   State(e, Map(), 
         Store[BAddr, Storable](Map()), 
         Store[KAddr, Cont](Map(Halt -> Set())), 
         Halt, List())
+\end{verbatim}
 
+However, comparing with concrete CESK machine, the
+\texttt{drive} function performs collecting semantics instead of valuation
+semantics. That is, for the purpose of analyzing programs, the function \texttt{drive}
+collects all the intermediate machine states as the program is abstractly executing.
+The following code shows a variant of work list algorithm that always applies \texttt{step}
+function to the first element \texttt{hd} of the work list \texttt{todo} if \texttt{hd}
+is unseen, then adds the result of \texttt{step} to the work list and also adds \texttt{hd}
+to the explored states set.
+If the work list is empty, the function just
+returns the set of explored states up to now.
+
+\begin{verbatim}
 def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
   case Nil => seen
   case hd::tl if seen.contains(hd) => drive(tl, seen)
@@ -585,6 +609,9 @@ def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
 
 def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
 \end{verbatim}
+
+Finally, a user could use function \texttt{analyze} to obtain all possible states 
+for a given program.
 
 %\subsection{Monadic Abstract Interpreter}
 %Maybe not here?
@@ -608,7 +635,7 @@ To see the problem, we can consider the following example:
 return flow of \texttt{id} is polluted, and returns to both \texttt{x} and
 \texttt{y}. TODO: explain more
 
-In this section, we firstly describe a naive and uncomputable solution to the
+In this section, we firstly describe a simple but uncomputable solution to the
 problem; then briefly review several recent research works that enable
 computable and precise call/return match. Even though the first solution is
 uncomputable, but as we will see in section 3, it is the starting point of our
@@ -647,11 +674,32 @@ def step(s: State): List[State] = {
 
 \subsubsection{Computable Solutions}
 
-Recent years, there are great efforts \cite{vardoulakis2010cfa2, earl2012introspective, gilray2016pushdown}
-to achieve precise call/return match based
-on small-step abstracting abstract machines which is what we described in section \ref{aam}.
+Recent years, there are great efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
+gilray2016pushdown, johnson2015abstracting}
+to achieve precise call/return match based on small-step AAM which is what we 
+described in section \ref{aam}.
 
-go over existing computable solutions P4F ANF, not works on direct style,PDCFA,AAC
+TODO: summarize CFA2, PDCFA, AAC, P4F
+
+On the other side, \citeauthor{darais2017abstracting} construct abstracting 
+definitional interpreters (ADI) that automatically inherit the pushdown control-flow 
+property from the defining language. TODO
+
+In the rest of this section, we take a closer look at the two state-of-art techniques
+to accomplish perfect call-stack precision.
+
+\textbf{Pushdown for Free.}
+\citeauthor{gilray2016pushdown} proposed a continuation address allocator for 
+small-step abstracting abstract machine that is both easy to implement and
+computational inexpensive.
+
+\begin{verbatim}
+case class P4FContAddr(tgt: Expr, tgtEnv: Env, time: Time) extends KAddr
+def allocKont(tgtExpr: Expr, tgtEnv: Env, time: Time): KAddr = 
+  P4FContAddr(tgtExpr, tgtEnv, time)
+\end{verbatim}
+
+\textbf{Abstracting Definitional Interpreters.}
 
 \section{From AAM to ADI}
 
@@ -706,7 +754,7 @@ specify higher-order definitional interpreters using first-order means (cite)
 
 \subsection{Refunctionalization}
 
-\section{Detour: Shiver's \textit{k}-CFA}
+\section{Detour: Shiver's \textit{k}-CFA?}
 
 \section{Related Work}
 
