@@ -375,7 +375,7 @@ By calling function \texttt{atomicEval}, we obtain the closure that callee \text
 The successor state's control then transfers to the \texttt{body} expression of closure,
 with an updated environment and an update store. The new environment is extended
 from closure's environment and mapped \texttt{v} to a fresh address \texttt{addr}.
-The new store also extends with \texttt{addr} mapping to the value of \texttt{ae},
+The new store is extended with \texttt{addr} mapping to the value of \texttt{ae},
 which is evaluated from \texttt{atomicEval}.
 In the meanwhile, a new frame \texttt{frame} is pushed onto the stack \texttt{k}.
 This \texttt{frame} contains the variable name \texttt{x} at left-hand side position of \texttt{Let},
