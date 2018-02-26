@@ -330,7 +330,7 @@ can be used to resume the interrupted computation.
 A \texttt{Frame} constitutes of a variable name \texttt{x} to be bind later, a control expression
 that resumes to, and its environment. (TODO: mention that frame list vs KArg/KFun)
 
-\subsubsection{Single-step Evaluation}
+\subsubsection{Single-step Transition}
 Before go into describing how the machine evaluates expressions, we firstly define several helper functions.
 As we mentioned in section \ref{anfsyntax}, the atomic expressions are either a variable, or
 a literal \texttt{lambda} term. So the helper function \texttt{atomicEval} handles these two
@@ -529,7 +529,7 @@ def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
 def allocKont(tgtExpr: Expr, time: Time): KAddr = ContAddr(tgtExpr, time)
 \end{verbatim}
 
-\subsubsection{Single-step Evaluation}
+\subsubsection{Single-step Transition}
 
 Since dereferencing an address becomes non-deterministic, our \texttt{atomicEval}
 function also truns into non-deterministic. Given an atomic expression \texttt{e},
