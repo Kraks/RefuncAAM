@@ -752,7 +752,7 @@ To see this, consider a program that has two mutually recursived functions:
 
 \texttt{f1} and \texttt{f2} call each others, and the stack will be interleaved
 pushing \texttt{f1} and \texttt{f2} onto the top of current stack, but not existing 
-two stack components are the same in the state space.
+two stack components are identical in the state space.
 
 \subsubsection{Computable Solutions}
 
@@ -791,16 +791,83 @@ TODO: connection to this paper.
 TODO: although they establish pushdown control-flow analysis in different ways, 
 is there a correspondence between different methods?
 
-
 \section{From AAM to ADI}
 
 We start from the AAM with unbounded stack.
 
 \subsection{Fusing}
 
+\begin{verbatim}
+def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
+  case Nil => seen
+  case hd::tl if seen.contains(hd) => drive_step(tl, seen)
+  case hd::tl =>
+    val new_time = tick(hd)
+    val new_states = hd match {
+      case State(Let(x, App(f, ae), e), env, bstore, konts, time) 
+        if isAtomic(ae) =>
+        for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
+          val frame = Frame(x, e, env)
+          val baddr = allocBind(v, new_time)
+          val new_env = env_c + (v -> baddr)
+          val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+          State(body, new_env, new_store, frame::konts, new_time)
+        }
+      case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
+        konts match {
+          case Nil => List()
+          case Frame(x, e, f_env)::konts =>
+            val baddr = allocBind(x, new_time)
+            val new_env = f_env + (x -> baddr)
+            val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+            List(State(e, new_env, new_store, konts, new_time))
+        }
+    }
+    drive_step(new_states ++ tl, seen + hd)
+}
+
+def analyze(e: Expr): Set[State] = drive_step(List(inject(e)), Set())
+\end{verbatim}
+
 \subsection{Disentangling}
 
-for plain direct-style, the apply handles more cases.
+for plain direct-style, the continue function handles more cases.
+
+\begin{verbatim}
+def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
+  case Nil => seen
+  case hd::tl if seen.contains(hd) => drive_step(tl, seen)
+  case hd::tl =>
+    val new_time = tick(hd)
+    hd match {
+      case State(Let(x, App(f, ae), e), env, bstore, konts, time)
+        if isAtomic(ae) =>
+        val closures = atomicEval(f, env, bstore).toList
+        val new_states = for (Clos(Lam(v, body), env_c) <- closures) yield {
+          val frame = Frame(x, e, env)
+          val baddr = allocBind(v, new_time)
+          val new_env = env_c + (v -> baddr)
+          val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+          State(body, new_env, new_store, frame::konts, new_time)
+        }
+        drive_step(new_states ++ tl, seen + hd)
+      case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
+        continue(konts, atomicEval(ae, env, bstore), bstore, new_time, tl, seen + hd)
+    }
+}
+
+def continue(konts: List[Frame], ds: Set[Storable], bstore: BStore, time: Time, 
+             todo: List[State], seen: Set[State]): Set[State] = 
+  konts match {
+    case Nil => drive_step(todo, seen)
+    case Frame(x, e, f_env)::konts =>
+      val baddr = allocBind(x, time)
+      val new_env = f_env + (x -> baddr)
+      val new_store = bstore.update(baddr, ds)
+      val new_state = State(e, new_env, new_store, konts, time)
+      drive_step(new_state::todo, seen)
+  }
+\end{verbatim}
 
 \subsection{Refunctionalization}
 
