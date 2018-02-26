@@ -52,7 +52,28 @@
                         %% http://ctan.org/pkg/booktabs
 \usepackage{subcaption} %% For complex figures with subfigures/subcaptions
 %% http://ctan.org/pkg/subcaption
-\usepackage{syntax}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[scaled=0.9]{beramono}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xcolor,colortbl}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{paralist}
+\usepackage{wrapfig}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{flushend}
+
+\input{macros}
+
+\lstMakeShortInline[keywordstyle=,%
+              flexiblecolumns=false,%
+              %basewidth={0.56em, 0.52em},%
+              mathescape=false,%
+              basicstyle=\tt]@
 
 \begin{document}
 
@@ -264,25 +285,25 @@ TODO: add letrec?
 To begin, we now present the concrete syntax of a call-by-value $\lambda$-calculus language 
 in ANF \cite{flanagan1993essence}.
 
-\begin{verbatim}
-e \in Exp ::= ae
-            | (let ([x (f ae)]) e)
-ae \in AExp ::= x
-              | lam
-lam \in Lam ::= (lambda (x) e)
+\begin{lstlisting}
+e $\in$ Exp ::= ae
+          | (let ([x (f ae)]) e)
+ae $\in$ AExp ::= x            
+            | lam
+lam $\in$ Lam ::= (lambda (x) e)
 x ... are variable names
-\end{verbatim}
+\end{lstlisting}
 
-In ANF, all the function applications must be administrated in a \texttt{let} expression,
+In ANF, all the function applications must be administrated in a @let@ expression,
 and then bounded to a variable name under current environment.
-We can use \texttt{letrec} to create mutually recursive function bindings. But \texttt{letrec}
+We can use @letrec@ to create mutually recursive function bindings. But @letrec@
 only accepts atomic expressions that appear at the right-hand side of a binding.
-The atomic expressions $ae$ are either a variable, or a literal \texttt{lambda} term, which
+The atomic expressions $ae$ are either a variable, or a literal @lambda@ term, which
 both can be evaluated in a single step.
 
 The abstract syntax can be straightforwardly described in Scala as follows:
 
-\begin{verbatim}
+\begin{lstlisting}
 sealed trait Expr
 case class Binding(x: String, e: Expr)
 
@@ -290,7 +311,7 @@ case class Var(x: String) extends Expr
 case class App(e1: Expr, e2: Expr) extends Expr
 case class Lam(x: String, body: Expr) extends Expr
 case class Let(x: String, e: App, body: Expr) extends Expr
-\end{verbatim}
+\end{lstlisting}
 
 \subsection{CESK Machine} \label{cesk}
 
@@ -309,7 +330,7 @@ In our toy language, the only category of value is closure, i.e., a function pai
 
 We show the Scala representations for the components of CESK machine.
 
-\begin{verbatim}
+\begin{lstlisting}
 type Addr = Int
 type Env = Map[String, Addr]
 type Store = Map[Addr, Storable]
@@ -321,36 +342,36 @@ case class Frame(x: String, e: Expr, env: Env)
 type Kont = List[Frame]
 
 case class State(e: Expr, env: Env, store: Store, k: Kont)
-\end{verbatim}
+\end{lstlisting}
 
-It is worth noting that the continuation class \texttt{Kont} is defined as a list of frames.
-The frame class \texttt{Frame} stores the information of call-site, i.e., the information that
+It is worth noting that the continuation class @Kont@ is defined as a list of frames.
+The frame class @Frame@ stores the information of call-site, i.e., the information that
 can be used to resume the interrupted computation.
-A \texttt{Frame} constitutes of a variable name \texttt{x} to be bind later, a control expression
+A @Frame@ constitutes of a variable name @x@ to be bind later, a control expression
 that resumes to, and its environment. (TODO: mention that frame list vs KArg/KFun)
 
 \subsubsection{Single-step Transition}
 Before go into describing how the machine evaluates expressions, we firstly define several helper functions.
 As we mentioned in section \ref{anfsyntax}, the atomic expressions are either a variable, or
-a literal \texttt{lambda} term. So the helper function \texttt{atomicEval} handles these two
+a literal @lambda@ term. So the helper function @atomicEval@ handles these two
 cases and evaluates atomic expressions to closures in a straightforward way.
-The \texttt{alloc} function generates a fresh address, and always allocates an unique integer under the domain
+The @alloc@ function generates a fresh address, and always allocates an unique integer under the domain
 of store.
-The \texttt{isAtomic} function is used as a predicate of whether the expression is atomic.
+The @isAtomic@ function is used as a predicate of whether the expression is atomic.
 
-\begin{verbatim}
+\begin{lstlisting}
 def atomicEval(e: Expr, env: Env, store: Store): Storable = e match {
   case Var(x) => store(env(x))
   case lam@Lam(x, body) => Clos(lam, env)
 }
 def alloc(store: Store): Addr = store.keys.size + 1
 def isAtomic(e: Expr): Boolean = e.isInstanceOf[Var] || e.isInstanceOf[Lam]
-\end{verbatim}
+\end{lstlisting}
 
-Now, we can faithfully describe the state transition function \texttt{step},
-that given a machine state, function \texttt{step} determines its successor state.
+Now, we can faithfully describe the state transition function @step@,
+that given a machine state, function @step@ determines its successor state.
 
-\begin{verbatim}
+\begin{lstlisting}
 def step(s: State): State = s match {
   case State(Let(x, App(f, ae), e), env, store, k) if isAtomic(ae) =>
     val Clos(Lam(v, body), env_c) = atomicEval(f, env, store)
@@ -366,50 +387,50 @@ def step(s: State): State = s match {
     val new_store = store + (addr -> atomicEval(ae, env, store))
     State(e, new_env, new_store, ks)
 }
-\end{verbatim}
+\end{lstlisting}
 
-The first case is that the control of current state is a \texttt{Let} expression,
+The first case is that the control of current state is a @Let@ expression,
 and its right-hand side is an function application.
-By calling function \texttt{atomicEval}, we obtain the closure that callee \texttt{f} stands for.
-The successor state's control then transfers to the \texttt{body} expression of closure,
+By calling function @atomicEval@, we obtain the closure that callee @f@ stands for.
+The successor state's control then transfers to the @body@ expression of closure,
 with an updated environment and an update store. The new environment is extended
-from closure's environment and mapped \texttt{v} to a fresh address \texttt{addr}.
-The new store is extended with \texttt{addr} mapping to the value of \texttt{ae},
-which is evaluated from \texttt{atomicEval}.
-In the meanwhile, a new frame \texttt{frame} is pushed onto the stack \texttt{k}.
-This \texttt{frame} contains the variable name \texttt{x} at left-hand side position of \texttt{Let},
-the body expression of \texttt{Let}, and the lexical environment of the body expression.
+from closure's environment and mapped @v@ to a fresh address @addr@.
+The new store is extended with @addr@ mapping to the value of @ae@,
+which is evaluated from @atomicEval@.
+In the meanwhile, a new frame @frame@ is pushed onto the stack @k@.
+This @frame@ contains the variable name @x@ at left-hand side position of @Let@,
+the body expression of @Let@, and the lexical environment of the body expression.
 
-The second case for \texttt{step} is the control is transferred to an atomic expression.
+The second case for @step@ is the control is transferred to an atomic expression.
 We extract the top frame of continuations firstly.
 The control (that is an atomic expression) of current state is the evaluated term
-that being bind to the variable \texttt{x} from the top frame.
-The environment and store are updated with \texttt{x} mapping to the closure value of \texttt{ae}.
-Then the successor state is transferred to expression \texttt{e} from the top frame,
-which is the body of a \texttt{Let} expression, with the updated environment, store, and
-the rest of stack \texttt{ks}.
+that being bind to the variable @x@ from the top frame.
+The environment and store are updated with @x@ mapping to the closure value of @ae@.
+Then the successor state is transferred to expression @e@ from the top frame,
+which is the body of a @Let@ expression, with the updated environment, store, and
+the rest of stack @ks@.
 
 \subsubsection{Valuation}
 
-To run the program, we first use function \texttt{inject} to construct an initial machine
-state given an expression \texttt{e}. The initial state contains an empty environment, 
+To run the program, we first use function @inject@ to construct an initial machine
+state given an expression @e@. The initial state contains an empty environment, 
 store and stack.
-\begin{verbatim}
+\begin{lstlisting}
 def inject(e: Expr): State = State(e, Map(), Map(), Nil)
-\end{verbatim}
+\end{lstlisting}
 
-Then the \texttt{drive} function is used to evaluate
-to a final state by iteratively apply \texttt{step} on current state until we reach a state
+Then the @drive@ function is used to evaluate
+to a final state by iteratively apply @step@ on current state until we reach a state
 that the control is an atomic expression and the continuation stack is empty.
 And of course, we can extract the value from the final state at last.
 
-\begin{verbatim}
+\begin{lstlisting}
 def drive(s: State): State = s match {
   case State(ae, _, _, Nil) if isAtomic(ae) => s
   case _ => drive(step(s))
 }
 def eval(e: Expr): State = drive(inject(e))
-\end{verbatim}
+\end{lstlisting}
 
 \subsection{Abstracting Abstract Machine} \label{aam}
 Abstracting abstract machine (AAM) is a systematic methodology that derives sound 
@@ -437,17 +458,17 @@ Also, the store performs a join rather than overwriting when updating elements o
 Third, the continuations are likewise allocated on store instead of formed a linked list,
 and the continuation in a state then turns into a continuation address.
 
-For clarity, we divide the store into binding store \texttt{BStore} and continuation store \texttt{KStore}. 
+For clarity, we divide the store into binding store @BStore@ and continuation store @KStore@. 
 The binding store maps binding addresses to sets of closure values, and continuation store maps
 continuation addresses to sets of continuations.
-We define a generic class \texttt{Store[K,V]} that performs join when updating elements
-in a store. By parameterizing \texttt{Store[K,V]} with \texttt{[BAddr, Storable]} and 
-\texttt{[KAddr, Cont]}, we obtain \texttt{BStore} and \texttt{KStore}, perspectively.
+We define a generic class @Store[K,V]@ that performs join when updating elements
+in a store. By parameterizing @Store[K,V]@ with @[BAddr, Storable]@ and 
+@[KAddr, Cont]@, we obtain @BStore@ and @KStore@, perspectively.
 
 TODO(rephrase): Note that the store is monotonic, the store is always growing and never becoming 
 smaller. This property guarantees we eventually will find a fixed point.
 
-\begin{verbatim}
+\begin{lstlisting}
 case class Store[K,V](map: Map[K, Set[V]]) {
   def apply(addr: K): List[V] = map(addr).toList
   def update(addr: K, d: Set[V]): Store[K,V] = {
@@ -458,117 +479,117 @@ case class Store[K,V](map: Map[K, Set[V]]) {
 }
 type BStore = Store[BAddr, Storable]
 type KStore = Store[KAddr, Cont]
-\end{verbatim}
+\end{lstlisting}
 
-The co-domain of binding stores \texttt{Storable} is the same
+The co-domain of binding stores @Storable@ is the same
 as we defined for CESK machines.
-The co-domain of continuation stores \texttt{Cont} is comprised of 
-a frame \texttt{Frame} and a continuation address \texttt{KAddr}.
-To mimic the runtime call stack, \texttt{KAddr} plays the role of
+The co-domain of continuation stores @Cont@ is comprised of 
+a frame @Frame@ and a continuation address @KAddr@.
+To mimic the runtime call stack, @KAddr@ plays the role of
 representing the remaining stack frames.
 TODO: talk about nondet of cont deref?
 
-\begin{verbatim}
+\begin{lstlisting}
 abstract class Storable 
 case class Clos(v: Lam, env: Env) extends Storable
 
 case class Frame(x: String, e: Expr, env: Env)
 case class Cont(frame: Frame, kaddr: KAddr)
-\end{verbatim}
+\end{lstlisting}
 
 As a consequence, the components of a state is also changed: 
 the store is divided into binding store and continuation store;
 the continuation stack becomes an address.
 By dereferencing this address in continuation store, we can retrieve the 
-actual transfer of controls. The definition of environment \texttt{Env}
+actual transfer of controls. The definition of environment @Env@
 remains the same.
 
-\begin{verbatim}
+\begin{lstlisting}
 case class State(e: Expr, env: Env, bstore: BStore, 
                  kstore: KStore, k: KAddr, time: Time)
-\end{verbatim}
+\end{lstlisting}
 
 \subsubsection{Allocating Addresses}
 Up to now, we did not describe much about the adresses in stores and the 
-time-stamp \texttt{Time}.
+time-stamp @Time@.
 But they are key ingredients to achieve analyses with different sensitivities,
 as well as a finite state space analysis.
 To effectively approximate the runtime behavior, a finite 
-program contour \texttt{time} that encodes the program execution history is introduced.
+program contour @time@ that encodes the program execution history is introduced.
 Here, we use a list of execution contexts (expressions) to reprent that, and
-as we will see in section \ref{kcfainst}, by using different \texttt{tick}
+as we will see in section \ref{kcfainst}, by using different @tick@
 function on time we may obtain a family of analyses.
 
-\begin{verbatim}
+\begin{lstlisting}
 type Time = List[Expr]
-\end{verbatim}
+\end{lstlisting}
 
 As we mentioned previously, the space of addresses is finite in AAM.
 Binding addresses are parameterized by variable names and the time that creates this binding,
 which are both finite.
-Continuation addresses \texttt{KAddr} has two variants: 
-1) \texttt{Halt} which corresponds to the empty stack, and
-2) \texttt{ContAddr} consists of the entry expression of callee and the time that
+Continuation addresses @KAddr@ has two variants: 
+1) @Halt@ which corresponds to the empty stack, and
+2) @ContAddr@ consists of the entry expression of callee and the time that
 creates this address, and they are also finite. 
 (TODO: why target expression, allocation polyvariance)
 
-\begin{verbatim}
+\begin{lstlisting}
 case class BAddr(x: String, time: Time)
 
 abstract class KAddr
 case object Halt extends KAddr
 case class ContAddr(tgt: Expr, time: Time) extends KAddr
-\end{verbatim}
+\end{lstlisting}
 
-We use two helper functions \texttt{allocBind} and \texttt{allocKont} that will be used later
+We use two helper functions @allocBind@ and @allocKont@ that will be used later
 to allocate binding addresses and continuation addresses.
 
-\begin{verbatim}
+\begin{lstlisting}
 def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
 def allocKont(tgtExpr: Expr, time: Time): KAddr = ContAddr(tgtExpr, time)
-\end{verbatim}
+\end{lstlisting}
 
 \subsubsection{Single-step Transition}
 
-Since dereferencing an address becomes non-deterministic, our \texttt{atomicEval}
-function also truns into non-deterministic. Given an atomic expression \texttt{e},
-\texttt{atomicEval} returns a set of storable values, i.e., closures, to the caller.
-If the expression is just a \texttt{lambda} term, then the returned set is singleton.
+Since dereferencing an address becomes non-deterministic, our @atomicEval@
+function also truns into non-deterministic. Given an atomic expression @e@,
+@atomicEval@ returns a set of storable values, i.e., closures, to the caller.
+If the expression is just a @lambda@ term, then the returned set is singleton.
 
-\begin{verbatim}
+\begin{lstlisting}
 def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
   case Var(x) => bstore(env(x))
   case lam@Lam(x, body) => Set(Clos(lam, env))
 }
-\end{verbatim}
+\end{lstlisting}
 
-The structure of function \texttt{step} is similar with concrete CESK machines, 
-except non-determinism which makes \texttt{step} returns a list of reachable 
+The structure of function @step@ is similar with concrete CESK machines, 
+except non-determinism which makes @step@ returns a list of reachable 
 successor states.
-In the beginning of \texttt{step}, we call function \texttt{tick} to update 
+In the beginning of @step@, we call function @tick@ to update 
 the time.
-Then we have two cases to consider: 1) Current control expression is \texttt{Let},
-and \texttt{App(f, ae)} is being bind to \texttt{x}.
-Fristly we retrieve the set of closures that \texttt{f} may represents.
+Then we have two cases to consider: 1) Current control expression is @Let@,
+and @App(f, ae)@ is being bind to @x@.
+Fristly we retrieve the set of closures that @f@ may represents.
 For each closure in the set, we do almost the same as what we did in concrete 
-CESK machines. But note that since the continuation is allocated on store (\texttt{kstore}),
-a new continuation address \texttt{new_kaddr} is constructed, and a new frame
-\texttt{Frame(x, e, env)} paired with the current continuation address \texttt{kaddr}
+CESK machines. But note that since the continuation is allocated on store (@kstore@),
+a new continuation address @new_kaddr@ is constructed, and a new frame
+@Frame(x, e, env)@ paired with the current continuation address @kaddr@
 is joined into this address. Finally, a list of states is generated.
 
-2) An atomic expression \texttt{ae} sits on the control position of the state.
-The value of \texttt{ae} is being returned to its caller. 
-We dereference the continuation address \texttt{kaddr} and obtain a set of
-continuations \texttt{conts}.
+2) An atomic expression @ae@ sits on the control position of the state.
+The value of @ae@ is being returned to its caller. 
+We dereference the continuation address @kaddr@ and obtain a set of
+continuations @conts@.
 For each continuation in the set, we construct an environment based on the
-environment of the frame (\texttt{env_f}), and bind \texttt{x} to a newly created binding 
-address \texttt{baddr}; also update the store with \texttt{baddr} and 
-the values that \texttt{ae} represents. In every generated states,
-the control becomes the expression \texttt{e} in the frame,
-and as we can tell from the name, continuation address \texttt{f_kaddr} 
+environment of the frame (@env_f@), and bind @x@ to a newly created binding 
+address @baddr@; also update the store with @baddr@ and 
+the values that @ae@ represents. In every generated states,
+the control becomes the expression @e@ in the frame,
+and as we can tell from the name, continuation address @f_kaddr@
 also comes from the frame.
 
-\begin{verbatim}
+\begin{lstlisting}
 def step(s: State): List[State] = {
   val new_time = tick(s)
   s match {
@@ -594,41 +615,43 @@ def step(s: State): List[State] = {
       }
   }
 }
-\end{verbatim}
+\end{lstlisting}
 
 \subsubsection{$k$-call-sensitive Instantiation} \label{kcfainst}
 
-\begin{verbatim}
+TODO
+
+\begin{lstlisting}
 def k: Int = 0
-def tick(s: State): Time = (s.e::s.time).take(k)
-\end{verbatim}
+def tick(s: State): Time = (s.e :: s.time).take(k)
+\end{lstlisting}
 
 \subsubsection{Collecting Semantics}
 
-To run (analyze) a program, as CESK machine, we use \texttt{inject} to construct
+To run (analyze) a program, as CESK machine, we use @inject@ to construct
 the initial state given a program. 
 Note that the initial continuation store has a special mapping that maps continuation address
-\texttt{Halt} to empty set of continuations.
+@Halt@ to empty set of continuations.
 We also provide an empty program contour as initial time.
-\begin{verbatim}
+\begin{lstlisting}
 def inject(e: Expr): State = 
   State(e, Map(), 
         Store[BAddr, Storable](Map()), 
         Store[KAddr, Cont](Map(Halt -> Set())), 
         Halt, List())
-\end{verbatim}
+\end{lstlisting}
 
 However, comparing with concrete CESK machine, the
-\texttt{drive} function performs collecting semantics instead of valuation
-semantics. That is, for the purpose of analyzing programs, the function \texttt{drive}
+@drive@ function performs collecting semantics instead of valuation
+semantics. That is, for the purpose of analyzing programs, the function @drive@
 collects all the intermediate machine states as the program is abstractly executing.
-The following code shows a variant of work list algorithm that always applies \texttt{step}
-function to the first element \texttt{hd} of the work list \texttt{todo} if \texttt{hd}
-is unseen, then adds the result of \texttt{step} to the rest of work list and in 
-the meanwhile adds \texttt{hd} to the explored states set.
+The following code shows a variant of work list algorithm that always applies @step@
+function to the first element @hd@ of the work list @todo@ if @hd@
+is unseen, then adds the result of @step@ to the rest of work list and in 
+the meanwhile adds @hd@ to the explored states set.
 If the work list is empty, the function just returns the set of reachable states up to now.
 
-\begin{verbatim}
+\begin{lstlisting}
 def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
   case Nil => seen
   case hd::tl if seen.contains(hd) => drive(tl, seen)
@@ -636,9 +659,9 @@ def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
 }
 
 def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
-\end{verbatim}
+\end{lstlisting}
 
-Finally, a user could use function \texttt{analyze} to obtain all reachable states 
+Finally, a user could use function @analyze@ to obtain all reachable states 
 for a given program.
 
 %\subsection{Monadic Abstract Interpreter}
@@ -654,25 +677,25 @@ the state space using finite space abstraction thus cause imprecise stack modeli
 
 To see the problem of spurious return-flows, we can consider the following example:
 
-\begin{verbatim}
+\begin{lstlisting}
 (let ([id (lambda (z) z)])
   (let ([x (id 1)])
     (let ([y (id 2)])
       x)))
-\end{verbatim}
+\end{lstlisting}
 
 In traditional $k$-CFA algorithm and the AAM we showed in section \ref{aam}, 
-the return-flow of invocation \texttt{(id 2)} 
-is going to both call-sites \texttt{(id 1)} and \texttt{(id 2)}. Therefore, the
-returned value \texttt{2} for variable \texttt{y} is also propagated to 
-variable \texttt{x} and then imprecise analysis result is arose.
+the return-flow of invocation @(id 2)@
+is going to both call-sites @(id 1)@ and @(id 1)@. Therefore, the
+returned value @2@ for variable @y@ is also propagated to 
+variable @x@ and then imprecise analysis result is arose.
 This return-flow merging is inevitable even we increase the context-sensitivity.
-If we use the monovariant analysis 0CFA, the analyzing result would be \texttt{x} and 
-\texttt{y} point to set \texttt{\{1, 2\}}, because it not distinguishes
-\texttt{z} at different call-sites.
-Under $1$-CFA, the algorithm is able to distinguish that variable \texttt{z} of function
-\texttt{id} has two different values at two call-sites, so variable \texttt{y} 
-would not be polluted by \texttt{1}, but it is still helplessness for distinguish
+If we use the monovariant analysis 0CFA, the analyzing result would be @x@ and 
+@y@ point to set @\{1, 2\}@, because it not distinguishes
+@z@ at different call-sites.
+Under $1$-CFA, the algorithm is able to distinguish that variable @z@ of function
+@id@ has two different values at two call-sites, so variable @y@ 
+would not be polluted by @1@, but it is still helplessness for distinguish
 return-flows.
 TODO: do need more details to explain this example? (as in P4F paper)
 
@@ -688,29 +711,29 @@ A naive solution to is to use precise call stack modeling as we did in concrete
 CESK machine. Instead of allocating continuations on store and recording an 
 address of continuations, we leave the call stack unabstracted. 
 
-In the definition of state \texttt{State}, continuation store disappears, and
-\texttt{konts} becomes a list of frames. Other components keep the same.
+In the definition of state @State@, continuation store disappears, and
+@konts@ becomes a list of frames. Other components keep the same.
 
-\begin{verbatim}
+\begin{lstlisting}
 case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
-\end{verbatim}
+\end{lstlisting}
 
-The state transition function \texttt{step} is still non-determinism, but
-the only non-determinism happens when dereferencing the callee \texttt{f} 
-from the store at call-site \texttt{App(f, ae)}. 
-For each closure of \texttt{f} in the set, we do exactly
+The state transition function @step@ is still non-determinism, but
+the only non-determinism happens when dereferencing the callee @f@ 
+from the store at call-site @App(f, ae)@. 
+For each closure of @f@ in the set, we do exactly
 the same as what we did in concrete CESK machines: a new frame is constructed
 and pushed onto the stack.
-In the second case, since the continuation \texttt{konts} is a list of 
+In the second case, since the continuation @konts@ is a list of 
 frames, we can simply decompose it to differentiate an empty stack
 or a frame exists on the top of stack. 
 If the stack is empty, then empty successors is returned, because the computation
 is finished.
-Otherwise, we matched a frame \texttt{Frame(x, e, env_f)}. 
+Otherwise, we matched a frame @Frame(x, e, env_f)@. 
 This transition is deterministic, because we only have one frame, this frame
 is then popped and the new state uses the rest of stack.
 
-\begin{verbatim}
+\begin{lstlisting}
 def step(s: State): List[State] = {
   val new_time = tick(s)
   s match {
@@ -733,7 +756,7 @@ def step(s: State): List[State] = {
       }
   }
 }
-\end{verbatim}
+\end{lstlisting}
 
 Unfortunately, even though other components is finite, this AAM with unbounded stack is uncomputable. 
 Because the unbounded stack can grow to arbitrary deep and this implies that the state space is possibly 
@@ -741,17 +764,17 @@ infinite, therefore the analysis may not terminate for all programs if we simply
 reachable states.
 To see this, consider a program that has two mutually recursived functions:
 
-\begin{verbatim}
+\begin{lstlisting}
 (letrec ([f1 (lambda (x) 
                (let ([x1 (f2 x)]) x1))]
          [f2 (lambda (y)
                (let ([y1 (f1 y)]) y1))])
   (let ([z (f1 1)])
     z))
-\end{verbatim}
+\end{lstlisting}
 
-\texttt{f1} and \texttt{f2} call each others, and the stack will be interleaved
-pushing \texttt{f1} and \texttt{f2} onto the top of current stack, but not existing 
+@f1@ and @f2@ call each others, and the stack will be interleaved
+pushing @f1@ and @f2@ onto the top of current stack, but not existing 
 two stack components are identical in the state space.
 
 \subsubsection{Computable Solutions}
@@ -775,11 +798,11 @@ approach to pushdown control flow analysis.
 small-step abstracting abstract machine that is both easy to implement and
 computational inexpensive.
 
-\begin{verbatim}
+\begin{lstlisting}
 case class P4FContAddr(tgt: Expr, tgtEnv: Env, time: Time) extends KAddr
 def allocKont(tgtExpr: Expr, tgtEnv: Env, time: Time): KAddr = 
   P4FContAddr(tgtExpr, tgtEnv, time)
-\end{verbatim}
+\end{lstlisting}
 
 \textbf{Abstracting Definitional Interpreters.}
 
@@ -797,7 +820,7 @@ We start from the AAM with unbounded stack.
 
 \subsection{Fusing}
 
-\begin{verbatim}
+\begin{lstlisting}
 def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
   case Nil => seen
   case hd::tl if seen.contains(hd) => drive_step(tl, seen)
@@ -827,13 +850,13 @@ def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
 }
 
 def analyze(e: Expr): Set[State] = drive_step(List(inject(e)), Set())
-\end{verbatim}
+\end{lstlisting}
 
 \subsection{Disentangling}
 
 for plain direct-style, the continue function handles more cases.
 
-\begin{verbatim}
+\begin{lstlisting}
 def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
   case Nil => seen
   case hd::tl if seen.contains(hd) => drive_step(tl, seen)
@@ -867,7 +890,7 @@ def continue(konts: List[Frame], ds: Set[Storable], bstore: BStore, time: Time,
       val new_state = State(e, new_env, new_store, konts, time)
       drive_step(new_state::todo, seen)
   }
-\end{verbatim}
+\end{lstlisting}
 
 \subsection{Refunctionalization}
 
