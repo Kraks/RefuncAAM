@@ -657,11 +657,9 @@ transformation.
 
 \subsubsection{AAM with Unbound Stack}
 
-uncomputable solutions
-
 A naive solution to is to use precise call stack modeling as we did in concrete
 CESK machine. Instead of allocating continuations on store and recording an 
-address of continuations, we 
+address of continuations, we leave the call stack unabstracted. 
 
 In the definition of state \texttt{State}, continuation store disappears, and
 \texttt{konts} becomes a list of frames. Other components keep the same.
@@ -698,21 +696,47 @@ def step(s: State): List[State] = {
 }
 \end{verbatim}
 
+Unfortunately, even though other components is finite, this AAM with unbounded stack is uncomputable. 
+Because the unbounded stack can grow to arbitrary deep and this implies that the state space is possibly 
+infinite, therefore the analysis may not terminate for all programs if we simply enumerating 
+reachable states.
+To see this, consider a program that has two mutually recursived functions:
+
+\begin{verbatim}
+(letrec ([f1 (lambda (x) 
+               (let ([x1 (f2 x)]) x1))]
+         [f2 (lambda (y)
+               (let ([y1 (f1 y)]) y1))])
+  (let ([z (f1 1)])
+    z))
+\end{verbatim}
+
+\texttt{f1} and \texttt{f2} call each others, and the stack will be interleaved
+pushing \texttt{f1} and \texttt{f2} onto the top of current stack, but not existing 
+two stack components are the same in the state space.
+
 \subsubsection{Computable Solutions}
 
 Recent years, there are great efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
-gilray2016pushdown, johnson2015abstracting}
-to achieve precise call/return match based on small-step AAM which is what we 
-described in section \ref{aam}.
+gilray2016pushdown, johnson2015abstracting} to achieve precise call/return 
+match based on small-step AAM which is what we described in section \ref{aam}.
 
-TODO: summarize CFA2, PDCFA, AAC, P4F
+CFA2 is the first solution that solves the return-flows problem\cite{vardoulakis2010cfa2}.
+But CFA2 has several drawbacks: it works only on continuation-passing style programs, 
+and only allows monovariant analysis, in addition with an exponential time complexity.
+TODO: summarize PDCFA, AAC, P4F
 
-On the other side, \citeauthor{darais2017abstracting} construct abstracting 
+On the other side, with the insight from Reynold that the defined language will inherit properties
+from the defining language, \citeauthor{darais2017abstracting} construct abstracting 
 definitional interpreters (ADI) that automatically inherit the pushdown control-flow 
-property from the defining language. TODO
+property from the defining language.
+TODO: connection to this paper.
 
-In the rest of this section, we take a closer look at the two state-of-art techniques
-to accomplish perfect call-stack precision.
+Question: although they establish pushdown control-flow analysis in different ways, 
+is there a correspondence between different methods?
+
+In the rest of this section, we take a closer look at the P4F and ADI which are
+two state-of-art techniques to accomplish perfect call-stack precision.
 
 \textbf{Pushdown for Free.}
 \citeauthor{gilray2016pushdown} proposed a continuation address allocator for 
