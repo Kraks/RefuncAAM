@@ -55,7 +55,7 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
-\usepackage[scaled=0.9]{beramono}
+\usepackage[scaled=0.85]{beramono}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{xcolor,colortbl}
@@ -686,17 +686,17 @@ To see the problem of spurious return-flows, we can consider the following examp
 
 In traditional $k$-CFA algorithm and the AAM we showed in section \ref{aam}, 
 the return-flow of invocation @(id 2)@
-is going to both call-sites @(id 1)@ and @(id 1)@. Therefore, the
+is going to both call-sites @(id 1)@ and @(id 2)@. Therefore, the
 returned value @2@ for variable @y@ is also propagated to 
 variable @x@ and then imprecise analysis result is arose.
 This return-flow merging is inevitable even we increase the context-sensitivity.
-If we use the monovariant analysis 0CFA, the analyzing result would be @x@ and 
-@y@ point to set @\{1, 2\}@, because it not distinguishes
-@z@ at different call-sites.
+If we use the monovariant analysis (i.e. 0CFA), the analyzing result would be @x@ and 
+@y@ point to set @{1, 2}@, because the algorithm not distinguishes
+@z@ comes from different call-sites.
 Under $1$-CFA, the algorithm is able to distinguish that variable @z@ of function
 @id@ has two different values at two call-sites, so variable @y@ 
-would not be polluted by @1@, but it is still helplessness for distinguish
-return-flows.
+would not be polluted by @1@, but two call-sites still share the same continuation and
+it is still helplessness for distinguish return-flows.
 TODO: do need more details to explain this example? (as in P4F paper)
 
 In this section, we firstly show a simple but uncomputable solution to the
@@ -773,13 +773,13 @@ To see this, consider a program that has two mutually recursived functions:
     z))
 \end{lstlisting}
 
-@f1@ and @f2@ call each others, and the stack will be interleaved
+@f1@ and @f2@ mutually call each others, and the stack will be alternatively
 pushing @f1@ and @f2@ onto the top of current stack, but not existing 
 two stack components are identical in the state space.
 
 \subsubsection{Computable Solutions}
 
-Recent years, there are great efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
+In recent years, there are great efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
 gilray2016pushdown, johnson2015abstracting} to achieve precise call/return 
 match based on small-step AAM which is what we described in section \ref{aam}.
 
@@ -797,6 +797,10 @@ approach to pushdown control flow analysis.
 \citeauthor{gilray2016pushdown} proposed a continuation address allocator for 
 small-step abstracting abstract machine that is both easy to implement and
 computational inexpensive.
+The only change in code is when allocating a continuation address, not only
+keep track of the entry-point expression of callee, but also hold the target environment.
+The target environment is the environment extended from closure's environment
+(namely @val new_env = env_c + (v -> baddr)@). All the rest things remain the same.
 
 \begin{lstlisting}
 case class P4FContAddr(tgt: Expr, tgtEnv: Env, time: Time) extends KAddr
@@ -804,12 +808,18 @@ def allocKont(tgtExpr: Expr, tgtEnv: Env, time: Time): KAddr =
   P4FContAddr(tgtExpr, tgtEnv, time)
 \end{lstlisting}
 
+TODO: explain the reason why it works.
+Notably, this change only causes constant-factor increase in time complexity of analysis.
+
 \textbf{Abstracting Definitional Interpreters.}
 
-On the other side, with the insight from Reynold that the defined language will inherit properties
+On the other side, with the insight from Reynold's seminal paper 
+\emph{Definitional interpreters for higher-order programming languages} \cite{reynolds1972definitional}
+that the defined language will inherit properties
 from the defining language, \citeauthor{darais2017abstracting} construct abstracting 
 definitional interpreters (ADI) that automatically inherit the pushdown control-flow 
-property from the defining language.
+property from its defining language.
+
 TODO: connection to this paper.
 TODO: although they establish pushdown control-flow analysis in different ways, 
 is there a correspondence between different methods?
