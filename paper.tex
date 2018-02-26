@@ -544,7 +544,7 @@ def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
 \end{verbatim}
 
 The structure of function \texttt{step} is similar with concrete CESK machines, 
-except non-determinism which makes \texttt{step} returns a list of possible
+except non-determinism which makes \texttt{step} returns a list of reachable 
 successor states.
 In the beginning of \texttt{step}, we call function \texttt{tick} to update 
 the time.
@@ -639,7 +639,7 @@ def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
 def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
 \end{verbatim}
 
-Finally, a user could use function \texttt{analyze} to obtain all possible states 
+Finally, a user could use function \texttt{analyze} to obtain all reachable states 
 for a given program.
 
 %\subsection{Monadic Abstract Interpreter}
