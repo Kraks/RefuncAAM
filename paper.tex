@@ -767,7 +767,7 @@ TODO: summarize PDCFA, AAC, P4F
 
 In the rest of this section, we take a closer look at the P4F which is the
 state-of-art techniques to accomplish perfect call-stack precision on small-step
-AAMs, and Abstracting De nitional Interpreters (ADI) that adpots another 
+AAMs, and Abstracting Defnitional Interpreters (ADI) that adpots another 
 approach to pushdown control flow analysis.
 
 \textbf{Pushdown for Free.}
@@ -816,15 +816,18 @@ fix point cache
 
 %probably Store Widening \& Abstract Garbage Collection
 %monadic
-\subsection{Monadification: From Refunctionalized AAM to ADI}
+\subsection{Monadification: to Abstracting Definitional Interpreter}
 
 For one direction, we can transform the refunctionalized AAM to abstracting definitional interpreter
 by adding monads.
 
-\subsection{Un-CPS: From Refunctionalized AAM to Direct Style}
+\subsection{Un-CPS: to Yet Another Abstracting Definitional Interpreter}
 
 We can transform the refunctionalized AAM to direct style, but explicitly use 
 side effects such as assignment and mutation to handle collecting semantics and non-determinism.
+
+TODO: use delimited continuation? 
+Another form of abstracting definitional interpreter.
 
 \section{Refunctionalized AAM}
 
