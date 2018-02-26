@@ -134,25 +134,24 @@
   small-step abstract machines. Recent progress applies the same idea 
   on definitional interpreter and obtains a big-step 
   abstracting definitional interpreter (ADI) written in monadic style.
-  Danvy shows the correspondence between abstract machines and interpreters.
-  In this paper, we study the relations between small-step AAM and 
-  big-step ADI.
+  Danvy shows the correspondence between concrete abstract machines and interpreters.
+  But the relations between small-step abstracting abstract machines and 
+  big-step abstracting definitional interpreters is not well studied.
 
-  We show their correspondence and how to syntactically transform a small-step 
-  abstracting abstract machine to a big-step abstracting definitional 
-  interpreter.
+  In this paper, we show their correspondence and how to syntactically transform small-step 
+  abstracting abstract machines into big-step abstracting definitional 
+  interpreters.
   The transformations include fusing, disentangling, refunctionalizing 
-  and monadification(un-CPS), and all of them properly handle the 
+  and monadification (or un-CPS to direct-style). All of them properly handle the 
   collecting semantics and the non-determinism of abstract interpretation. 
   After each transformation, we also obtain an intermediary form of 
   abstract interpreter.
   Remarkably, follow the idea that evaluation contexts are defunctionalized 
   continuations, we reveal how precise call/return match in control-flow 
-  analysis is obtained by refunctionalizing a small-step abstracting 
-  abstract machine,  % with unbounded stack
+  analysis can be obtained by refunctionalizing a small-step abstracting 
+  abstract machine,
   as well as explain how it been lost by defunctionalizing the higher-order
-  continuations into an algebraic data type. Further, we show how to turn 
-  precise call/return match into computable analysis.
+  continuations into an firts-order data type. 
   
   TODO: Maybe something Shiver's formulation of CFA in denotational style. 
  
