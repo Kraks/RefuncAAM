@@ -445,7 +445,8 @@ We define a generic class \texttt{Store[K,V]} that performs join when updating e
 in a store. By parameterizing \texttt{Store[K,V]} with \texttt{[BAddr, Storable]} and 
 \texttt{[KAddr, Cont]}, we obtain \texttt{BStore} and \texttt{KStore}, perspectively.
 
-Note that the store is monotonic. TODO
+TODO(rephrase): Note that the store is monotonic, the store is always growing and never becoming 
+smaller. This property guarantees we eventually will find a fixed point.
 
 \begin{verbatim}
 case class Store[K,V](map: Map[K, Set[V]]) {
@@ -466,7 +467,7 @@ The co-domain of continuation stores \texttt{Cont} is comprised of
 a frame \texttt{Frame} and a continuation address \texttt{KAddr}.
 To mimic the runtime call stack, \texttt{KAddr} plays the role of
 representing the remaining stack frames.
-TODO: nondet of cont?
+TODO: talk about nondet of cont deref?
 
 \begin{verbatim}
 abstract class Storable 
@@ -530,15 +531,43 @@ def allocKont(tgtExpr: Expr, time: Time): KAddr = ContAddr(tgtExpr, time)
 
 \subsubsection{Single-step Evaluation}
 
-atomicEval returns a set of storable values, i.e., closures.
+Since dereferencing an address becomes non-deterministic, our \texttt{atomicEval}
+function also truns into non-deterministic. Given an atomic expression \texttt{e},
+\texttt{atomicEval} returns a set of storable values, i.e., closures, to the caller.
+If the expression is just a \texttt{lambda} term, then the returned set is singleton.
 
 \begin{verbatim}
-
 def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
   case Var(x) => bstore(env(x))
   case lam@Lam(x, body) => Set(Clos(lam, env))
 }
 \end{verbatim}
+
+The structure of function \texttt{step} is similar with concrete CESK machines, 
+except non-determinism which makes \texttt{step} returns a list of possible
+successor states.
+In the beginning of \texttt{step}, we call function \texttt{tick} to update 
+the time.
+Then we have two cases to consider: 1) Current control expression is \texttt{Let},
+and \texttt{App(f, ae)} is being bind to \texttt{x}.
+Fristly we retrieve the set of closures that \texttt{f} may represents.
+For each closure in the set, we do almost the same as what we did in concrete 
+CESK machines. But note that since the continuation is allocated on store (\texttt{kstore}),
+a new continuation address \texttt{new_kaddr} is constructed, and a new frame
+\texttt{Frame(x, e, env)} paired with the current continuation address \texttt{kaddr}
+is joined into this address. Finally, a list of states is generated.
+
+2) An atomic expression \texttt{ae} sits on the control position of the state.
+The value of \texttt{ae} is being returned to its caller. 
+We dereference the continuation address \texttt{kaddr} and obtain a set of
+continuations \texttt{conts}.
+For each continuation in the set, we construct an environment based on the
+environment of the frame (\texttt{env_f}), and bind \texttt{x} to a newly created binding 
+address \texttt{baddr}; also update the store with \texttt{baddr} and 
+the values that \texttt{ae} represents. In every generated states,
+the control becomes the expression \texttt{e} in the frame,
+and as we can tell from the name, continuation address \texttt{f_kaddr} 
+also comes from the frame.
 
 \begin{verbatim}
 def step(s: State): List[State] = {
@@ -596,10 +625,9 @@ semantics. That is, for the purpose of analyzing programs, the function \texttt{
 collects all the intermediate machine states as the program is abstractly executing.
 The following code shows a variant of work list algorithm that always applies \texttt{step}
 function to the first element \texttt{hd} of the work list \texttt{todo} if \texttt{hd}
-is unseen, then adds the result of \texttt{step} to the work list and also adds \texttt{hd}
-to the explored states set.
-If the work list is empty, the function just
-returns the set of explored states up to now.
+is unseen, then adds the result of \texttt{step} to the rest of work list and in 
+the meanwhile adds \texttt{hd} to the explored states set.
+If the work list is empty, the function just returns the set of reachable states up to now.
 
 \begin{verbatim}
 def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
@@ -641,7 +669,7 @@ returned value \texttt{2} for variable \texttt{y} is also propagated to
 variable \texttt{x} and then imprecise analysis result is arose.
 This return-flow merging is inevitable even we increase the context-sensitivity.
 If we use the monovariant analysis 0CFA, the analyzing result would be \texttt{x} and 
-\texttt{y} point to set \texttt{\{1, 2\}}, because it not distinguished 
+\texttt{y} point to set \texttt{\{1, 2\}}, because it not distinguishes
 \texttt{z} at different call-sites.
 Under $1$-CFA, the algorithm is able to distinguish that variable \texttt{z} of function
 \texttt{id} has two different values at two call-sites, so variable \texttt{y} 
@@ -649,7 +677,7 @@ would not be polluted by \texttt{1}, but it is still helplessness for distinguis
 return-flows.
 TODO: do need more details to explain this example? (as in P4F paper)
 
-In this section, we firstly describe a simple but uncomputable solution to the
+In this section, we firstly show a simple but uncomputable solution to the
 problem; then briefly review several recent research works that enable
 computable and precise call/return match. Even though the first solution is
 uncomputable, but as we will see in section 3, it is the starting point of our
@@ -668,8 +696,20 @@ In the definition of state \texttt{State}, continuation store disappears, and
 case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
 \end{verbatim}
 
-the only non-determinism in our state transition function is when dereferencing
-the callee \texttt{f} from store at a call-site.
+The state transition function \texttt{step} is still non-determinism, but
+the only non-determinism happens when dereferencing the callee \texttt{f} 
+from the store at call-site \texttt{App(f, ae)}. 
+For each closure of \texttt{f} in the set, we do exactly
+the same as what we did in concrete CESK machines: a new frame is constructed
+and pushed onto the stack.
+In the second case, since the continuation \texttt{konts} is a list of 
+frames, we can simply decompose it to differentiate an empty stack
+or a frame exists on the top of stack. 
+If the stack is empty, then empty successors is returned, because the computation
+is finished.
+Otherwise, we matched a frame \texttt{Frame(x, e, env_f)}. 
+This transition is deterministic, because we only have one frame, this frame
+is then popped and the new state uses the rest of stack.
 
 \begin{verbatim}
 def step(s: State): List[State] = {
@@ -726,17 +766,10 @@ But CFA2 has several drawbacks: it works only on continuation-passing style prog
 and only allows monovariant analysis, in addition with an exponential time complexity.
 TODO: summarize PDCFA, AAC, P4F
 
-On the other side, with the insight from Reynold that the defined language will inherit properties
-from the defining language, \citeauthor{darais2017abstracting} construct abstracting 
-definitional interpreters (ADI) that automatically inherit the pushdown control-flow 
-property from the defining language.
-TODO: connection to this paper.
-
-Question: although they establish pushdown control-flow analysis in different ways, 
-is there a correspondence between different methods?
-
-In the rest of this section, we take a closer look at the P4F and ADI which are
-two state-of-art techniques to accomplish perfect call-stack precision.
+In the rest of this section, we take a closer look at the P4F which is the
+state-of-art techniques to accomplish perfect call-stack precision on small-step
+AAMs, and Abstracting De nitional Interpreters (ADI) that adpots another 
+approach to pushdown control flow analysis.
 
 \textbf{Pushdown for Free.}
 \citeauthor{gilray2016pushdown} proposed a continuation address allocator for 
@@ -751,6 +784,15 @@ def allocKont(tgtExpr: Expr, tgtEnv: Env, time: Time): KAddr =
 
 \textbf{Abstracting Definitional Interpreters.}
 
+On the other side, with the insight from Reynold that the defined language will inherit properties
+from the defining language, \citeauthor{darais2017abstracting} construct abstracting 
+definitional interpreters (ADI) that automatically inherit the pushdown control-flow 
+property from the defining language.
+TODO: connection to this paper.
+TODO: although they establish pushdown control-flow analysis in different ways, 
+is there a correspondence between different methods?
+
+
 \section{From AAM to ADI}
 
 We start from the AAM with unbounded stack.
@@ -763,6 +805,13 @@ We start from the AAM with unbounded stack.
 
 allocating continuations of defined language on the heap of defining language.
 
+\subsubsection{First Try}
+
+simply trun evaluation contexts into higher-order continuations
+
+\subsubsection{Computable Refunctionalization}
+
+fix point cache
 
 %probably Store Widening \& Abstract Garbage Collection
 %monadic
