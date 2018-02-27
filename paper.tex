@@ -97,7 +97,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 \titlenote{with title note}             %% \titlenote is optional;
                                         %% can be repeated if necessary;
                                         %% contents suppressed with 'anonymous'
-\subtitle{Filling the Gap between Abstracting Abstract Machine and Abstracting Definitional Interpreter}        %% \subtitle is optional
+\subtitle{Filling the Gap between Abstracting Abstract Machines and Abstracting Definitional Interpreters}        %% \subtitle is optional
 \subtitlenote{with subtitle note}       %% \subtitlenote is optional;
                                         %% can be repeated if necessary;
                                         %% contents suppressed with 'anonymous'
@@ -226,6 +226,8 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 
 \section{Introduction}
 
+boardly speaking, AAM and ADI they are both abstract interpreters.
+
 \subsection{Contributions}
 
 the essence of abstracting definitional interpreter.
@@ -258,29 +260,53 @@ the essence of abstracting definitional interpreter.
 \subsection{Outline}
 
 The paper is organized as follows. 
-TODO: add a diagraph on transformations.
 Section \ref{background} reviews the background. 
 
 \begin{tikzpicture}
-  \matrix (m) [matrix of math nodes, row sep=3em, column sep=3em]
-    { abstracting abstract machines & A  & B  & C  & 0 \\
-      abstract machines & A' & B' & C' & 0 \\ };
-  { [start chain] \chainin (m-1-1);
-    \chainin (m-1-2);
-    { [start branch=A] \chainin (m-2-2)
-        [join={node[right,labeled] {\eta_1}}];}
-    \chainin (m-1-3) [join={node[above,labeled] {\varphi}}];
-    { [start branch=B] \chainin (m-2-3)
-        [join={node[right,labeled] {\eta_2}}];}
-    \chainin (m-1-4) [join={node[above,labeled] {\psi}}];
-    { [start branch=C] \chainin (m-2-4)
-        [join={node[right,labeled] {\eta_3}}];}
-    \chainin (m-1-5); }
-  { [start chain] \chainin (m-2-1);
-    \chainin (m-2-2);
-    \chainin (m-2-3) [join={node[above,labeled] {\varphi'}}];
-    \chainin (m-2-4) [join={node[above,labeled] {\psi'}}];
-    \chainin (m-2-5); }
+  \matrix (m) [matrix of math nodes, row sep=3em, column sep=3.7em]
+    { 
+      \begin{smallmatrix} \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
+      \begin{smallmatrix} \text{big-step} \\ \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  & 
+      \begin{smallmatrix} \text{disentangled}  \\ \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
+      \begin{smallmatrix} \text{refunctionalized}  \\ \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
+      \begin{smallmatrix} \text{abstracting} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix}  \\
+      \begin{smallmatrix} \text{abstract} \\ \text{machines} \end{smallmatrix} & 
+        &
+      %\begin{smallmatrix} \text{big-step} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  & 
+        &
+      %\begin{smallmatrix} \text{disentangled} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
+        &
+      %\begin{smallmatrix} \text{refunctionalized} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
+      \begin{smallmatrix} \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\ 
+    };
+
+  { 
+    [start chain] \chainin (m-1-1);
+    \chainin (m-1-2) [join={node[above,labeled] {\text{fusion}}}];
+
+    \chainin (m-1-3) [join={node[above,labeled] {\text{disentangling}}}];
+
+    \chainin (m-1-4) [join={node[above,labeled] {\text{refunc.}}}];
+
+    \chainin (m-1-5) [join={node[above,labeled] {\text{monadify}}}];
+  }
+  { 
+    [start chain] 
+    \chainin (m-2-1);
+    { [start branch=A] \chainin (m-1-1)
+      [join={node[left, labeled] {\alpha}}];
+    }
+  }
+    %\chainin (m-2-2);
+    %\chainin (m-2-3);
+    %\chainin (m-2-4);
+  {
+    [start chain] 
+    \chainin (m-2-5); 
+    { [start branch=B] \chainin (m-1-5)
+      [join={node[left, labeled] {\alpha}}];
+    }
+  }
 \end{tikzpicture}
 
 \subsection{Style}
@@ -289,10 +315,10 @@ We use Scala language to demonstrate the idea and each step of transformations.
 The reader should have moderate familiarity to Scala's syntax, such as
 case classes, pattern matching and for comprehension.
 
-There are two main reasons to use a real-world language:
+There are two main reasons we use a real-world language:
 1) The code does not diminish the accuracy of the material
 than formal and mathematical notations, 
-which are heavily used in other papers in static analysis or semantics.
+which are heavily used in other static analysis or semantics papers.
 The Scala code in this paper can be easily back-translated into formal notations.
 2) As a functional pearl, the code in this paper is executable with only few changes, 
 which make it particularly fit for presenting syntactical transformations on abstract
