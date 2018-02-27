@@ -312,7 +312,7 @@ Section \ref{background} reviews the background.
 \subsection{Style}
 
 We use Scala language to demonstrate the idea and each step of transformations.
-The reader should have moderate familiarity to Scala's syntax, such as
+We expect that readers have moderate familiarity to Scala's syntax, such as
 case classes, pattern matching and for comprehension.
 
 There are two main reasons we use a real-world language:
@@ -939,44 +939,102 @@ def analyze(e: Expr): Set[State] = drive_step(List(inject(e)), Set())
 for plain direct-style, the continue function handles more cases.
 
 \begin{lstlisting}
-def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
-  case Nil => seen
-  case hd::tl if seen.contains(hd) => drive_step(tl, seen)
-  case hd::tl =>
-    val new_time = tick(hd)
-    hd match {
-      case State(Let(x, App(f, ae), e), env, bstore, konts, time)
-        if isAtomic(ae) =>
-        val closures = atomicEval(f, env, bstore).toList
-        val new_states = for (Clos(Lam(v, body), env_c) <- closures) yield {
-          val frame = Frame(x, e, env)
-          val baddr = allocBind(v, new_time)
-          val new_env = env_c + (v -> baddr)
-          val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-          State(body, new_env, new_store, frame::konts, new_time)
-        }
-        drive_step(new_states ++ tl, seen + hd)
-      case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
-        continue(konts, atomicEval(ae, env, bstore), bstore, new_time, tl, seen + hd)
-    }
+def aval(state: State, todo: List[State], seen: Set[State]): Set[State] = { 
+  val newTime = tick(state)
+  state match {
+    case State(Let(x, App(f, ae), e), env, bstore, konts, time) if isAtomic(ae) =>
+      val newStates = for (Clos(Lam(v, body), c_env) <- aeval(f, env, bstore).toList) yield {
+        val frame = Frame(x, e, env)
+        val baddr = allocBind(v, newTime)
+        val newEnv = c_env + (v -> baddr)
+        val newStore = bstore.update(baddr, aeval(ae, env, bstore))
+        State(body, newEnv, newStore, frame::konts, newTime)
+      }   
+      collect(newStates ++ todo, seen + state)
+    case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
+      continue(konts, aeval(ae, env, bstore), bstore, newTime, todo, seen + state)
+  }   
 }
 
-def continue(konts: List[Frame], ds: Set[Storable], bstore: BStore, time: Time, 
-             todo: List[State], seen: Set[State]): Set[State] = 
-  konts match {
-    case Nil => drive_step(todo, seen)
-    case Frame(x, e, f_env)::konts =>
-      val baddr = allocBind(x, time)
-      val new_env = f_env + (x -> baddr)
-      val new_store = bstore.update(baddr, ds)
-      val new_state = State(e, new_env, new_store, konts, time)
-      drive_step(new_state::todo, seen)
-  }
+def collect(todo: List[State], seen: Set[State]): Set[State] = { 
+  todo match {
+    case Nil => seen
+    case hd::tl if seen.contains(hd) => collect(tl, seen)
+    case hd::tl => aval(hd, tl, seen)
+  }   
+}
+
+def continue(konts: List[Frame], ds: Set[Storable], bstore: BStore, time: Time,
+              todo: List[State], seen: Set[State]): Set[State] = konts match {
+  case Nil => collect(todo, seen)
+  case Frame(x, e, f_env)::konts =>
+    val baddr = allocBind(x, time)
+    val newEnv = f_env + (x -> baddr)
+    val newStore = bstore.update(baddr, ds) 
+    val newState = State(e, newEnv, newStore, konts, time)
+    collect(newState::todo, seen)
+}
+
+def analyze(e: Expr): Set[State] = aval(inject(e), List(), Set()) 
 \end{lstlisting}
 
 \subsection{Refunctionalization}
 
 allocating continuations of defined language on the heap of defining language.
+
+\begin{lstlisting}
+case class Config(e: Expr, env: Env, store: BStore, time: Time)
+case class ValStore(vs: Set[Storable], store: BStore, time: Time)
+type Cache = Map[Config, ValStore]
+
+type Continue = Function4[Set[Storable], BStore, Time, Cache, ValStore]
+
+def tick(s: Config): Time = (s.e::s.time).take(k)
+
+def aval(e: Expr, env: Env, bstore: BStore, time: Time, cache: Cache, continue: Continue): ValStore = {
+  val config = Config(e, env, bstore, time)
+  if (cache.contains(config)) {
+    val ValStore(vs, bstore, time) = cache(config)
+    return continue(vs, bstore, time, cache)
+  }
+  val newTime = tick(config)
+  e match {
+    case Let(x, App(f, ae), e) if isAtomic(ae) =>
+      val closures = aeval(f, env, bstore).toList
+
+      def nd(closures: List[Storable], accds: Set[Storable], accbstore: BStore, acctime: Time, cache: Cache): ValStore  = {
+        closures match {
+          case Nil =>
+            val baddr = allocBind(x, acctime)
+            val newEnv = env + (x -> baddr)
+            val newStore = accbstore.update(baddr, accds)
+            aval(e, newEnv, newStore, acctime, cache, (ds: Set[Storable], accbstore: BStore, acctime: Time, accCache: Cache) => {
+                val newCache = accCache + (Config(e, newEnv, newStore, acctime) -> ValStore(ds, accbstore, acctime))
+                continue(ds, accbstore, acctime, newCache)
+            })
+          case Clos(Lam(v, body), env_c)::rest =>
+            val baddr = allocBind(v, newTime)
+            val newEnv = env_c + (v -> baddr)
+            val newStore = accbstore.update(baddr, aeval(ae, env, bstore)) //TODO: which store?
+            aval(body, newEnv, newStore, newTime, cache, (ds: Set[Storable], accbstore: BStore, acctime: Time, accCache: Cache) => {
+                val newCache = accCache + (Config(body, newEnv, newStore, newTime) -> ValStore(ds, accbstore, acctime))
+                nd(rest, ds++accds, accbstore, acctime, newCache)
+            })
+        }
+      }
+
+      nd(closures, Set(), bstore, newTime, cache)
+    case ae if isAtomic(ae) =>
+      val ds = aeval(ae, env, bstore)
+      continue(ds, bstore, newTime, cache)
+  }
+}
+
+def done: Continue = (ds: Set[Storable], bstore: BStore, time: Time, cache: Cache) => {
+  ValStore(ds, bstore, time)
+}
+def analyze(e: Expr): ValStore = aval(e, Map(), Store[BAddr, Storable](Map()), List(), Map[Config, ValStore](), done)
+\end{lstlisting}
 
 \subsubsection{First Try}
 
