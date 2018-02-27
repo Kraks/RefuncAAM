@@ -66,14 +66,27 @@
 \usepackage{enumitem}
 \usepackage{multicol}
 \usepackage{flushend}
+\usepackage{tikz}
+
+\usetikzlibrary{arrows,chains,matrix,positioning,scopes}
+\makeatletter
+\tikzset{join/.code=\tikzset{after node path={%
+\ifx\tikzchainprevious\pgfutil@empty\else(\tikzchainprevious)%
+edge[every join]#1(\tikzchaincurrent)\fi}}}
+\makeatother
+
+\tikzset{>=stealth',every on chain/.append style={join},
+         every join/.style={->}}
+\tikzstyle{labeled}=[execute at begin node=$\scriptstyle,
+   execute at end node=$]
 
 \input{macros}
 
 \lstMakeShortInline[keywordstyle=,%
-              flexiblecolumns=false,%
-              %basewidth={0.56em, 0.52em},%
-              mathescape=false,%
-              basicstyle=\tt]@
+                    flexiblecolumns=false,%
+                    %basewidth={0.56em, 0.52em},%
+                    mathescape=false,%
+                    basicstyle=\tt]@
 
 \begin{document}
 
@@ -213,8 +226,6 @@
 
 \section{Introduction}
 
-\subsection{Motivation}
-
 \subsection{Contributions}
 
 the essence of abstracting definitional interpreter.
@@ -246,18 +257,48 @@ the essence of abstracting definitional interpreter.
 
 \subsection{Outline}
 
+The paper is organized as follows. 
+TODO: add a diagraph on transformations.
+Section \ref{background} reviews the background. 
+
+\begin{tikzpicture}
+  \matrix (m) [matrix of math nodes, row sep=3em, column sep=3em]
+    { abstracting abstract machines & A  & B  & C  & 0 \\
+      abstract machines & A' & B' & C' & 0 \\ };
+  { [start chain] \chainin (m-1-1);
+    \chainin (m-1-2);
+    { [start branch=A] \chainin (m-2-2)
+        [join={node[right,labeled] {\eta_1}}];}
+    \chainin (m-1-3) [join={node[above,labeled] {\varphi}}];
+    { [start branch=B] \chainin (m-2-3)
+        [join={node[right,labeled] {\eta_2}}];}
+    \chainin (m-1-4) [join={node[above,labeled] {\psi}}];
+    { [start branch=C] \chainin (m-2-4)
+        [join={node[right,labeled] {\eta_3}}];}
+    \chainin (m-1-5); }
+  { [start chain] \chainin (m-2-1);
+    \chainin (m-2-2);
+    \chainin (m-2-3) [join={node[above,labeled] {\varphi'}}];
+    \chainin (m-2-4) [join={node[above,labeled] {\psi'}}];
+    \chainin (m-2-5); }
+\end{tikzpicture}
+
 \subsection{Style}
 
 We use Scala language to demonstrate the idea and each step of transformations.
-There are two main reasons to do so:
+The reader should have moderate familiarity to Scala's syntax, such as
+case classes, pattern matching and for comprehension.
+
+There are two main reasons to use a real-world language:
 1) The code does not diminish the accuracy of the material
 than formal and mathematical notations, 
 which are heavily used in other papers in static analysis or semantics.
 The Scala code in this paper can be easily back-translated into formal notations.
-2) The code is also executable with only few changes, which make it particularly fit for 
-presenting topic: syntactical transformations of programs.
+2) As a functional pearl, the code in this paper is executable with only few changes, 
+which make it particularly fit for presenting syntactical transformations on abstract
+interpreters.
 
-\section{Background}
+\section{Background} \label{background}
 
 In this section, we first describe the target language we will
 analyze and a concrete CESK machine as operational semantics for it.
@@ -441,15 +482,16 @@ approximates the runtime behaviors of programs.
 Since the state space of concrete execution is possibly infinite,
 so to analyze programs, the key insight of AAM approach is to allocate both bindings
 and continuations on the store, and then bound the addresses space to be finite.
-Thus the approximated machine-state space is finite, and computable.
+Since each component of state is finite, 
+thus the abstracted machine-state space is finite, and computable.
 
 In this section, we derive the abstracting abstract machine from concrete
 CESK machines, and also show that how to instantiate
-useful $k$-call-sensitive analysis.
+useful $k$-call-sensitive control-flow analysis.
 
 \subsubsection{Machine Components}
 
-Similar with CESK machines, the machine state of the AAM has a control expression,
+Similar with CESK machines, the machine state of AAM has a control expression,
 an environment, a store and continuation, and in addition with a time-stamp.
 But there are several notable differences of store between AAMs and concrete CESK machines.
 In AAM, the store maps addresses to sets of values, so it stores all possible values
@@ -575,7 +617,7 @@ For each closure in the set, we do almost the same as what we did in concrete
 CESK machines. But note that since the continuation is allocated on store (@kstore@),
 a new continuation address @new_kaddr@ is constructed, and a new frame
 @Frame(x, e, env)@ paired with the current continuation address @kaddr@
-is joined into this address. Finally, a list of states is generated.
+is joined into @new_kaddr@. Finally, a list of successors states is generated.
 
 2) An atomic expression @ae@ sits on the control position of the state.
 The value of @ae@ is being returned to its caller. 
@@ -628,9 +670,9 @@ def tick(s: State): Time = (s.e :: s.time).take(k)
 
 \subsubsection{Collecting Semantics}
 
-To run (analyze) a program, as CESK machine, we use @inject@ to construct
+To run (analyze) a program, as CESK machine, we use function @inject@ to construct
 the initial state given a program. 
-Note that the initial continuation store has a special mapping that maps continuation address
+Note that the initial continuation store has a built-in mapping that maps continuation address
 @Halt@ to empty set of continuations.
 We also provide an empty program contour as initial time.
 \begin{lstlisting}
@@ -672,10 +714,11 @@ for a given program.
 Pushdown control-flow is a property in analysis that precisely models
 the runtime call-stack of the analyzed program. 
 A pushdown control-flow analysis provides as exact as runtime return-flow 
-when analyzing the program, but traditional control-flow analysis collapse 
-the state space using finite space abstraction thus cause imprecise stack modeling.
+when analyzing the program, but traditional control-flow analysis collapses 
+the state space into a finite space thus causes imprecise stack modeling.
 
-To see the problem of spurious return-flows, we can consider the following example:
+To see how traditional CFA suffers from spurious return-flows, 
+we can consider the following example:
 
 \begin{lstlisting}
 (let ([id (lambda (z) z)])
@@ -695,8 +738,9 @@ If we use the monovariant analysis (i.e. 0CFA), the analyzing result would be @x
 @z@ comes from different call-sites.
 Under $1$-CFA, the algorithm is able to distinguish that variable @z@ of function
 @id@ has two different values at two call-sites, so variable @y@ 
-would not be polluted by @1@, but two call-sites still share the same continuation and
-it is still helplessness for distinguish return-flows.
+would not be polluted by @1@. 
+But two call-sites still share the same continuation and
+it is still helplessness for separating the return-flows.
 TODO: do need more details to explain this example? (as in P4F paper)
 
 In this section, we firstly show a simple but uncomputable solution to the
@@ -707,31 +751,31 @@ transformation.
 
 \subsubsection{AAM with Unbound Stack}
 
-A naive solution to is to use precise call stack modeling as we did in concrete
+A naive solution to is to use precise call stack as we did in concrete
 CESK machine. Instead of allocating continuations on store and recording an 
-address of continuations, we leave the call stack unabstracted. 
+address of continuations in state, we leave the call stack unabstracted. 
 
-In the definition of state @State@, continuation store disappears, and
-@konts@ becomes a list of frames. Other components keep the same.
+In the definition of state @State@, the continuation store disappears, and
+component @konts@ becomes a list of frames. Other components keep the same.
 
 \begin{lstlisting}
 case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
 \end{lstlisting}
 
-The state transition function @step@ is still non-determinism, but
+The state transition function @step@ is still non-deterministic, but
 the only non-determinism happens when dereferencing the callee @f@ 
 from the store at call-site @App(f, ae)@. 
 For each closure of @f@ in the set, we do exactly
 the same as what we did in concrete CESK machines: a new frame is constructed
 and pushed onto the stack.
 In the second case, since the continuation @konts@ is a list of 
-frames, we can simply decompose it to differentiate an empty stack
+frames, we can simply decompose it to differentiate an empty stack case
 or a frame exists on the top of stack. 
-If the stack is empty, then empty successors is returned, because the computation
-is finished.
-Otherwise, we matched a frame @Frame(x, e, env_f)@. 
-This transition is deterministic, because we only have one frame, this frame
-is then popped and the new state uses the rest of stack.
+If the stack is empty, then empty list of successors is returned, 
+because the computation is finished.
+Otherwise, we matched a frame @Frame(x, e, env_f)@ on the top of stack.
+The frame is then poped, and the new state uses the rest of stack.
+Since we can only access one frame at a time, this transition is deterministic.
 
 \begin{lstlisting}
 def step(s: State): List[State] = {
@@ -779,7 +823,7 @@ two stack components are identical in the state space.
 
 \subsubsection{Computable Solutions}
 
-In recent years, there are great efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
+In recent years, there are significant efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
 gilray2016pushdown, johnson2015abstracting} to achieve precise call/return 
 match based on small-step AAM which is what we described in section \ref{aam}.
 
@@ -795,11 +839,11 @@ approach to pushdown control flow analysis.
 
 \textbf{Pushdown for Free.}
 \citeauthor{gilray2016pushdown} proposed a continuation address allocator for 
-small-step abstracting abstract machine that is both easy to implement and
+small-step abstracting abstract machines that is both simple to implement and
 computational inexpensive.
 The only change in code is when allocating a continuation address, not only
 keep track of the entry-point expression of callee, but also hold the target environment.
-The target environment is the environment extended from closure's environment
+The target environment is the binding environment extended from closure's environment
 (namely @val new_env = env_c + (v -> baddr)@). All the rest things remain the same.
 
 \begin{lstlisting}
@@ -809,7 +853,9 @@ def allocKont(tgtExpr: Expr, tgtEnv: Env, time: Time): KAddr =
 \end{lstlisting}
 
 TODO: explain the reason why it works.
-Notably, this change only causes constant-factor increase in time complexity of analysis.
+
+Notably, this change only causes constant-factor increase in time complexity of analysis
+if the store is widened.
 
 \textbf{Abstracting Definitional Interpreters.}
 
@@ -817,7 +863,7 @@ On the other side, with the insight from Reynold's seminal paper
 \emph{Definitional interpreters for higher-order programming languages} \cite{reynolds1972definitional}
 that the defined language will inherit properties
 from the defining language, \citeauthor{darais2017abstracting} construct abstracting 
-definitional interpreters (ADI) that automatically inherit the pushdown control-flow 
+definitional interpreters that automatically inherit the pushdown control-flow 
 property from its defining language.
 
 TODO: connection to this paper.
