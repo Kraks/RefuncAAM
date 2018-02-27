@@ -420,7 +420,7 @@ that resumes to, and its environment. (TODO: mention that frame list vs KArg/KFu
 \subsubsection{Single-step Transition}
 Before go into describing how the machine evaluates expressions, we firstly define several helper functions.
 As we mentioned in section \ref{anfsyntax}, the atomic expressions are either a variable, or
-a literal @lambda@ term. So the helper function @atomicEval@ handles these two
+a literal @lambda@ term. So the atomic expression evaluator @atomicEval@ handles these two
 cases and evaluates atomic expressions to closures in a straightforward way.
 The @alloc@ function generates a fresh address, and always allocates an unique integer under the domain
 of store.
@@ -458,7 +458,7 @@ def step(s: State): State = s match {
 
 The first case is that the control of current state is a @Let@ expression,
 and its right-hand side is an function application.
-By calling function @atomicEval@, we obtain the closure that callee @f@ stands for.
+By calling evaluator @atomicEval@, we obtain the closure that callee @f@ stands for.
 The successor state's control then transfers to the @body@ expression of closure,
 with an updated environment and an update store. The new environment is extended
 from closure's environment and mapped @v@ to a fresh address @addr@.
@@ -875,8 +875,7 @@ The target environment is the binding environment extended from closure's enviro
 
 \begin{lstlisting}
 case class P4FContAddr(tgt: Expr, tgtEnv: Env) extends KAddr
-def allocKont(tgtExpr: Expr, tgtEnv: Env): KAddr = 
-  P4FContAddr(tgtExpr, tgtEnv)
+def allocKont(tgtExpr: Expr, tgtEnv: Env): KAddr = P4FContAddr(tgtExpr, tgtEnv)
 \end{lstlisting}
 
 TODO: explain the reason why it works.
@@ -885,7 +884,6 @@ Notably, this change only causes constant-factor increase in time complexity of 
 if the store is widened.
 
 \textbf{Abstracting Definitional Interpreters.}
-
 On the other side, with the insight from Reynold's seminal paper 
 \emph{Definitional interpreters for higher-order programming languages} \cite{reynolds1972definitional}
 that the defined language will inherit properties
@@ -900,6 +898,8 @@ is there a correspondence between different methods?
 \section{From AAM to ADI}
 
 We start from the AAM with unbounded stack.
+In fact, since later we will eliminate the call stack and transform to
+higher-order continuations, it does not matter what kind of AAM we start from.
 
 \subsection{Fusing}
 
@@ -983,6 +983,11 @@ def analyze(e: Expr): Set[State] = aval(inject(e), List(), Set())
 
 allocating continuations of defined language on the heap of defining language.
 
+\subsubsection{First Try}
+
+simply trun evaluation contexts into higher-order continuations.
+We establish pushdown control-flow, but this is not computable.
+
 \begin{lstlisting}
 case class Config(e: Expr, env: Env, store: BStore, time: Time)
 case class ValStore(ds: Set[Storable], store: BStore, time: Time)
@@ -1036,11 +1041,8 @@ def analyze(e: Expr): ValStore = aval(e, Map(), Store[BAddr, Storable](Map()),
                                       List(), Map[Config, ValStore](), done)
 \end{lstlisting}
 
-\subsubsection{First Try}
 
-simply trun evaluation contexts into higher-order continuations
-
-\subsubsection{Computable Refunctionalization}
+\subsubsection{Caching Fixed-Points}
 
 fix point cache
 
