@@ -597,8 +597,9 @@ Binding addresses are parameterized by variable names and the time that creates 
 which are both finite.
 Continuation addresses @KAddr@ has two variants: 
 1) @Halt@ which corresponds to the empty stack, and
-2) @ContAddr@ consists of the entry expression of callee and the time that
-creates this address, and they are also finite. 
+2) @ContAddr@ consists of the entry expressions of callee, which are also also
+finite.
+One may ask, why not also keep track of the time in continuation addresses?
 (TODO: why target expression, allocation polyvariance)
 
 \begin{lstlisting}
@@ -606,7 +607,7 @@ case class BAddr(x: String, time: Time)
 
 abstract class KAddr
 case object Halt extends KAddr
-case class ContAddr(tgt: Expr, time: Time) extends KAddr
+case class ContAddr(tgt: Expr) extends KAddr
 \end{lstlisting}
 
 We use two helper functions @allocBind@ and @allocKont@ that will be used later
@@ -614,7 +615,7 @@ to allocate binding addresses and continuation addresses.
 
 \begin{lstlisting}
 def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
-def allocKont(tgtExpr: Expr, time: Time): KAddr = ContAddr(tgtExpr, time)
+def allocKont(tgtExpr: Expr): KAddr = ContAddr(tgtExpr)
 \end{lstlisting}
 
 \subsubsection{Single-step Transition}
@@ -668,7 +669,7 @@ def step(s: State): List[State] = {
         val baddr = allocBind(v, new_time)
         val new_env = env_c + (v -> baddr)
         val new_bstore = bstore.update(baddr, atomicEval(ae, env, bstore))
-        val new_kaddr = allocKont(body, new_time)
+        val new_kaddr = allocKont(body)
         val new_kstore = kstore.update(new_kaddr, Cont(Frame(x, e, env), kaddr))
         State(body, new_env, new_bstore, new_kstore, new_kaddr, new_time)
       }
@@ -873,9 +874,9 @@ The target environment is the binding environment extended from closure's enviro
 (namely @val new_env = env_c + (v -> baddr)@). All the rest things remain the same.
 
 \begin{lstlisting}
-case class P4FContAddr(tgt: Expr, tgtEnv: Env, time: Time) extends KAddr
-def allocKont(tgtExpr: Expr, tgtEnv: Env, time: Time): KAddr = 
-  P4FContAddr(tgtExpr, tgtEnv, time)
+case class P4FContAddr(tgt: Expr, tgtEnv: Env) extends KAddr
+def allocKont(tgtExpr: Expr, tgtEnv: Env): KAddr = 
+  P4FContAddr(tgtExpr, tgtEnv)
 \end{lstlisting}
 
 TODO: explain the reason why it works.
@@ -984,56 +985,55 @@ allocating continuations of defined language on the heap of defining language.
 
 \begin{lstlisting}
 case class Config(e: Expr, env: Env, store: BStore, time: Time)
-case class ValStore(vs: Set[Storable], store: BStore, time: Time)
+case class ValStore(ds: Set[Storable], store: BStore, time: Time)
 type Cache = Map[Config, ValStore]
 
-type Continue = Function4[Set[Storable], BStore, Time, Cache, ValStore]
+type Continue = Function2[ValStore, Cache, ValStore]
 
 def tick(s: Config): Time = (s.e::s.time).take(k)
 
-def aval(e: Expr, env: Env, bstore: BStore, time: Time, cache: Cache, continue: Continue): ValStore = {
+def aval(e: Expr, env: Env, bstore: BStore, time: Time, cache: Cache, continue: Continue): ValStore = { 
   val config = Config(e, env, bstore, time)
   if (cache.contains(config)) {
-    val ValStore(vs, bstore, time) = cache(config)
-    return continue(vs, bstore, time, cache)
-  }
+    return continue(cache(config), cache)
+  }   
   val newTime = tick(config)
   e match {
     case Let(x, App(f, ae), e) if isAtomic(ae) =>
       val closures = aeval(f, env, bstore).toList
 
-      def nd(closures: List[Storable], accds: Set[Storable], accbstore: BStore, acctime: Time, cache: Cache): ValStore  = {
+      def nd(closures: List[Storable], accds: Set[Storable],
+             accbstore: BStore, acctime: Time, cache: Cache): ValStore  = { 
         closures match {
           case Nil =>
             val baddr = allocBind(x, acctime)
             val newEnv = env + (x -> baddr)
             val newStore = accbstore.update(baddr, accds)
-            aval(e, newEnv, newStore, acctime, cache, (ds: Set[Storable], accbstore: BStore, acctime: Time, accCache: Cache) => {
-                val newCache = accCache + (Config(e, newEnv, newStore, acctime) -> ValStore(ds, accbstore, acctime))
-                continue(ds, accbstore, acctime, newCache)
-            })
+            aval(e, newEnv, newStore, acctime, cache, (vs: ValStore, accCache: Cache) => {
+              val newCache = accCache + (Config(e, newEnv, newStore, acctime) -> vs) 
+              continue(vs, newCache)
+            })  
           case Clos(Lam(v, body), env_c)::rest =>
             val baddr = allocBind(v, newTime)
             val newEnv = env_c + (v -> baddr)
             val newStore = accbstore.update(baddr, aeval(ae, env, bstore)) //TODO: which store?
-            aval(body, newEnv, newStore, newTime, cache, (ds: Set[Storable], accbstore: BStore, acctime: Time, accCache: Cache) => {
-                val newCache = accCache + (Config(body, newEnv, newStore, newTime) -> ValStore(ds, accbstore, acctime))
-                nd(rest, ds++accds, accbstore, acctime, newCache)
-            })
-        }
-      }
+            aval(body, newEnv, newStore, newTime, cache, (vs: ValStore, accCache: Cache) => {
+              val newCache = accCache + (Config(body, newEnv, newStore, newTime) -> vs) 
+              nd(rest, vs.ds++accds, accbstore, acctime, newCache)
+            })  
+        }   
+      }   
 
       nd(closures, Set(), bstore, newTime, cache)
     case ae if isAtomic(ae) =>
       val ds = aeval(ae, env, bstore)
-      continue(ds, bstore, newTime, cache)
-  }
+      continue(ValStore(ds, bstore, newTime), cache)
+  }   
 }
 
-def done: Continue = (ds: Set[Storable], bstore: BStore, time: Time, cache: Cache) => {
-  ValStore(ds, bstore, time)
-}
-def analyze(e: Expr): ValStore = aval(e, Map(), Store[BAddr, Storable](Map()), List(), Map[Config, ValStore](), done)
+def done: Continue = (vs: ValStore, cache: Cache) => { vs }                                                                                                                                                                                                 
+def analyze(e: Expr): ValStore = aval(e, Map(), Store[BAddr, Storable](Map()),
+                                      List(), Map[Config, ValStore](), done)
 \end{lstlisting}
 
 \subsubsection{First Try}
