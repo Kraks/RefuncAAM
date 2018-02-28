@@ -169,7 +169,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   on definitional interpreter and obtains a big-step 
   abstracting definitional interpreter (ADI) written in monadic style.
   Danvy shows the correspondence between concrete abstract machines and interpreters.
-  But the relations between small-step abstracting abstract machines and 
+  Yet, the relations between small-step abstracting abstract machines and 
   big-step abstracting definitional interpreters is not well studied.
 
   In this paper, we show their correspondence and how to syntactically transform small-step 
@@ -180,7 +180,8 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   collecting semantics and the non-determinism of abstract interpretation. 
   After each transformation, we also obtain an intermediary form of 
   abstract interpreter.
-  Remarkably, follow the idea that evaluation contexts are defunctionalized 
+  Remarkably, refunctionalization sequentializes the abstract evaluation.
+  And follow the idea that evaluation contexts are defunctionalized 
   continuations, we reveal how precise call/return match in control-flow 
   analysis can be obtained by refunctionalizing a small-step abstracting 
   abstract machine,
@@ -372,8 +373,6 @@ The abstract syntax can be straightforwardly described in Scala as follows:
 
 \begin{lstlisting}
 sealed trait Expr
-case class Binding(x: String, e: Expr)
-
 case class Var(x: String) extends Expr
 case class App(e1: Expr, e2: Expr) extends Expr
 case class Lam(x: String, body: Expr) extends Expr
@@ -1041,10 +1040,82 @@ def analyze(e: Expr): ValStore = aval(e, Map(), Store[BAddr, Storable](Map()),
                                       List(), Map[Config, ValStore](), done)
 \end{lstlisting}
 
-
 \subsubsection{Caching Fixed-Points}
 
 fix point cache
+
+\begin{lstlisting}
+case class Config(e: Expr, env: Env)
+case class ValStore(ds: Set[Storable], store: BStore, time: Time)
+type Cache = Store[Config, ValStore]
+type RetType = (Set[ValStore], Cache)
+type Continue = Function5[Set[ValStore], BStore, Time, Cache, Cache, RetType]
+
+def tick(e: Expr, oldtime: Time): Time = (e::oldtime).take(k)
+
+def aval(e: Expr, env: Env, bstore: BStore, time: Time,
+         inCache: Cache, _outCache: Cache, continue: Continue): RetType = {
+  val config = Config(e, env)
+  if (_outCache.contains(config)) {
+    return continue(_outCache(config), bstore, List(), inCache, _outCache)
+  }
+  val outCache = _outCache.update(config, inCache.getOrElse(config, Set()))
+  val newTime = tick(e, time)
+  e match {
+    case Let(x, App(f, ae), e) if isAtomic(ae) =>
+      val closures = aeval(f, env, bstore).toList
+      def nd(closures: List[Storable], accds: Set[Storable], accbstore: BStore, acctime: Time,
+              accInCache: Cache, accOutCache: Cache): RetType  = closures match {
+        case Nil =>
+          // TODO: If we use `newTime` instead of `acctime`, is it m-CFA?
+          val baddr = allocBind(x, acctime)
+          val newEnv = env + (x -> baddr)
+          val newStore = accbstore.update(baddr, accds)
+          aval(e, newEnv, newStore, acctime, accInCache, accOutCache,
+            (vs: Set[ValStore], accStore: BStore, acctime: Time, accInCache: Cache, accOutCache: Cache) => {
+              val newOutCache = accOutCache.update(Config(e, newEnv), vs)
+              continue(vs, accStore, acctime, accInCache, newOutCache)
+            })
+        case Clos(Lam(v, body), env_c)::rest =>
+          val baddr = allocBind(v, newTime)
+          val newEnv = env_c + (v -> baddr)
+          val newStore = accbstore.update(baddr, aeval(ae, env, bstore)) //TODO: which store?
+          aval(body, newEnv, newStore, newTime, accInCache, accOutCache,
+            (vs: Set[ValStore], accStore: BStore, acctime: Time, accInCache: Cache, accOutCache) => {
+              val newOutCache = accOutCache.update(Config(body, newEnv), vs)
+              val vsds = vs.map(_.ds).foldLeft(Set[Storable]())(_ ++ _)
+              nd(rest, vsds++accds, accStore, acctime, accInCache, newOutCache)
+            })
+      }
+      nd(closures, Set(), bstore, newTime, inCache, outCache)
+    case ae if isAtomic(ae) =>
+      val ds = aeval(ae, env, bstore)
+      continue(Set(ValStore(ds, bstore, newTime)), bstore, newTime, inCache, outCache)
+    }
+}
+
+def done: Function2[Expr, Env, Continue] = (e: Expr, env: Env) => {
+  (vs: Set[ValStore], store: BStore, time: Time, inCache: Cache, outCache: Cache) => {
+    val newOutCache = outCache.update(Config(e, env), vs)
+    (vs, outCache)
+  }
+}
+
+def analyze1(e: Expr, cache: Cache): RetType = {
+  aval(e, Map(), Store[BAddr, Storable](Map()), List(), cache, cache, done(e, Map()))
+}
+
+def analyze(e: Expr): Set[ValStore] = {
+  def iter(cache: Cache): RetType = {
+    val (vs, newCache) = analyze1(e, cache)
+    if (cache == newCache) (vs, newCache)
+    else iter(newCache)
+  }
+  val (vs, cache) = iter(Store[Config, ValStore](Map()))
+  val summarized = cache.map.values.map(_.map(_.store).foldLeft(Store[BAddr, Storable](Map()))(_.join(_))).foldLeft(Store[BAddr, Storable](Map()))(_.join(_))
+  vs
+}
+\end{lstlisting}
 
 %probably Store Widening \& Abstract Garbage Collection
 %monadic
@@ -1072,6 +1143,10 @@ TODO: analyze programs with call/cc, shift, reset.
 \subsection{Precise Call/Return Match}
 
 show the precision of stack
+
+On equivalence: since refunc interp does not have an explicit concept of $state$,
+so 1) we can compare the final states of P4F against with refunc interp,
+or 2) we can compare the summarized store of P4F against with summarized store of refunc interp.
 
 \subsection{Termination}
 
