@@ -261,7 +261,11 @@ the essence of abstracting definitional interpreter.
 \subsection{Outline}
 
 The paper is organized as follows. 
-Section \ref{background} reviews the background. 
+
+In section \ref{background}, we first describe the target language we will
+analyze and a concrete CESK machine as operational semantics for it.
+Then we review abstracting abstract machines (AAM) as an abstract interpretation
+counterpart of CESK machines.
 
 \begin{tikzpicture}
   \matrix (m) [matrix of math nodes, row sep=3em, column sep=3.7em]
@@ -327,15 +331,7 @@ interpreters.
 
 \section{Background} \label{background}
 
-In this section, we first describe the target language we will
-analyze and a concrete CESK machine as operational semantics for it.
-Then we review some recent works in control-flow analysis for
-higher-order languages:
-1) abstracting abstract machines (AAM) as an abstract interpretation
-counterpart of CESK machines, and
 2) the precise call/return match problem in control-flow analysis and its existing solutions.
-We will show in section 3 that the abstracting abstract machines form the basis of our transformations,
-and call/return match is obtained during transformation.
 
 \subsection{A-Normal Form $\lambda$-Calculus} \label{anfsyntax}
 
@@ -345,7 +341,9 @@ and simplifies the analysis \cite{Shivers:1991:SSC:115865.115884, Shivers:1988:C
 Here, we choose to use administrative normal form (ANF) which is a direct-style intermediate representation 
 as target for clarity but without losing simplicity and generality.
 Although we just show the core calculus language, but it can be easily extended
-to support recursive bindings, conditionals, primitive types and operations on primitive types.
+to support recursive bindings (such as $letrec$), conditionals, primitive types and 
+operations on primitive types. These cases would be trival or simple, so we omit them
+in the paper.
 The transformations we will show in the rest of this paper
 also work on abstract machines for plain, direct-style $\lambda$-calculus languages.
 TODO: add letrec?
