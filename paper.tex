@@ -176,7 +176,8 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   abstracting abstract machines into big-step abstracting definitional 
   interpreters.
   The transformations include fusing, disentangling, refunctionalizing 
-  and monadification (or un-CPS to direct-style). All of them properly handle the 
+  and monadification (or un-CPS to direct-style with delimited continuation). 
+  All of them properly handle the 
   collecting semantics and the non-determinism of abstract interpretation. 
   After each transformation, we also obtain an intermediary form of 
   abstract interpreter.
@@ -236,18 +237,20 @@ the essence of abstracting definitional interpreter.
 \begin{itemize}
 \item The main contribution of this paper is we fill the gap
   between small-step AAM and big-step ADI by developing a series of
-  systematic transformations. The correspondence between abstract
+  systematic transformations. 
+  The correspondence between abstract
   machines and interpreters exists not only in concrete semantics artifact,
   but also in abstract semantics artifact.
   Galois connection?
 
-\item We present an abstract interpreter obtained from refunctionalizing
+\item A new understanding of pushdown control-flow analysis by 
+  refunctionalization.
+  We present an abstract interpreter obtained from refunctionalizing
   an small-step abstracting abstract machine. 
   This abstract interpreter naturally has pushdown control-flow property
-  since we represent the evaluation contexts of analyzed language using
-  continuations of the meta-language, and therefore sequentialize the
-  analyzing.
-  We also analyze its termination, soundness and complexity.
+  because the refunctionalization forces us to sequentialize the 
+  abstract exectuion.
+  We also analyze its termination and soundness.
 
 \item Further, we show that defunctionalization and refunctionalization
   of abstract interpreters play important roles for call stack of analyzed language.
@@ -268,13 +271,15 @@ Then we review abstracting abstract machines (AAM) as an abstract interpretation
 counterpart of CESK machines.
 
 \begin{tikzpicture}
-  \matrix (m) [matrix of math nodes, row sep=3em, column sep=3.7em]
+  \matrix (m) [matrix of math nodes, row sep=2.5em, column sep=3.7em]
     { 
+        &  &  &  & 
+      \begin{smallmatrix} \text{abstracting} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\
       \begin{smallmatrix} \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
       \begin{smallmatrix} \text{big-step} \\ \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  & 
       \begin{smallmatrix} \text{disentangled}  \\ \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
       \begin{smallmatrix} \text{refunctionalized}  \\ \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
-      \begin{smallmatrix} \text{abstracting} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix}  \\
+      \begin{smallmatrix} \text{monadic} \\ \text{abstracting} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix}  \\
       \begin{smallmatrix} \text{abstract} \\ \text{machines} \end{smallmatrix} & 
         &
       %\begin{smallmatrix} \text{big-step} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  & 
@@ -284,21 +289,23 @@ counterpart of CESK machines.
       %\begin{smallmatrix} \text{refunctionalized} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
       \begin{smallmatrix} \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\ 
     };
-
+  {
+    [start chain] \chainin (m-2-4);
+    \chainin (m-1-5) [join={node[sloped,anchor=center,above,labeled] {\text{un-CPS}}}];
+    \chainin (m-2-5) [join={node[above,labeled] {\text{}}}];
+    \chainin (m-1-5) [join={node[above,labeled] {\text{}}}];
+  }
   { 
-    [start chain] \chainin (m-1-1);
-    \chainin (m-1-2) [join={node[above,labeled] {\text{fusion}}}];
-
-    \chainin (m-1-3) [join={node[above,labeled] {\text{disentangling}}}];
-
-    \chainin (m-1-4) [join={node[above,labeled] {\text{refunc.}}}];
-
-    \chainin (m-1-5) [join={node[above,labeled] {\text{monadify}}}];
+    [start chain] \chainin (m-2-1);
+    \chainin (m-2-2) [join={node[above,labeled] {\text{fusion}}}];
+    \chainin (m-2-3) [join={node[above,labeled] {\text{disentangling}}}];
+    \chainin (m-2-4) [join={node[above,labeled] {\text{refunc.}}}];
+    \chainin (m-2-5) [join={node[above,labeled] {\text{monadify}}}];
   }
   { 
     [start chain] 
-    \chainin (m-2-1);
-    { [start branch=A] \chainin (m-1-1)
+    \chainin (m-3-1);
+    { [start branch=A] \chainin (m-2-1)
       [join={node[left, labeled] {\alpha}}];
     }
   }
@@ -307,9 +314,9 @@ counterpart of CESK machines.
     %\chainin (m-2-4);
   {
     [start chain] 
-    \chainin (m-2-5); 
-    { [start branch=B] \chainin (m-1-5)
-      [join={node[left, labeled] {\alpha}}];
+    \chainin (m-3-5); 
+    { [start branch=B] \chainin (m-2-5)
+      [join={node[right, labeled] {\alpha}}];
     }
   }
 \end{tikzpicture}
@@ -330,8 +337,6 @@ which make it particularly fit for presenting syntactical transformations on abs
 interpreters.
 
 \section{Background} \label{background}
-
-2) the precise call/return match problem in control-flow analysis and its existing solutions.
 
 \subsection{A-Normal Form $\lambda$-Calculus} \label{anfsyntax}
 
@@ -733,172 +738,11 @@ for a given program.
 %\subsection{Monadic Abstract Interpreter}
 %Maybe not here?
 
-\subsection{Pushdown Control-Flow Analysis}
-
-Pushdown control-flow is a property in analysis that precisely models
-the runtime call-stack of the analyzed program. 
-A pushdown control-flow analysis provides as exact as runtime return-flow 
-when analyzing the program, but traditional control-flow analysis collapses 
-the state space into a finite space thus causes imprecise stack modeling.
-
-To see how traditional CFA suffers from spurious return-flows, 
-we can consider the following example:
-
-\begin{lstlisting}
-(let ([id (lambda (z) z)])
-  (let ([x (id 1)])
-    (let ([y (id 2)])
-      x)))
-\end{lstlisting}
-
-In traditional $k$-CFA algorithm and the AAM we showed in section \ref{aam}, 
-the return-flow of invocation @(id 2)@
-is going to both call-sites @(id 1)@ and @(id 2)@. Therefore, the
-returned value @2@ for variable @y@ is also propagated to 
-variable @x@ and then imprecise analysis result is arose.
-This return-flow merging is inevitable even we increase the context-sensitivity.
-If we use the monovariant analysis (i.e. 0CFA), the analyzing result would be @x@ and 
-@y@ point to set @{1, 2}@, because the algorithm not distinguishes
-@z@ comes from different call-sites.
-Under $1$-CFA, the algorithm is able to distinguish that variable @z@ of function
-@id@ has two different values at two call-sites, so variable @y@ 
-would not be polluted by @1@. 
-But two call-sites still share the same continuation and
-it is still helplessness for separating the return-flows.
-TODO: do need more details to explain this example? (as in P4F paper)
-
-In this section, we firstly show a simple but uncomputable solution to the
-problem; then briefly review several recent research works that enable
-computable and precise call/return match. Even though the first solution is
-uncomputable, but as we will see in section 3, it is the starting point of our
-transformation. 
-
-\subsubsection{AAM with Unbound Stack}
-
-A naive solution to is to use precise call stack as we did in concrete
-CESK machine. Instead of allocating continuations on store and recording an 
-address of continuations in state, we leave the call stack unabstracted. 
-
-In the definition of state @State@, the continuation store disappears, and
-component @konts@ becomes a list of frames. Other components keep the same.
-
-\begin{lstlisting}
-case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
-\end{lstlisting}
-
-The state transition function @step@ is still non-deterministic, but
-the only non-determinism happens when dereferencing the callee @f@ 
-from the store at call-site @App(f, ae)@. 
-For each closure of @f@ in the set, we do exactly
-the same as what we did in concrete CESK machines: a new frame is constructed
-and pushed onto the stack.
-In the second case, since the continuation @konts@ is a list of 
-frames, we can simply decompose it to differentiate an empty stack case
-or a frame exists on the top of stack. 
-If the stack is empty, then empty list of successors is returned, 
-because the computation is finished.
-Otherwise, we matched a frame @Frame(x, e, env_f)@ on the top of stack.
-The frame is then poped, and the new state uses the rest of stack.
-Since we can only access one frame at a time, this transition is deterministic.
-
-\begin{lstlisting}
-def step(s: State): List[State] = {
-  val new_time = tick(s)
-  s match {
-    case State(Let(x, App(f, ae), e), env, bstore, konts, time) if isAtomic(ae) =>
-      for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
-        val frame = Frame(x, e, env)
-        val baddr = allocBind(v, new_time)
-        val new_env = env_c + (v -> baddr)
-        val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-        State(body, new_env, new_store, frame::konts, new_time)
-      }
-    case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
-      konts match {
-        case Nil => List()
-        case Frame(x, e, env_f)::konts =>
-          val baddr = allocBind(x, new_time)
-          val new_env = env_f + (x -> baddr)
-          val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-          List(State(e, new_env, new_store, konts, new_time))
-      }
-  }
-}
-\end{lstlisting}
-
-Unfortunately, even though other components is finite, this AAM with unbounded stack is uncomputable. 
-Because the unbounded stack can grow to arbitrary deep and this implies that the state space is possibly 
-infinite, therefore the analysis may not terminate for all programs if we simply enumerating 
-reachable states.
-To see this, consider a program that has two mutually recursived functions:
-
-\begin{lstlisting}
-(letrec ([f1 (lambda (x) 
-               (let ([x1 (f2 x)]) x1))]
-         [f2 (lambda (y)
-               (let ([y1 (f1 y)]) y1))])
-  (let ([z (f1 1)])
-    z))
-\end{lstlisting}
-
-@f1@ and @f2@ mutually call each others, and the stack will be alternatively
-pushing @f1@ and @f2@ onto the top of current stack, but not existing 
-two stack components are identical in the state space.
-
-\subsubsection{Computable Solutions}
-
-In recent years, there are significant efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
-gilray2016pushdown, johnson2015abstracting} to achieve precise call/return 
-match based on small-step AAM which is what we described in section \ref{aam}.
-
-CFA2 is the first solution that solves the return-flows problem\cite{vardoulakis2010cfa2}.
-But CFA2 has several drawbacks: it works only on continuation-passing style programs, 
-and only allows monovariant analysis, in addition with an exponential time complexity.
-TODO: summarize PDCFA, AAC, P4F
-
-In the rest of this section, we take a closer look at the P4F which is the
-state-of-art techniques to accomplish perfect call-stack precision on small-step
-AAMs, and Abstracting Defnitional Interpreters (ADI) that adpots another 
-approach to pushdown control flow analysis.
-
-\textbf{Pushdown for Free.}
-\citeauthor{gilray2016pushdown} proposed a continuation address allocator for 
-small-step abstracting abstract machines that is both simple to implement and
-computational inexpensive.
-The only change in code is when allocating a continuation address, not only
-keep track of the entry-point expression of callee, but also hold the target environment.
-The target environment is the binding environment extended from closure's environment
-(namely @val new_env = env_c + (v -> baddr)@). All the rest things remain the same.
-
-\begin{lstlisting}
-case class P4FContAddr(tgt: Expr, tgtEnv: Env) extends KAddr
-def allocKont(tgtExpr: Expr, tgtEnv: Env): KAddr = P4FContAddr(tgtExpr, tgtEnv)
-\end{lstlisting}
-
-TODO: explain the reason why it works.
-
-Notably, this change only causes constant-factor increase in time complexity of analysis
-if the store is widened.
-
-\textbf{Abstracting Definitional Interpreters.}
-On the other side, with the insight from Reynold's seminal paper 
-\emph{Definitional interpreters for higher-order programming languages} \cite{reynolds1972definitional}
-that the defined language will inherit properties
-from the defining language, \citeauthor{darais2017abstracting} construct abstracting 
-definitional interpreters that automatically inherit the pushdown control-flow 
-property from its defining language.
-
-TODO: connection to this paper.
-TODO: although they establish pushdown control-flow analysis in different ways, 
-is there a correspondence between different methods?
-
-\section{From AAM to ADI}
+\section{Fusing}
 
 We start from the AAM with unbounded stack.
 In fact, since later we will eliminate the call stack and transform to
 higher-order continuations, it does not matter what kind of AAM we start from.
-
-\subsection{Fusing}
 
 \begin{lstlisting}
 def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
@@ -932,7 +776,7 @@ def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
 def analyze(e: Expr): Set[State] = drive_step(List(inject(e)), Set())
 \end{lstlisting}
 
-\subsection{Disentangling}
+\section{Disentangling}
 
 for plain direct-style, the continue function handles more cases.
 
@@ -976,7 +820,7 @@ def continue(konts: List[Frame], ds: Set[Storable], bstore: BStore, time: Time,
 def analyze(e: Expr): Set[State] = aval(inject(e), List(), Set()) 
 \end{lstlisting}
 
-\subsection{Refunctionalization}
+\section{Refunctionalization}
 
 allocating continuations of defined language on the heap of defining language.
 
@@ -1115,14 +959,142 @@ def analyze(e: Expr): Set[ValStore] = {
 }
 \end{lstlisting}
 
+\subsection{Pushdown Control-Flow Analysis}
+
+Pushdown control-flow is a property in analysis that precisely models
+the runtime call-stack of the analyzed program. 
+A pushdown control-flow analysis provides as exact as runtime return-flow 
+when analyzing the program, but traditional control-flow analysis collapses 
+the state space into a finite space thus causes imprecise stack modeling.
+
+To see how traditional CFA suffers from spurious return-flows, 
+we can consider the following example:
+
+\begin{lstlisting}
+(let ([id (lambda (z) z)])
+  (let ([x (id 1)])
+    (let ([y (id 2)])
+      x)))
+\end{lstlisting}
+
+In traditional $k$-CFA algorithm and the AAM we showed in section \ref{aam}, 
+the return-flow of invocation @(id 2)@
+is going to both call-sites @(id 1)@ and @(id 2)@. Therefore, the
+returned value @2@ for variable @y@ is also propagated to 
+variable @x@ and then imprecise analysis result is arose.
+This return-flow merging is inevitable even we increase the context-sensitivity.
+If we use the monovariant analysis (i.e. 0CFA), the analyzing result would be @x@ and 
+@y@ point to set @{1, 2}@, because the algorithm not distinguishes
+@z@ comes from different call-sites.
+Under $1$-CFA, the algorithm is able to distinguish that variable @z@ of function
+@id@ has two different values at two call-sites, so variable @y@ 
+would not be polluted by @1@. 
+But two call-sites still share the same continuation and
+it is still helplessness for separating the return-flows.
+TODO: do need more details to explain this example? (as in P4F paper)
+
+In this section, we firstly show a simple but uncomputable solution to the
+problem; then briefly review several recent research works that enable
+computable and precise call/return match. Even though the first solution is
+uncomputable, but as we will see in section 3, it is the starting point of our
+transformation. 
+
+\subsubsection{AAM with Unbound Stack}
+
+A naive solution to is to use precise call stack as we did in concrete
+CESK machine. Instead of allocating continuations on store and recording an 
+address of continuations in state, we leave the call stack unabstracted. 
+
+In the definition of state @State@, the continuation store disappears, and
+component @konts@ becomes a list of frames. Other components keep the same.
+
+\begin{lstlisting}
+case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
+\end{lstlisting}
+
+The state transition function @step@ is still non-deterministic, but
+the only non-determinism happens when dereferencing the callee @f@ 
+from the store at call-site @App(f, ae)@. 
+For each closure of @f@ in the set, we do exactly
+the same as what we did in concrete CESK machines: a new frame is constructed
+and pushed onto the stack.
+In the second case, since the continuation @konts@ is a list of 
+frames, we can simply decompose it to differentiate an empty stack case
+or a frame exists on the top of stack. 
+If the stack is empty, then empty list of successors is returned, 
+because the computation is finished.
+Otherwise, we matched a frame @Frame(x, e, env_f)@ on the top of stack.
+The frame is then poped, and the new state uses the rest of stack.
+Since we can only access one frame at a time, this transition is deterministic.
+
+\begin{lstlisting}
+def step(s: State): List[State] = {
+  val new_time = tick(s)
+  s match {
+    case State(Let(x, App(f, ae), e), env, bstore, konts, time) if isAtomic(ae) =>
+      for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
+        val frame = Frame(x, e, env)
+        val baddr = allocBind(v, new_time)
+        val new_env = env_c + (v -> baddr)
+        val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+        State(body, new_env, new_store, frame::konts, new_time)
+      }
+    case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
+      konts match {
+        case Nil => List()
+        case Frame(x, e, env_f)::konts =>
+          val baddr = allocBind(x, new_time)
+          val new_env = env_f + (x -> baddr)
+          val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+          List(State(e, new_env, new_store, konts, new_time))
+      }
+  }
+}
+\end{lstlisting}
+
+Unfortunately, even though other components is finite, this AAM with unbounded stack is uncomputable. 
+Because the unbounded stack can grow to arbitrary deep and this implies that the state space is possibly 
+infinite, therefore the analysis may not terminate for all programs if we simply enumerating 
+reachable states.
+To see this, consider a program that has two mutually recursived functions:
+
+\begin{lstlisting}
+(letrec ([f1 (lambda (x) 
+               (let ([x1 (f2 x)]) x1))]
+         [f2 (lambda (y)
+               (let ([y1 (f1 y)]) y1))])
+  (let ([z (f1 1)])
+    z))
+\end{lstlisting}
+
+@f1@ and @f2@ mutually call each others, and the stack will be alternatively
+pushing @f1@ and @f2@ onto the top of current stack, but not existing 
+two stack components are identical in the state space.
+
+\subsubsection{Computable Solutions}
+
+In recent years, there are significant efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
+gilray2016pushdown, johnson2015abstracting} to achieve precise call/return 
+match based on small-step AAM which is what we described in section \ref{aam}.
+
+CFA2 is the first solution that solves the return-flows problem\cite{vardoulakis2010cfa2}.
+But CFA2 has several drawbacks: it works only on continuation-passing style programs, 
+and only allows monovariant analysis, in addition with an exponential time complexity.
+TODO: summarize PDCFA, AAC, P4F
+
+In the rest of this section, we take a closer look at the P4F which is the
+state-of-art techniques to accomplish perfect call-stack precision on small-step
+AAMs, and Abstracting Defnitional Interpreters (ADI) that adpots another 
+approach to pushdown control flow analysis.
+
 %probably Store Widening \& Abstract Garbage Collection
 %monadic
-\subsection{Monadification: to Abstracting Definitional Interpreter}
+\section{Monadification: to Abstracting Definitional Interpreter}
 
 For one direction, we can transform the refunctionalized AAM to abstracting definitional interpreter
 by adding monads.
 
-\subsection{Un-CPS: to Yet Another Abstracting Definitional Interpreter}
+\section{Un-CPS: to Yet Another Abstracting Definitional Interpreter}
 
 We can transform the refunctionalized AAM to direct style, but explicitly use 
 side effects such as assignment and mutation to handle collecting semantics and non-determinism.
@@ -1131,6 +1103,8 @@ TODO: use delimited continuation?
 Another form of abstracting definitional interpreter.
 
 \section{Refunctionalized AAM}
+
+May be insert to section refunc.
 
 \subsection{Store Widening}
 
@@ -1162,9 +1136,40 @@ specify higher-order definitional interpreters using first-order means (cite)
 
 \subsection{Refunctionalization}
 
-\section{Detour: Shiver's \textit{k}-CFA?}
+%\section{Detour: Shiver's \textit{k}-CFA?}
 
 \section{Related Work}
+
+\textbf{Pushdown for Free.}
+\citeauthor{gilray2016pushdown} proposed a continuation address allocator for 
+small-step abstracting abstract machines that is both simple to implement and
+computational inexpensive.
+The only change in code is when allocating a continuation address, not only
+keep track of the entry-point expression of callee, but also hold the target environment.
+The target environment is the binding environment extended from closure's environment
+(namely @val new_env = env_c + (v -> baddr)@). All the rest things remain the same.
+
+\begin{lstlisting}
+case class P4FContAddr(tgt: Expr, tgtEnv: Env) extends KAddr
+def allocKont(tgtExpr: Expr, tgtEnv: Env): KAddr = P4FContAddr(tgtExpr, tgtEnv)
+\end{lstlisting}
+
+TODO: explain the reason why it works.
+
+Notably, this change only causes constant-factor increase in time complexity of analysis
+if the store is widened.
+
+\textbf{Abstracting Definitional Interpreters.}
+On the other side, with the insight from Reynold's seminal paper 
+\emph{Definitional interpreters for higher-order programming languages} \cite{reynolds1972definitional}
+that the defined language will inherit properties
+from the defining language, \citeauthor{darais2017abstracting} construct abstracting 
+definitional interpreters that automatically inherit the pushdown control-flow 
+property from its defining language.
+
+TODO: connection to this paper.
+TODO: although they establish pushdown control-flow analysis in different ways, 
+is there a correspondence between different methods?
 
 \section{Conclusion}
 
