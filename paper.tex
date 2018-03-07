@@ -97,7 +97,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 \titlenote{with title note}             %% \titlenote is optional;
                                         %% can be repeated if necessary;
                                         %% contents suppressed with 'anonymous'
-\subtitle{Filling the Gap between Abstracting Abstract Machines and Abstracting Definitional Interpreters}        %% \subtitle is optional
+\subtitle{Or Filling the Gap of Abstracting Abstract Machines to Abstracting Definitional Interpreters}        %% \subtitle is optional
 \subtitlenote{with subtitle note}       %% \subtitlenote is optional;
                                         %% can be repeated if necessary;
                                         %% contents suppressed with 'anonymous'
@@ -184,8 +184,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   Remarkably, refunctionalization sequentializes the abstract evaluation.
   And follow the idea that evaluation contexts are defunctionalized 
   continuations, we reveal how precise call/return match in control-flow 
-  analysis can be obtained by refunctionalizing a small-step abstracting 
-  abstract machine,
+  analysis can be obtained by refunctionalizing a small-step abstract interpreter.
   as well as explain how it been lost by defunctionalizing the higher-order
   continuations into an firts-order data type. 
   
@@ -247,10 +246,10 @@ the essence of abstracting definitional interpreter.
   refunctionalization.
   We present an abstract interpreter obtained from refunctionalizing
   an small-step abstracting abstract machine. 
-  This abstract interpreter naturally has pushdown control-flow property
+  This abstract interpreter naturally enjoys pushdown control-flow property
   because the refunctionalization forces us to sequentialize the 
   abstract exectuion.
-  We also analyze its termination and soundness.
+  We also analyze its correctness, soundness and termination.
 
 \item Further, we show that defunctionalization and refunctionalization
   of abstract interpreters play important roles for call stack of analyzed language.
