@@ -176,7 +176,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   abstracting abstract machines into big-step abstracting definitional 
   interpreters.
   The transformations include fusing, disentangling, refunctionalizing 
-  and monadification (or un-CPS to direct-style with delimited continuation). 
+  and monadification (or un-CPS to direct-style with delimited continuations). 
   All of them properly handle the 
   collecting semantics and the non-determinism of abstract interpretation. 
   After each transformation, we also obtain an intermediary form of 
@@ -254,7 +254,7 @@ the essence of abstracting definitional interpreter.
 \item Further, we show that defunctionalization and refunctionalization
   of abstract interpreters play important roles for call stack of analyzed language.
   Given this insight, we reveal that why small-step AAM has no pushdown
-  control-flow property (if without extra effort), as well as explain
+  control-flow property (if without extra efforts), as well as explain
   that why ADI naturally extends pushdown control-flow property from its
   defining language.
 
@@ -345,33 +345,33 @@ and simplifies the analysis \cite{Shivers:1991:SSC:115865.115884, Shivers:1988:C
 Here, we choose to use administrative normal form (ANF) which is a direct-style intermediate representation 
 as target for clarity but without losing simplicity and generality.
 Although we just show the core calculus language, but it can be easily extended
-to support recursive bindings (such as $letrec$), conditionals, primitive types and 
-operations on primitive types. These cases would be trival or simple, so we omit them
-in the paper.
+to support recursive bindings (such as @letrec@), conditionals, primitive types and 
+operations on primitive types. These cases would be trival or simple to implement, 
+so we omit them in the paper.
 The transformations we will show in the rest of this paper
-also work on abstract machines for plain, direct-style $\lambda$-calculus languages.
-TODO: add letrec?
+also work on abstract machines for plain direct-style $\lambda$-calculus languages.
 
 To begin, we now present the concrete syntax of a call-by-value $\lambda$-calculus language 
 in ANF \cite{flanagan1993essence}.
 
 \begin{lstlisting}
 e $\in$ Exp ::= ae
-          | (let ([x (f ae)]) e)
+          | (let ([x (ae ae)]) e)
 ae $\in$ AExp ::= x            
             | lam
 lam $\in$ Lam ::= (lambda (x) e)
 x ... are variable names
 \end{lstlisting}
 
-In ANF, all the function applications must be administrated in a @let@ expression,
-and then bounded to a variable name under current environment.
-We can use @letrec@ to create mutually recursive function bindings. But @letrec@
-only accepts atomic expressions that appear at the right-hand side of a binding.
+In ANF, an expression is an atomic expression or a @let@ expression.
+The restriction is all the function applications must be administrated in a @let@ expression,
+and then bounded to a variable name under the current environment.
+Both the operator and operand of function applications should be an atomic expression.
 The atomic expressions $ae$ are either a variable, or a literal @lambda@ term, which
 both can be evaluated in a single step.
 
 The abstract syntax can be straightforwardly described in Scala as follows:
+TODO: update the abstract syntax.
 
 \begin{lstlisting}
 sealed trait Expr
@@ -430,7 +430,7 @@ The @isAtomic@ function is used as a predicate of whether the expression is atom
 \begin{lstlisting}
 def atomicEval(e: Expr, env: Env, store: Store): Storable = e match {
   case Var(x) => store(env(x))
-  case lam@Lam(x, body) => Clos(lam, env)
+  case lam @ Lam(x, body) => Clos(lam, env)
 }
 def alloc(store: Store): Addr = store.keys.size + 1
 def isAtomic(e: Expr): Boolean = e.isInstanceOf[Var] || e.isInstanceOf[Lam]
@@ -698,8 +698,8 @@ def tick(s: State): Time = (s.e :: s.time).take(k)
 
 \subsubsection{Collecting Semantics}
 
-To run (analyze) a program, as CESK machine, we use function @inject@ to construct
-the initial state given a program. 
+To run (analyze) a program, as CESK machines, we first use function @inject@ to construct
+the initial state given the program. 
 Note that the initial continuation store has a built-in mapping that maps continuation address
 @Halt@ to empty set of continuations.
 We also provide an empty program contour as initial time.
@@ -715,11 +715,13 @@ However, comparing with concrete CESK machine, the
 @drive@ function performs collecting semantics instead of valuation
 semantics. That is, for the purpose of analyzing programs, the function @drive@
 collects all the intermediate machine states as the program is abstractly executing.
-The following code shows a variant of work list algorithm that always applies @step@
-function to the first element @hd@ of the work list @todo@ if @hd@
-is unseen, then adds the result of @step@ to the rest of work list and in 
-the meanwhile adds @hd@ to the explored states set.
-If the work list is empty, the function just returns the set of reachable states up to now.
+The following code shows a variant of work list algorithm to find the fixed-point 
+of set of states.
+Function @drive@ always applies function @step@ to the head element @hd@ of 
+the work list @todo@ if @hd@ is unseen, then inserts the result of @step@ to 
+the rest of work list; and in the meanwhile adds @hd@ to the explored states set.
+If the work list is empty, the @drive@ just returns the set of reachable states 
+up to now.
 
 \begin{lstlisting}
 def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
@@ -732,16 +734,26 @@ def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
 \end{lstlisting}
 
 Finally, a user could use function @analyze@ to obtain all reachable states 
-for a given program.
+as a finite set for a given program.
 
 %\subsection{Monadic Abstract Interpreter}
 %Maybe not here?
 
+\subsection{Pushdown Machine}
+
+AAM with unbounded stack
+
 \section{Fusing}
 
-We start from the AAM with unbounded stack.
-In fact, since later we will eliminate the call stack and transform to
-higher-order continuations, it does not matter what kind of AAM we start from.
+In last section, we showed that by keeping an unabstracted stack in the state 
+space we can recover the precise call/return match. In this section, we start
+our first transformation: \textit{fusing} an AAM with unbounded stack.
+
+In fact, later we will eliminate the stack and transform it to continuations
+represented by higher-order functions.
+Because of transforming to higher-order functions forces us to sequentialize the execution order,
+it does not matter what kind of AAM we start from. 
+We choose to start from AAM with unbounded stack just because TODO.
 
 \begin{lstlisting}
 def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
@@ -1072,15 +1084,6 @@ two stack components are identical in the state space.
 
 \subsubsection{Computable Solutions}
 
-In recent years, there are significant efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
-gilray2016pushdown, johnson2015abstracting} to achieve precise call/return 
-match based on small-step AAM which is what we described in section \ref{aam}.
-
-CFA2 is the first solution that solves the return-flows problem\cite{vardoulakis2010cfa2}.
-But CFA2 has several drawbacks: it works only on continuation-passing style programs, 
-and only allows monovariant analysis, in addition with an exponential time complexity.
-TODO: summarize PDCFA, AAC, P4F
-
 In the rest of this section, we take a closer look at the P4F which is the
 state-of-art techniques to accomplish perfect call-stack precision on small-step
 AAMs, and Abstracting Defnitional Interpreters (ADI) that adpots another 
@@ -1139,14 +1142,25 @@ specify higher-order definitional interpreters using first-order means (cite)
 
 \section{Related Work}
 
-\textbf{Pushdown for Free.}
+\textbf{Pushdown Control-flow Analysis}
+In recent years, there are significant efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
+gilray2016pushdown, johnson2015abstracting} to achieve precise call/return 
+match based on small-step AAM which is what we described in section \ref{aam}.
+
+CFA2 is the first solution that solves the return-flows problem\cite{vardoulakis2010cfa2}.
+But CFA2 has several drawbacks: it works on only continuation-passing style programs, 
+and not supports polyvariant analysis, in addition with an exponential time complexity.
+TODO: summarize PDCFA, AAC
+
 \citeauthor{gilray2016pushdown} proposed a continuation address allocator for 
 small-step abstracting abstract machines that is both simple to implement and
-computational inexpensive.
-The only change in code is when allocating a continuation address, not only
+computational inexpensive. 
+Based on the AAM we presented in Section \ref{aam}, the only change in code is when 
+allocating a continuation address, not only
 keep track of the entry-point expression of callee, but also hold the target environment.
 The target environment is the binding environment extended from closure's environment
 (namely @val new_env = env_c + (v -> baddr)@). All the rest things remain the same.
+The following code shows the implementation:
 
 \begin{lstlisting}
 case class P4FContAddr(tgt: Expr, tgtEnv: Env) extends KAddr
@@ -1155,20 +1169,28 @@ def allocKont(tgtExpr: Expr, tgtEnv: Env): KAddr = P4FContAddr(tgtExpr, tgtEnv)
 
 TODO: explain the reason why it works.
 
-Notably, this change only causes constant-factor increase in time complexity of analysis
-if the store is widened.
+Notably, this change only causes constant-factor increase in time complexity of 
+the analysis if the store is widened.
+
+TOOD: why only needs the target env. correspondence?
 
 \textbf{Abstracting Definitional Interpreters.}
-On the other side, with the insight from Reynold's seminal paper 
+On the other side of small-step AAM, with the insight from Reynold's seminal paper 
 \emph{Definitional interpreters for higher-order programming languages} \cite{reynolds1972definitional}
-that the defined language will inherit properties
-from the defining language, \citeauthor{darais2017abstracting} construct abstracting 
+that the defined language will inherit properties from the defining language, 
+\citeauthor{darais2017abstracting} construct abstracting 
 definitional interpreters that automatically inherit the pushdown control-flow 
 property from its defining language.
 
+\citeauthor{darais2017abstracting}'s abstracting definitional interpreters is written
+in monadic style.
+
 TODO: connection to this paper.
+TODO: delimited control vs monad. correspondence since the very beginning time.
 TODO: although they establish pushdown control-flow analysis in different ways, 
 is there a correspondence between different methods?
+
+\textbf{Defunctionalization and Refunctionalization.}
 
 \section{Conclusion}
 
