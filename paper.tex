@@ -369,6 +369,8 @@ and then bounded to a variable name under the current environment.
 Both the operator and operand of function applications should be an atomic expression.
 The atomic expressions $ae$ are either a variable, or a literal @lambda@ term, which
 both can be evaluated in a single step.
+We also assume that the program is globally alpha-renamed, i.e., all the
+variable names are unique.
 
 The abstract syntax can be straightforwardly described in Scala as follows:
 TODO: update the abstract syntax.
@@ -689,16 +691,32 @@ def step(s: State): List[State] = {
 
 \subsubsection{$k$-call-sensitive Instantiation} \label{kcfainst}
 
-TODO
+A histroy of last $k$ call sites is served as time information in
+$k$-call-sensitive analysis.
+The history is represented as a list of expressions and embedded
+in the allocated addresses.
+
+Every time when we transfer to next states, we use function @tick@ to
+fresh the time and use this new time when allocating addresses. The function
+@tick@ returns the $k$ front-most expressions given the current state and its
+time history.
 
 \begin{lstlisting}
 def k: Int = 0
 def tick(s: State): Time = (s.e :: s.time).take(k)
 \end{lstlisting}
 
+If we instantiate $k$ to be $0$, the history degenerates to an empty list,
+then we obtain a monovariant analysis, which
+not differentiates values at different call sites. In this case, the address
+space collapses to the space of variable names.
+Note that regarding to the ambiguitiy in
+$k$-CFA\cite{Gilray:2016:ACP:2951913.2951936},
+here the code actually implements a call+return sensitivity.
+
 \subsubsection{Collecting Semantics}
 
-To run (analyze) a program, as CESK machines, we first use function @inject@ to construct
+To run (analyze) a program, as the CESK machines, we first use function @inject@ to construct
 the initial state given the program. 
 Note that the initial continuation store has a built-in mapping that maps continuation address
 @Halt@ to empty set of continuations.
@@ -837,60 +855,55 @@ allocating continuations of defined language on the heap of defining language.
 
 \subsubsection{First Try}
 
+Transform to Extended Continuation-Passing Style (ECPS), continuation and meta-continuation.
 simply trun evaluation contexts into higher-order continuations.
 We establish pushdown control-flow, but this is not computable.
 
 \begin{lstlisting}
-case class Config(e: Expr, env: Env, store: BStore, time: Time)
-case class ValStore(ds: Set[Storable], store: BStore, time: Time)
-type Cache = Map[Config, ValStore]
+case class VS(vals: Set[Storable], time: Time, store: BStore)
+type MCont = VS => VS
+type Cont  = MCont => (VS => VS)
 
-type Continue = Function2[ValStore, Cache, ValStore]
+def aval(e: Expr, env: Env, store: BStore, time: Time, cont: Cont, rcont: MCont): VS = {
+  val new_time = (e::time).take(k)
 
-def tick(s: Config): Time = (s.e::s.time).take(k)
-
-def aval(e: Expr, env: Env, bstore: BStore, time: Time, cache: Cache, continue: Continue): ValStore = { 
-  val config = Config(e, env, bstore, time)
-  if (cache.contains(config)) {
-    return continue(cache(config), cache)
-  }   
-  val newTime = tick(config)
   e match {
-    case Let(x, App(f, ae), e) if isAtomic(ae) =>
-      val closures = aeval(f, env, bstore).toList
+    case Let(x, App(f, ae), e) =>
+      val closures = atomicEval(f, env, store).toList.asInstanceOf[List[Clos]]
 
-      def nd(closures: List[Storable], accds: Set[Storable],
-             accbstore: BStore, acctime: Time, cache: Cache): ValStore  = { 
+      def ndCont(closures: List[Clos])(r: MCont)(vs: VS): VS = {
         closures match {
-          case Nil =>
-            val baddr = allocBind(x, acctime)
-            val newEnv = env + (x -> baddr)
-            val newStore = accbstore.update(baddr, accds)
-            aval(e, newEnv, newStore, acctime, cache, (vs: ValStore, accCache: Cache) => {
-              val newCache = accCache + (Config(e, newEnv, newStore, acctime) -> vs) 
-              continue(vs, newCache)
-            })  
-          case Clos(Lam(v, body), env_c)::rest =>
-            val baddr = allocBind(v, newTime)
-            val newEnv = env_c + (v -> baddr)
-            val newStore = accbstore.update(baddr, aeval(ae, env, bstore)) //TODO: which store?
-            aval(body, newEnv, newStore, newTime, cache, (vs: ValStore, accCache: Cache) => {
-              val newCache = accCache + (Config(body, newEnv, newStore, newTime) -> vs) 
-              nd(rest, vs.ds++accds, accbstore, acctime, newCache)
-            })  
-        }   
-      }   
+          case Nil => r(vs)
+          case Clos(Lam(v, body), c_env)::rest =>
+            val baddr = allocBind(v, vs.time)
+            val new_env = c_env + (v -> baddr)
+            val new_store = vs.store.update(baddr, atomicEval(ae, env, vs.store))
+            aval(body, new_env, new_store, new_time, ndCont(rest), (vs1: VS) => {
+                    r(VS(vs.vals ++ vs1.vals, vs1.time, vs1.store))
+                  })
+        }
+      }
+      def mtCont(vs: VS): VS = {
+        val baddr = allocBind(x, vs.time)
+        val new_env = env + (x -> baddr)
+        val new_store = vs.store.update(baddr, vs.vals)
+        aval(e, new_env, new_store, vs.time, cont, rcont)
+      }
 
-      nd(closures, Set(), bstore, newTime, cache)
+      ndCont(closures)(mtCont)(VS(Set(), new_time, store))
+
     case ae if isAtomic(ae) =>
-      val ds = aeval(ae, env, bstore)
-      continue(ValStore(ds, bstore, newTime), cache)
-  }   
+      val ds = atomicEval(ae, env, store)
+      cont(rcont)(VS(ds, new_time, store))
+  }
 }
 
-def done: Continue = (vs: ValStore, cache: Cache) => { vs }                                                                                                                                                                                                 
-def analyze(e: Expr): ValStore = aval(e, Map(), Store[BAddr, Storable](Map()),
-                                      List(), Map[Config, ValStore](), done)
+def analyze(e: Expr) = aval(e, Map(),
+                            Store[BAddr, Storable](Map()),
+                            List(),
+                            (r: MCont) => (vs: VS) => vs,
+                            (vs: VS) => vs)
+
 \end{lstlisting}
 
 \subsubsection{Caching Fixed-Points}
@@ -898,76 +911,6 @@ def analyze(e: Expr): ValStore = aval(e, Map(), Store[BAddr, Storable](Map()),
 fix point cache
 
 \begin{lstlisting}
-case class Config(e: Expr, env: Env)
-case class ValStore(ds: Set[Storable], store: BStore, time: Time)
-type Cache = Store[Config, ValStore]
-type RetType = (Set[ValStore], Cache)
-type Continue = Function5[Set[ValStore], BStore, Time, Cache, Cache, RetType]
-
-def tick(e: Expr, oldtime: Time): Time = (e::oldtime).take(k)
-
-def aval(e: Expr, env: Env, bstore: BStore, time: Time,
-         inCache: Cache, _outCache: Cache, continue: Continue): RetType = {
-  val config = Config(e, env)
-  if (_outCache.contains(config)) {
-    return continue(_outCache(config), bstore, List(), inCache, _outCache)
-  }
-  val outCache = _outCache.update(config, inCache.getOrElse(config, Set()))
-  val newTime = tick(e, time)
-  e match {
-    case Let(x, App(f, ae), e) if isAtomic(ae) =>
-      val closures = aeval(f, env, bstore).toList
-      def nd(closures: List[Storable], accds: Set[Storable], accbstore: BStore, acctime: Time,
-              accInCache: Cache, accOutCache: Cache): RetType  = closures match {
-        case Nil =>
-          // TODO: If we use `newTime` instead of `acctime`, is it m-CFA?
-          val baddr = allocBind(x, acctime)
-          val newEnv = env + (x -> baddr)
-          val newStore = accbstore.update(baddr, accds)
-          aval(e, newEnv, newStore, acctime, accInCache, accOutCache,
-            (vs: Set[ValStore], accStore: BStore, acctime: Time, accInCache: Cache, accOutCache: Cache) => {
-              val newOutCache = accOutCache.update(Config(e, newEnv), vs)
-              continue(vs, accStore, acctime, accInCache, newOutCache)
-            })
-        case Clos(Lam(v, body), env_c)::rest =>
-          val baddr = allocBind(v, newTime)
-          val newEnv = env_c + (v -> baddr)
-          val newStore = accbstore.update(baddr, aeval(ae, env, bstore)) //TODO: which store?
-          aval(body, newEnv, newStore, newTime, accInCache, accOutCache,
-            (vs: Set[ValStore], accStore: BStore, acctime: Time, accInCache: Cache, accOutCache) => {
-              val newOutCache = accOutCache.update(Config(body, newEnv), vs)
-              val vsds = vs.map(_.ds).foldLeft(Set[Storable]())(_ ++ _)
-              nd(rest, vsds++accds, accStore, acctime, accInCache, newOutCache)
-            })
-      }
-      nd(closures, Set(), bstore, newTime, inCache, outCache)
-    case ae if isAtomic(ae) =>
-      val ds = aeval(ae, env, bstore)
-      continue(Set(ValStore(ds, bstore, newTime)), bstore, newTime, inCache, outCache)
-    }
-}
-
-def done: Function2[Expr, Env, Continue] = (e: Expr, env: Env) => {
-  (vs: Set[ValStore], store: BStore, time: Time, inCache: Cache, outCache: Cache) => {
-    val newOutCache = outCache.update(Config(e, env), vs)
-    (vs, outCache)
-  }
-}
-
-def analyze1(e: Expr, cache: Cache): RetType = {
-  aval(e, Map(), Store[BAddr, Storable](Map()), List(), cache, cache, done(e, Map()))
-}
-
-def analyze(e: Expr): Set[ValStore] = {
-  def iter(cache: Cache): RetType = {
-    val (vs, newCache) = analyze1(e, cache)
-    if (cache == newCache) (vs, newCache)
-    else iter(newCache)
-  }
-  val (vs, cache) = iter(Store[Config, ValStore](Map()))
-  val summarized = cache.map.values.map(_.map(_.store).foldLeft(Store[BAddr, Storable](Map()))(_.join(_))).foldLeft(Store[BAddr, Storable](Map()))(_.join(_))
-  vs
-}
 \end{lstlisting}
 
 \subsection{Pushdown Control-Flow Analysis}
@@ -1082,13 +1025,6 @@ To see this, consider a program that has two mutually recursived functions:
 pushing @f1@ and @f2@ onto the top of current stack, but not existing 
 two stack components are identical in the state space.
 
-\subsubsection{Computable Solutions}
-
-In the rest of this section, we take a closer look at the P4F which is the
-state-of-art techniques to accomplish perfect call-stack precision on small-step
-AAMs, and Abstracting Defnitional Interpreters (ADI) that adpots another 
-approach to pushdown control flow analysis.
-
 %probably Store Widening \& Abstract Garbage Collection
 %monadic
 \section{Monadification: to Abstracting Definitional Interpreter}
@@ -1155,11 +1091,11 @@ TODO: summarize PDCFA, AAC
 \citeauthor{gilray2016pushdown} proposed a continuation address allocator for 
 small-step abstracting abstract machines that is both simple to implement and
 computational inexpensive. 
-Based on the AAM we presented in Section \ref{aam}, the only change in code is when 
-allocating a continuation address, not only
-keep track of the entry-point expression of callee, but also hold the target environment.
+Based on the AAM we presented in Section \ref{aam}, the only change in code is
+not only keeping track of the entry-point expression of callee, but also holding the target environment
+when allocating a continuation address.
 The target environment is the binding environment extended from closure's environment
-(namely @val new_env = env_c + (v -> baddr)@). All the rest things remain the same.
+(namely @val new_env = env_c + (v -> baddr)@). All the other part of the code remain the same.
 The following code shows the implementation:
 
 \begin{lstlisting}
