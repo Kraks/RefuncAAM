@@ -164,10 +164,10 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 %% before \maketitle command
 \begin{abstract}
   Abstracting abstract machines (AAM) is a systematic methodology 
-  for constructing abstract interpreters that derived from concrete
+  for constructing abstract interpreters that are derived from concrete
   small-step abstract machines. Recent progress applies the same idea 
-  on definitional interpreter and obtains a big-step 
-  abstracting definitional interpreter (ADI) written in monadic style.
+  on definitional interpreter and obtains big-step 
+  abstracting definitional interpreters (ADI) written in monadic style.
   Danvy shows the correspondence between concrete abstract machines and interpreters.
   Yet, the relations between small-step abstracting abstract machines and 
   big-step abstracting definitional interpreters is not well studied.
@@ -181,12 +181,13 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   collecting semantics and the non-determinism of abstract interpretation. 
   After each transformation, we also obtain an intermediary form of 
   abstract interpreter.
+
   Remarkably, refunctionalization sequentializes the abstract evaluation.
-  And follow the idea that evaluation contexts are defunctionalized 
+  Following the idea that evaluation contexts are defunctionalized 
   continuations, we reveal how precise call/return match in control-flow 
-  analysis can be obtained by refunctionalizing a small-step abstract interpreter.
-  as well as explain how it been lost by defunctionalizing the higher-order
-  continuations into an firts-order data type. 
+  analysis can be obtained by properly refunctionalizing a small-step abstract interpreter.
+  As well as we explain how it been lost by defunctionalizing the higher-order
+  continuations into an first-order data type. 
   
   TODO: Maybe something Shiver's formulation of CFA in denotational style. 
  
