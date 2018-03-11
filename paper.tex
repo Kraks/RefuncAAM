@@ -342,8 +342,9 @@ interpreters.
 Traditionally, continuation-passing style (CPS) is a popular intermediate representation
 for analyzing functional programs because of it exposes control transfer explicitly
 and simplifies the analysis \cite{Shivers:1991:SSC:115865.115884, Shivers:1988:CFA:53990.54007}.
-Here, we choose to use administrative normal form (ANF) which is a direct-style intermediate representation 
-as target for clarity but without losing simplicity and generality.
+Here, we choose to use $\lambda$-calculus in administrative normal form (ANF) 
+which is a direct-style intermediate representation as target for clarity 
+but without losing simplicity and generality.
 Although we just show the core calculus language, but it can be easily extended
 to support recursive bindings (such as @letrec@), conditionals, primitive types and 
 operations on primitive types. These cases would be trival or simple to implement, 
@@ -581,13 +582,13 @@ case class State(e: Expr, env: Env, bstore: BStore,
 \end{lstlisting}
 
 \subsubsection{Allocating Addresses}
-Up to now, we did not describe much about the adresses in stores and the 
+Up to now, we did not describe much about allocating adresses in stores and the 
 time-stamp @Time@.
-But they are key ingredients to achieve analyses with different sensitivities,
-as well as a finite state space analysis.
+But in abstract interpretation, they are key ingredients to achieve 
+analyses with different sensitivities, as well as to a finite state space analysis\cite{Gilray:2016:ACP:2951913.2951936}.
 To effectively approximate the runtime behavior, a finite 
 program contour @time@ that encodes the program execution history is introduced.
-Here, we use a list of execution contexts (expressions) to reprent that, and
+Here, we use a list of execution contexts (expressions) to represent that, and
 as we will see in section \ref{kcfainst}, by using different @tick@
 function on time we may obtain a family of analyses.
 
@@ -595,7 +596,7 @@ function on time we may obtain a family of analyses.
 type Time = List[Expr]
 \end{lstlisting}
 
-As we mentioned previously, the space of addresses is finite in AAM.
+As we mentioned previously, the space of addresses has to be finite in AAM.
 Binding addresses are parameterized by variable names and the time that creates this binding,
 which are both finite.
 Continuation addresses @KAddr@ has two variants: 
@@ -761,7 +762,7 @@ as a finite set for a given program.
 
 AAM with unbounded stack
 
-\section{Fusing}
+\section{Fusing} \label{fusing}
 
 In last section, we showed that by keeping an unabstracted stack in the state 
 space we can recover the precise call/return match. In this section, we start
@@ -805,7 +806,7 @@ def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
 def analyze(e: Expr): Set[State] = drive_step(List(inject(e)), Set())
 \end{lstlisting}
 
-\section{Disentangling}
+\section{Disentangling} \label{disen}
 
 for plain direct-style, the continue function handles more cases.
 
@@ -849,7 +850,7 @@ def continue(konts: List[Frame], ds: Set[Storable], bstore: BStore, time: Time,
 def analyze(e: Expr): Set[State] = aval(inject(e), List(), Set()) 
 \end{lstlisting}
 
-\section{Refunctionalization}
+\section{Refunctionalization} \label{refunc}
 
 allocating continuations of defined language on the heap of defining language.
 
@@ -1026,19 +1027,33 @@ pushing @f1@ and @f2@ onto the top of current stack, but not existing
 two stack components are identical in the state space.
 
 %probably Store Widening \& Abstract Garbage Collection
-%monadic
-\section{Monadification: to Abstracting Definitional Interpreter}
+\section{To Direct-Style}
 
-For one direction, we can transform the refunctionalized AAM to abstracting definitional interpreter
-by adding monads.
+In previous section, we presented a refunctionalized AAM that in extended continuation-passing style. 
+To obtain a definitional abstract interpreter, we need to transform it further to direct-style. 
+At this point, we have two choices: 
+1) By monadifying the continuations into monads, we obtain the \citeauthor{darais2017abstracting}'s 
+abstracting definitional interpreter in monadic style.
+2) By representing the extended continuation-passing style with delimited continuations,
+we derive a new form of abstract interpreters in direct-style.
+This coincidence should not be a surprise since there are extraordinarily rich literatures 
+show the correspondence between monads and continuations as of their very beginning era
+(TODO: cite Danvy/abs control/esce of fp).
+In this section, we present both of them.
 
-\section{Un-CPS: to Yet Another Abstracting Definitional Interpreter}
+\subsection{Monadification} \label{monadify}
 
-We can transform the refunctionalized AAM to direct style, but explicitly use 
-side effects such as assignment and mutation to handle collecting semantics and non-determinism.
+In this section, we show how to transform the refunctionalized AAM to monadic-style
+abstracting definitional interpreters.
+
+\subsection{Un-CPS} \label{uncps}
+
+On another path, here, we introduce direct-style abstracting definitional interpreter 
+with delimited control operators @reset@ and @shift@.
+
+collecting semantics and non-determinism.
 
 TODO: use delimited continuation? 
-Another form of abstracting definitional interpreter.
 
 \section{Refunctionalized AAM}
 
@@ -1088,8 +1103,8 @@ But CFA2 has several drawbacks: it works on only continuation-passing style prog
 and not supports polyvariant analysis, in addition with an exponential time complexity.
 TODO: summarize PDCFA, AAC
 
-\citeauthor{gilray2016pushdown} proposed a continuation address allocator for 
-small-step abstracting abstract machines that is both simple to implement and
+\citeauthor{gilray2016pushdown} proposed a polyvariant address allocator for continuations
+under small-step abstracting abstract machines that is both simple to implement and
 computational inexpensive. 
 Based on the AAM we presented in Section \ref{aam}, the only change in code is
 not only keeping track of the entry-point expression of callee, but also holding the target environment
@@ -1121,8 +1136,8 @@ property from its defining language.
 \citeauthor{darais2017abstracting}'s abstracting definitional interpreters is written
 in monadic style.
 
+composable.
 TODO: connection to this paper.
-TODO: delimited control vs monad. correspondence since the very beginning time.
 TODO: although they establish pushdown control-flow analysis in different ways, 
 is there a correspondence between different methods?
 
