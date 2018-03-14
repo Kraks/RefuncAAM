@@ -949,50 +949,53 @@ We establish pushdown control-flow, but this is not computable.
 
 \begin{lstlisting}
 case class VS(vals: Set[Storable], time: Time, store: BStore)
+type NCont = Set[VS] => Set[VS]
+type Cont  = NCont => (Set[VS] => Set[VS])
 
-type Ans = Set[VS]
-type NCont = VS => Ans
-type Cont = VS => (NCont => Ans)
-
-def aval(e: Expr, env: Env, store: BStore, time: Time, cont: Cont, ncont: NCont): Ans = {
+def aval(e: Expr, env: Env, store: BStore, time: Time,
+          cont: Cont, ncont: NCont): Set[VS] = {
   val new_time = (e::time).take(k)
   e match {
     case Let(x, App(f, ae), e) =>
       val closures = aeval(f, env, store).toList.asInstanceOf[List[Clos]]
 
-      def nd(closures: List[Clos]): Ans = {
+      def new_ncont(ret_vss: Set[VS])(result: Set[VS]): Set[VS] = {
+        val VS(vals, time, store) = ret_vss.head
+        val baddr = allocBind(x, time)
+        val new_env = env + (x -> baddr)
+        val new_store = store.update(baddr, vals)
+        aval(e, new_env, new_store, time, (r: NCont) => r, (vss1: Set[VS]) => {
+          if (ret_vss.tail.isEmpty) cont(ncont)(result ++ vss1)
+          else new_ncont(ret_vss.tail)(result ++ vss1)
+        })
+      }
+
+      def nd(closures: List[Clos], vss_acc: Set[VS]): Set[VS] = {
         val Clos(Lam(v, body), c_env)::rest = closures
         val baddr = allocBind(v, new_time)
         val new_env = c_env + (v -> baddr)
         val new_store = store.update(baddr, aeval(ae, env, store))
-        val new_cont = (vs: VS) => (r: NCont) => {
-          val baddr = allocBind(x, vs.time)
-          val new_env = env + (x -> baddr)
-          val new_store = vs.store.update(baddr, vs.vals)
-          aval(e, new_env, new_store, vs.time, cont, r)
-        }
-        val new_ncont = if (rest.isEmpty) {
-          ncont
-        } else (vs: VS) => {
-          nd(rest) + vs
-        }
-        // new_time is determined by the lexical scope
-        aval(body, new_env, new_store, new_time, new_cont, new_ncont)
+        aval(body, new_env, new_store, new_time, (r: NCont) => r, (vss: Set[VS]) => {
+          if (rest.isEmpty) new_ncont(vss_acc ++ vss)(Set())
+          else nd(rest, vss_acc ++ vss)
+        })
       }
 
-      nd(closures)
+      nd(closures, Set())
+
     case ae if isAtomic(ae) =>
       val ds = aeval(ae, env, store)
-      cont(VS(ds, new_time, store))(ncont)
+      cont(ncont)(Set(VS(ds, new_time, store)))
   }
 }
 
+def mtTime = List()
 def mtEnv = Map[String, BAddr]()
 def mtStore = Store[BAddr, Storable](Map())
-def analyze(e: Expr) = aval(e, env, store, List(), 
-                            (vs: VS) => (r: NCont) => r(vs), 
-                            (vs: VS) => Set(vs))
 
+def analyze(e: Expr) = aval(e, mtEnv, mtStore, mtTime, 
+                            (r: NCont) => (vss: Set[VS]) =>  r(vss), 
+                            (vss: Set[VS]) => vss)
 \end{lstlisting}
 
 \subsection{Caching Fixed-Points}
