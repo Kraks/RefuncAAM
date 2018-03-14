@@ -166,26 +166,26 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   Abstracting abstract machines (AAM) is a systematic methodology 
   for constructing abstract interpreters that are derived from concrete
   small-step abstract machines. Recent progress applies the same idea 
-  on definitional interpreter and obtains big-step 
-  abstracting definitional interpreters (ADI) written in monadic style.
+  on definitional interpreters and obtains big-step 
+  abstract definitional interpreters (ADI) written in monadic style.
   Danvy shows the correspondence between concrete abstract machines and interpreters.
   Yet, the relations between small-step abstracting abstract machines and 
   big-step abstracting definitional interpreters is not well studied.
 
   In this paper, we show their correspondence and how to syntactically transform small-step 
-  abstracting abstract machines into big-step abstracting definitional 
+  abstract abstract machines into big-step abstract definitional 
   interpreters.
   The transformations include fusing, disentangling, refunctionalizing 
   and monadification (or un-CPS to direct-style with delimited continuations). 
   All of them properly handle the 
   collecting semantics and the non-determinism of abstract interpretation. 
-  After each transformation, we also obtain an intermediary form of 
+  After each transformation, we also obtain an intermediate form of 
   abstract interpreter.
 
   Following the idea that evaluation contexts are defunctionalized 
-  continuations, we also found refunctionalization sequentializes the 
+  continuations, we also found that refunctionalization sequentializes the 
   non-deterministic abstract evaluation.
-  Remarkably, we reveal how precise call/return match in control-flow 
+  Remarkably, we reveal how precise call/return matching in control-flow 
   analysis can be obtained by properly refunctionalizing a small-step abstract interpreter.
   As well as we explain how it been lost by defunctionalizing the higher-order
   continuations into an first-order data type. 
@@ -236,7 +236,7 @@ boardly speaking, AAM and ADI they are both abstract interpreters.
 the essence of abstracting definitional interpreter.
 
 \begin{itemize}
-\item The main contribution of this paper is we fill the gap
+\item The main contribution of this paper is filling the gap
   between small-step AAM and big-step ADI by developing a series of
   systematic transformations. 
   The correspondence between abstract
@@ -275,11 +275,11 @@ counterpart of CESK machines.
   \matrix (m) [matrix of math nodes, row sep=2.5em, column sep=3.7em]
     { 
         &  &  &  & 
-      \begin{smallmatrix} \text{abstracting} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\
-      \begin{smallmatrix} \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
-      \begin{smallmatrix} \text{big-step} \\ \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  & 
-      \begin{smallmatrix} \text{disentangled}  \\ \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
-      \begin{smallmatrix} \text{refunctionalized}  \\ \text{abstracting} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
+      \begin{smallmatrix} \text{abstract} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\
+      \begin{smallmatrix} \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
+      \begin{smallmatrix} \text{big-step} \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  & 
+      \begin{smallmatrix} \text{disentangled}  \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
+      \begin{smallmatrix} \text{refunctionalized}  \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} & 
       \begin{smallmatrix} \text{monadic} \\ \text{abstracting} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix}  \\
       \begin{smallmatrix} \text{abstract} \\ \text{machines} \end{smallmatrix} & 
         &
@@ -322,6 +322,7 @@ counterpart of CESK machines.
   }
 \end{tikzpicture}
 
+\iffalse 
 \subsection{Style}
 
 We use Scala language to demonstrate the idea and each step of transformations.
@@ -336,20 +337,21 @@ The Scala code in this paper can be easily back-translated into formal notations
 2) As a functional pearl, the code in this paper is executable with only few changes, 
 which make it particularly fit for presenting syntactical transformations on abstract
 interpreters.
+\fi
 
 \section{Background} \label{background}
 
 \subsection{A-Normal Form $\lambda$-Calculus} \label{anfsyntax}
 
 Traditionally, continuation-passing style (CPS) is a popular intermediate representation
-for analyzing functional programs because of it exposes control transfer explicitly
+for analyzing functional programs because it exposes control transfer explicitly
 and simplifies the analysis \cite{Shivers:1991:SSC:115865.115884, Shivers:1988:CFA:53990.54007}.
 Here, we choose to use $\lambda$-calculus in administrative normal form (ANF) 
 which is a direct-style intermediate representation as target for clarity 
 but without losing simplicity and generality.
-Although we just show the core calculus language, but it can be easily extended
+Although we just show the core calculus language, it can be easily extended
 to support recursive bindings (such as @letrec@), conditionals, primitive types and 
-operations on primitive types. These cases would be trival or simple to implement, 
+operations on primitive types. These cases would be trivial to implement, 
 so we omit them in the paper.
 The transformations we will show in the rest of this paper
 also work on abstract machines for plain direct-style $\lambda$-calculus languages.
@@ -367,13 +369,12 @@ x ... are variable names
 \end{lstlisting}
 
 In ANF, an expression is an atomic expression or a @let@ expression.
-The restriction is all the function applications must be administrated in a @let@ expression,
-and then bounded to a variable name under the current environment.
-Both the operator and operand of function applications should be an atomic expression.
+The restriction is that all the function applications must be administrated in a @let@ expression,
+and then bound to a variable name under the current environment.
+Both the operator and operand of function applications are an atomic expressions.
 The atomic expressions $ae$ are either a variable, or a literal @lambda@ term, which
 both can be evaluated in a single step.
-We also assume that the program is globally alpha-renamed, i.e., all the
-variable names are unique.
+We also assume that all the variable names in the program are unique.
 
 The abstract syntax can be straightforwardly described in Scala as follows:
 TODO: update the abstract syntax.
@@ -390,16 +391,16 @@ case class Let(x: String, e: App, body: Expr) extends Expr
 
 \subsubsection{Machine Components}
 
-\textit{C}ontrol \textit{E}nvionment \textit{S}tore \textit{K}ontinuation (CESK) machine is an
+The CESK machine is an
 abstract machine for describing semantics of and evaluating $\lambda$-calculus \cite{felleisen1987calculus}.
-CESK machine models program execution as state transitions in a small-step fashion. As its name suggested,
-a machine state has four components: 1) Control is the expression currently being evaluated.
-2) Environment is the a map that contains the address of a variable that in the lexical
-scope of control.
-3) Store models the heap of a program, and it is also a map but maps from addresses to values.
-The addresses are infinite numbers starting from 0.
-In our toy language, the only category of value is closure, i.e., a function paired with an environment.
-4) Continuation represents the program stack.
+The CESK machine models program execution as state transitions in a small-step fashion. 
+As its name suggested, a machine state has four components: 
+1) \textit{Control} is the expression currently being evaluated.
+2) \textit{Environment} is a map that contains the address of a variable in the lexical scope.
+3) \textit{Store} models the heap of a program. It maps from addresses to values.
+The addresses space is numbers starting from 0.
+In our toy language, the only category of value is the closure, i.e., a function paired with an environment.
+4) \textit{Continuation} represents the program stack. \todo{explain more on stack}
 
 We show the Scala representations for the components of CESK machine.
 
@@ -418,19 +419,19 @@ case class State(e: Expr, env: Env, store: Store, k: Kont)
 \end{lstlisting}
 
 It is worth noting that the continuation class @Kont@ is defined as a list of frames.
-The frame class @Frame@ stores the information of call-site, i.e., the information that
-can be used to resume the interrupted computation.
+The frame class @Frame@ stores the information of a single call-site, 
+i.e., the information that can be used to resume the interrupted computation.
 A @Frame@ constitutes of a variable name @x@ to be bind later, a control expression
 that resumes to, and its environment. (TODO: mention that frame list vs KArg/KFun)
 
 \subsubsection{Single-step Transition}
-Before go into describing how the machine evaluates expressions, we firstly define several helper functions.
+Before going into describing how the machine evaluates expressions, we firstly define several helper functions.
 As we mentioned in section \ref{anfsyntax}, the atomic expressions are either a variable, or
 a literal @lambda@ term. So the atomic expression evaluator @atomicEval@ handles these two
 cases and evaluates atomic expressions to closures in a straightforward way.
-The @alloc@ function generates a fresh address, and always allocates an unique integer under the domain
-of store.
-The @isAtomic@ function is used as a predicate of whether the expression is atomic.
+The @alloc@ function generates a fresh address, and always allocates unique integer 
+in the domain of store.
+The @isAtomic@ function is used as a predicate of the expression is atomic.
 
 \begin{lstlisting}
 def atomicEval(e: Expr, env: Env, store: Store): Storable = e match {
@@ -442,7 +443,7 @@ def isAtomic(e: Expr): Boolean = e.isInstanceOf[Var] || e.isInstanceOf[Lam]
 \end{lstlisting}
 
 Now, we can faithfully describe the state transition function @step@,
-that given a machine state, function @step@ determines its successor state.
+that given a machine state, determines its successor state.
 
 \begin{lstlisting}
 def step(s: State): State = s match {
@@ -462,7 +463,7 @@ def step(s: State): State = s match {
 }
 \end{lstlisting}
 
-The first case is that the control of current state is a @Let@ expression,
+In the first case, the control of current state is a @Let@ expression,
 and its right-hand side is an function application.
 By calling evaluator @atomicEval@, we obtain the closure that callee @f@ stands for.
 The successor state's control then transfers to the @body@ expression of closure,
@@ -506,36 +507,36 @@ def eval(e: Expr): State = drive(inject(e))
 \end{lstlisting}
 
 \subsection{Abstracting Abstract Machine} \label{aam}
-Abstracting abstract machine (AAM) is a systematic methodology that derives sound 
+Abstracting abstract machines (AAM) is a systematic methodology that derives sound 
 abstract interpreters for higher-order functional languages from concrete 
 abstract machines \cite{van2012systematic, van2010abstracting}. 
 An abstracting abstract machine implements computable abstract semantics that 
 approximates the runtime behaviors of programs.
 Since the state space of concrete execution is possibly infinite,
-so to analyze programs, the key insight of AAM approach is to allocate both bindings
+to analyze programs, the key insight of AAM approach is to allocate both bindings
 and continuations on the store, and then bound the addresses space to be finite.
 Since each component of state is finite, 
-thus the abstracted machine-state space is finite, and computable.
+the abstracted machine-state space is finite, and computable.
 
 In this section, we derive the abstracting abstract machine from concrete
-CESK machines, and also show that how to instantiate
+CESK machines, and also show how to instantiate
 useful $k$-call-sensitive control-flow analysis.
 
 \subsubsection{Machine Components}
 
-Similar with CESK machines, the machine state of AAM has a control expression,
+Similar to CESK machines, the machine state of AAM has a control expression,
 an environment, a store and continuation, and in addition with a time-stamp.
-But there are several notable differences of store between AAMs and concrete CESK machines.
+But there are several notable differences between AAM's store and CESK machine's store.
 In AAM, the store maps addresses to sets of values, so it stores all possible values
-for a particular address. Thus the dereference an address becomes non-deterministic.
-Also, the store performs a join rather than overwriting when updating elements of the store.
+for a particular address. Thus dereferencing addresses becomes non-deterministic.
+Also, the store performs joining \todo{?} rather than overwriting when updating elements of the store.
 Third, the continuations are likewise allocated on store instead of formed a linked list,
 and the continuation in a state then turns into a continuation address.
 
-For clarity, we divide the store into binding store @BStore@ and continuation store @KStore@. 
-The binding store maps binding addresses to sets of closure values, and continuation store maps
+For clarity, we divide the store into a binding store @BStore@ and a continuation store @KStore@. 
+The binding store maps binding addresses to sets of closure values, and the continuation store maps
 continuation addresses to sets of continuations.
-We define a generic class @Store[K,V]@ that performs join when updating elements
+We define a generic class @Store[K,V]@ that performs joining when updating elements
 in a store. By parameterizing @Store[K,V]@ with @[BAddr, Storable]@ and 
 @[KAddr, Cont]@, we obtain @BStore@ and @KStore@, perspectively.
 
@@ -571,39 +572,37 @@ case class Frame(x: String, e: Expr, env: Env)
 case class Cont(frame: Frame, kaddr: KAddr)
 \end{lstlisting}
 
-As a consequence, the components of a state is also changed: 
+As a consequence, the components of states are also changed: 
 the store is divided into binding store and continuation store;
 the continuation stack becomes an address.
-By dereferencing this address in continuation store, we can retrieve the 
+By dereferencing this address in a continuation store, we can retrieve the 
 actual transfer of controls. The definition of environment @Env@
 remains the same.
 
 \begin{lstlisting}
-case class State(e: Expr, env: Env, bstore: BStore, 
-                 kstore: KStore, k: KAddr, time: Time)
+case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, k: KAddr, time: Time)
 \end{lstlisting}
 
 \subsubsection{Allocating Addresses}
-Up to now, we did not describe much about allocating adresses in stores and the 
-time-stamp @Time@.
+Up to now, we did not describe about allocating adresses in stores and the time stamp @Time@.
 But in abstract interpretation, they are key ingredients to achieve 
 analyses with different sensitivities, as well as to a finite state space analysis\cite{Gilray:2016:ACP:2951913.2951936}.
-To effectively approximate the runtime behavior, a finite 
-program contour @time@ that encodes the program execution history is introduced.
-Here, we use a list of execution contexts (expressions) to represent that, and
+To effectively approximate the runtime behavior, we introduce a finite 
+program contour @time@ that encodes the program execution history.
+Here, we use a list of execution contexts (expressions) to represent, and
 as we will see in section \ref{kcfainst}, by applying different @tick@
-functions to time we may obtain a family of analyses.
+functions on time stamp we may obtain a family of analyses.
 
 \begin{lstlisting}
 type Time = List[Expr]
 \end{lstlisting}
 
 As we mentioned previously, the space of addresses has to be finite in AAM.
-Binding addresses are parameterized by variable names and the time when creating this binding,
+Binding addresses are parameterized by variable names and the time of creating this binding,
 which are both finite.
 Continuation addresses @KAddr@ has two variants: 
 1) @Halt@ which corresponds to the empty stack, and
-2) @ContAddr@ consists of the entry expressions of callee, which are also also
+2) @ContAddr@ consists of the entry expressions of callee, which are also
 finite.
 One may ask, why not also keep track of the time in continuation addresses?
 (TODO: why target expression, allocation polyvariance)
@@ -616,7 +615,7 @@ case object Halt extends KAddr
 case class ContAddr(tgt: Expr) extends KAddr
 \end{lstlisting}
 
-We use two helper functions @allocBind@ and @allocKont@ that will be used later
+Two helper functions @allocBind@ and @allocKont@ that will be used later
 to allocate binding addresses and continuation addresses.
 
 \begin{lstlisting}
@@ -627,9 +626,9 @@ def allocKont(tgtExpr: Expr): KAddr = ContAddr(tgtExpr)
 \subsubsection{Single-step Transition}
 
 Since dereferencing an address becomes non-deterministic, our @atomicEval@
-function also truns into non-deterministic. Given an atomic expression @e@,
+function also truns to be non-deterministic. Given an atomic expression @e@,
 @atomicEval@ returns a set of storable values, i.e., closures, to the caller.
-If the expression is just a @lambda@ term, then the returned set is singleton.
+If the expression is just a @lambda@ term, then the returned set is a singleton.
 
 \begin{lstlisting}
 def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
@@ -638,15 +637,13 @@ def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
 }
 \end{lstlisting}
 
-The structure of function @step@ is similar with concrete CESK machines, 
-except non-determinism which makes @step@ returns a list of reachable 
-successor states.
-In the beginning of @step@, we call function @tick@ to update 
-the time.
-Then we have two cases to consider: 1) Current control expression is @Let@,
-and @App(f, ae)@ is being bind to @x@.
-Fristly we retrieve the set of closures that @f@ may represents.
-For each closure in the set, we do almost the same as what we did in concrete 
+The structure of function @step@ is similar to the concrete CESK machine, 
+except non-determinism which makes @step@ return a list of reachable successor states.
+In the beginning of @step@, we call function @tick@ to update the time.
+Then we have two cases to consider: 1) The current control expression is @Let@,
+and then the result of @App(f, ae)@ will be bound to variable @x@.
+Firstly we retrieve the set of closures that @f@ may represents.
+For each closure in the set, we do almost the same as what we did in the concrete 
 CESK machines. But note that since the continuation is allocated on store (@kstore@),
 a new continuation address @new_kaddr@ is constructed, and a new frame
 @Frame(x, e, env)@ paired with the current continuation address @kaddr@
@@ -694,14 +691,14 @@ def step(s: State): List[State] = {
 
 \subsubsection{$k$-Call-Sensitive Instantiation} \label{kcfainst}
 
-A histroy of last $k$ call sites is served as time information in
+A histroy of the last $k$ call sites is used as a finite program contour in
 $k$-call-sensitive analysis.
 The history is represented as a list of expressions and embedded
 in the allocated addresses.
 
-Every time when we transfer to next states, we use function @tick@ to
-fresh the time and use this new time when allocating addresses. The function
-@tick@ returns the $k$ front-most expressions given the current state and its
+Every time before transferring to successor states, we use function @tick@ to
+fresh the time stamp and use this new time stamp for successors when allocating addresses. 
+The function @tick@ returns the $k$ front-most expressions given the current state and its
 time history.
 
 \begin{lstlisting}
@@ -710,19 +707,18 @@ def tick(s: State): Time = (s.e :: s.time).take(k)
 \end{lstlisting}
 
 If we instantiate $k$ to be $0$, the history degenerates to an empty list,
-then we obtain a monovariant analysis, which
-not differentiates values at different call sites. In this case, the address
+and we obtain a monovariant analysis, which does
+not differentiate values at different call sites. In this case, the address
 space collapses to the space of variable names.
-Note that regarding to the ambiguitiy in
-$k$-CFA\cite{Gilray:2016:ACP:2951913.2951936},
-here the code actually implements a call+return sensitivity.
+Note that regarding the ambiguitiy in $k$-CFA\cite{Gilray:2016:ACP:2951913.2951936},
+the code here actually implements call+return sensitivity.
 
 \subsubsection{Collecting Semantics}
 
-To run (analyze) a program, as the CESK machines, we first use function @inject@ to construct
-the initial state given the program. 
+To run (analyze) a program, as same as the CESK machines, 
+we first use function @inject@ to construct the initial state given the program. 
 Note that the initial continuation store has a built-in mapping that maps continuation address
-@Halt@ to empty set of continuations.
+@Halt@ to an empty set of continuations.
 We also provide an empty program contour as initial time.
 \begin{lstlisting}
 def inject(e: Expr): State = 
@@ -732,16 +728,16 @@ def inject(e: Expr): State =
         Halt, List())
 \end{lstlisting}
 
-However, comparing with concrete CESK machine, the
-@drive@ function performs collecting semantics instead of valuation
+However, comparing with the concrete CESK machine, the
+@drive@ function performs collecting semantics instead of the valuation
 semantics. That is, for the purpose of analyzing programs, the function @drive@
 collects all the intermediate machine states as the program is abstractly executing.
-The following code shows a variant of work list algorithm to find the fixed-point 
+The following code shows a variant of the work list algorithm to find the fixed-point 
 of set of states.
 Function @drive@ always applies function @step@ to the head element @hd@ of 
 the work list @todo@ if @hd@ is unseen, then inserts the result of @step@ to 
-the rest of work list; and in the meanwhile adds @hd@ to the explored states set.
-If the work list is empty, the @drive@ just returns the set of reachable states 
+the rest of work list; and in the meantime adds @hd@ to the explored states set.
+If the work list is empty, then @drive@ just returns the set of reachable states 
 up to now.
 
 \begin{lstlisting}
@@ -754,35 +750,34 @@ def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
 def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
 \end{lstlisting}
 
-Finally, a user could use function @analyze@ to obtain all reachable states 
-as a finite set for a given program.
+Finally, a user could use function @analyze@ to obtain all reachable states for a given program.
 
 %\subsection{Monadic Abstract Interpreter}
 %Maybe not here?
 
 \subsection{One Step Back: Unabstracted Stack}
 
-In this section, we describe a variant of AAM that leaves stack to be 
-unabstracted. That is to to use a precise call stack as we did in concrete CESK machine. 
-Instead of allocating continuations on store and embedding
-addresses of continuations in states, we intended to use a list of frames
+In this section, we describe a variant of AAM that leaves the stack to be 
+unbounded. That uses a precise call stack as we did in the concrete CESK machine. 
+Instead of allocating continuations in the store and embedding
+addresses of continuations in states, we intend to use a list of frames
 to explicitly model the stack.
-By doing so, we recover the call stack as precise as runtime 
+By doing so, we recover the call stack as precise as runtime's
 (so called pushdown control-flow analysis), but since 
-the stack is unbounded thus the analysis is possibly not computable.
-For readers who do not familiarized pushdown analysis, we have a detailed 
+the stack is unbounded, the analysis is potentially not computable.
+For readers who are not familiar with pushdown analysis, we have a detailed 
 discussion in Section \ref{pdcfarevisit}.
-The reason we do so here is to establish an artifact with precise call/return match
+The reason we show it here is to establish an artifact with precise call/return match
 used for the next step of transformation.
 
 In the definition of state @State@, the continuation store disappears, and
-component @konts@ becomes a list of frames. Other components keep the same.
+component @konts@ becomes a list of frames. The other components keep the same.
 
 \begin{lstlisting}
 case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
 \end{lstlisting}
 
-The state transition function @step@ shows in below which is still 
+The state transition function @step@ shows below is still 
 non-deterministic, but the only non-determinism happens when dereferencing the callee @f@ 
 from function applications @App(f, ae)@. 
 
@@ -808,20 +803,18 @@ def step(s: State): List[State] = {
 }
 \end{lstlisting}
 
-In the first case of state matching, we may have multiple choices of closure for @f@.
+In the first case of pattern matching, we may have multiple choices of closure for callee @f@.
 For each closure in the set, a new frame is constructed and pushed onto the stack.
-The code for handling the second case is the same as concrete CESK machines.
-The function @drive@ should be also updated to prevent we pass a state with
+The code for handling the second case is the same as the concrete CESK machines.
+The function @drive@ is also updated (but not shown here) to prevent passing a state with
 empty frame list into function @step@.
 
-
 \textbf{Note on Computability.}
-Unfortunately, even though other components in states are finite, 
+Unfortunately, even though, other components in states are finite, 
 this AAM with unbounded stack is still not computable. 
-Because the unbounded stack can grow to arbitrary deep which implies that the state space is possibly 
-infinite, therefore the analysis may not terminate for all programs if we simply enumerating 
-reachable states.
-To see this, consider a program that has two mutually recursived functions:
+Because the unbounded stack can grow to arbitrary depth which implies that the state space is possibly 
+infinite, therefore the analysis may not terminate for all programs if we simply enumerate reachable states.
+To see this, consider a program that has two mutually recursive functions:
 
 \begin{lstlisting}
 (letrec ([f1 (lambda (x) 
@@ -832,20 +825,20 @@ To see this, consider a program that has two mutually recursived functions:
     z))
 \end{lstlisting}
 
-Function @f1@ and @f2@ mutually invokes each others, and the stack will be 
+Function @f1@ and @f2@ mutually invokes each other, and the stack will be 
 alternatively pushing frame @f1@ and @f2@ onto the top of current stack, 
-but not existing two stack components are identical in the state space.
+but no existing two stack components are identical in the state space.
 
 \section{Fusing} \label{fusing}
 
 In last section, we showed that by keeping an unabstracted stack in the state 
 space we can recover the precise call/return match. In this section, we start
-our first transformation: \textit{fusing} an AAM with unbounded-stack.
+our first step of transformation: \textit{fusing} an AAM with unbounded-stack.
 
 In fact, as later we will eliminate the stack and transform it to continuations
 that are represented by higher-order functions, it does not matter what kind of 
 AAM we start from. 
-Because of transforming to higher-order functions forces us to sequentialize 
+Because transforming to higher-order functions forces us to sequentialize 
 the order of abstract evaluation.
 We choose to start from AAM with unbounded-stack just because it has a 
 straightforward correspondence of pushdown semantics to refunctionalized AAM.
