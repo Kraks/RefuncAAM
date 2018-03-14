@@ -1052,7 +1052,10 @@ we derive a new form of abstract interpreters in direct-style.
 This coincidence should not be a surprise since there are extraordinarily rich literatures 
 show the correspondence between monads and continuations as of their very beginning era
 (TODO: cite Danvy/abs control/esce of fp).
-In this section, we present both of them.
+In fact, we can also just use the same caching algorithm but with side effect such as 
+assignments and mutations to achieve the same definitional interpreter with pushdown
+control flows.
+In this section, we present both of versions using monads and delimited controls.
 
 \subsection{Monadification} \label{monadify}
 
@@ -1064,9 +1067,53 @@ abstracting definitional interpreters.
 On another path, here, we introduce direct-style abstracting definitional interpreter 
 with delimited control operators @reset@ and @shift@.
 
-collecting semantics and non-determinism.
+TODO: This version does not use delimited controls.
 
-TODO: use delimited continuation? 
+\begin{lstlisting}
+def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): (Set[VS], Cache) = {
+  val config = Config(e, env, time)
+  if (cache.outContains(config)) return (cache.outGet(config), cache)
+
+  val new_cache = cache.outUpdate(config, cache.inGet(config))
+  val new_time = (e::time).take(k)
+
+  e match {
+    case Let(x, App(f, ae), e) =>
+      val closures = aeval(f, env, store).toList.asInstanceOf[List[Clos]]
+      val app_vss_cache = for (Clos(Lam(v, body), c_env) <- closures) yield {
+        val baddr = allocBind(v, new_time)
+        val new_env = c_env + (v -> baddr)
+        val new_store = store.update(baddr, aeval(ae, env, store))
+        aval(body, new_env, new_store, new_time, new_cache) //TODO: Do we have to use the latest cache?
+      }
+
+      val app_vss = app_vss_cache.map(_._1).foldLeft(Set[VS]())(_ ++ _)
+      val app_cache = app_vss_cache.map(_._2).foldLeft(mtCache)(_.outJoin(_))
+
+      val e_vss = for (VS(vals, time, store) <- app_vss.toList) yield {
+        val baddr = allocBind(x, time)
+        val new_env = env + (x -> baddr)
+        val new_store = store.update(baddr, vals)
+        aval(e, new_env, new_store, time, app_cache) //TODO: Do we have to use the latest cache?
+      }
+      val result = e_vss.map(_._1).foldLeft(Set[VS]())(_ ++ _)
+      (result, e_vss.map(_._2).foldLeft(mtCache)(_.outJoin(_)).outUpdate(config, result))
+
+    case ae if isAtomic(ae) =>
+      val ds = aeval(ae, env, store)
+      (Set(VS(ds, new_time, store)), new_cache.outUpdate(config, VS(ds, new_time, store)))
+  }
+}
+
+def analyze(e: Expr) = {
+  def iter(cache: Cache): (Set[VS], Cache) = {
+    val (vss, new_cache) = aval(e, mtEnv, mtStore, mtTime, cache)
+    if (new_cache.out == cache.out) (vss, new_cache)
+    else iter (Cache(new_cache.out, new_cache.out))
+  }
+  iter(mtCache)
+}
+\end{lstlisting}
 
 \section{Refunctionalized AAM}
 
