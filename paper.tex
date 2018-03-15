@@ -942,7 +942,7 @@ simply trun evaluation contexts into higher-order continuations.
 We establish pushdown control-flow, but this is not computable.
 
 \begin{lstlisting}
-def nd[T,S](ts: Set[T], acc: S, f: (T, S, S=>S) => S, g: S => S): S = {
+def nd[T,S](ts: Set[T], acc: S, f: (T, S, S => S) => S, g: S => S): S = {
   if (ts.isEmpty) g(acc)
   else f(ts.head, acc, (vss: S) => nd(ts.tail, vss, f, g))
 }
