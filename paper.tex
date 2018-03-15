@@ -879,6 +879,7 @@ def analyze(e: Expr): Set[State] = drive_step(List(inject(e)), Set())
 \section{Disentangling} \label{disen}
 
 for plain direct-style, the continue function handles more cases.
+\todo{a defunctionalized object for non-determinism}
 
 \begin{lstlisting}
 def aval(state: State, todo: List[State], seen: Set[State]): Set[State] = { 
@@ -941,54 +942,47 @@ simply trun evaluation contexts into higher-order continuations.
 We establish pushdown control-flow, but this is not computable.
 
 \begin{lstlisting}
-case class VS(vals: Set[Storable], time: Time, store: BStore)
-type NCont = Set[VS] => Set[VS]
-type Cont  = NCont => (Set[VS] => Set[VS])
+def nd[T,S](ts: Set[T], acc: S, f: (T, S, S=>S) => S, g: S => S): S = {
+  if (ts.isEmpty) g(acc)
+  else f(ts.head, acc, (vss: S) => nd(ts.tail, vss, f, g))
+}
 
-def aval(e: Expr, env: Env, store: BStore, time: Time,
-          cont: Cont, ncont: NCont): Set[VS] = {
+type Ans = Set[VS]
+type Cont = Ans => Ans
+
+def aval(e: Expr, env: Env, store: BStore, time: Time, cont: Cont): Ans = {
   val new_time = (e::time).take(k)
   e match {
     case Let(x, App(f, ae), e) =>
-      val closures = aeval(f, env, store).toList.asInstanceOf[List[Clos]]
-
-      def new_ncont(ret_vss: Set[VS])(result: Set[VS]): Set[VS] = {
-        val VS(vals, time, store) = ret_vss.head
-        val baddr = allocBind(x, time)
-        val new_env = env + (x -> baddr)
-        val new_store = store.update(baddr, vals)
-        aval(e, new_env, new_store, time, (r: NCont) => r, (vss1: Set[VS]) => {
-          if (ret_vss.tail.isEmpty) cont(ncont)(result ++ vss1)
-          else new_ncont(ret_vss.tail)(result ++ vss1)
-        })
-      }
-
-      def nd(closures: List[Clos], vss_acc: Set[VS]): Set[VS] = {
-        val Clos(Lam(v, body), c_env)::rest = closures
+      val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
+      nd[Clos, Ans](closures, Set[VS](), { case (clos, acc, closnd) =>
+        val Clos(Lam(v, body), c_env) = clos
         val baddr = allocBind(v, new_time)
         val new_env = c_env + (v -> baddr)
-        val new_store = store.update(baddr, aeval(ae, env, store))
-        aval(body, new_env, new_store, new_time, (r: NCont) => r, (vss: Set[VS]) => {
-          if (rest.isEmpty) new_ncont(vss_acc ++ vss)(Set())
-          else nd(rest, vss_acc ++ vss)
+        val new_store = store.update(baddr, atomicEval(ae, env, store)) 
+        aval(body, new_env, new_store, new_time, (bodyvss: Set[VS]) => {
+          nd[VS, Ans](bodyvss, Set[VS](), { case (vs, acc_vss, bdnd) => 
+            val VS(vals, time, store) = vs
+            val new_env = env + (x -> baddr)
+            val new_store = store.update(baddr, vals)
+            aval(e, new_env, new_store, time, (evss: Ans) => bdnd(acc_vss ++ evss))
+          },
+          (evss: Ans) => closnd(evss ++ acc))
         })
-      }
-
-      nd(closures, Set())
-
-    case ae if isAtomic(ae) =>
-      val ds = aeval(ae, env, store)
-      cont(ncont)(Set(VS(ds, new_time, store)))
-  }
+      }, 
+      cont)
+    case ae if isAtomic(ae) => 
+      val ds = atomicEval(ae, env, store)
+      cont(Set(VS(ds, new_time, store))) 
+  } 
 }
 
 def mtTime = List()
 def mtEnv = Map[String, BAddr]()
 def mtStore = Store[BAddr, Storable](Map())
 
-def analyze(e: Expr) = aval(e, mtEnv, mtStore, mtTime, 
-                            (r: NCont) => (vss: Set[VS]) =>  r(vss), 
-                            (vss: Set[VS]) => vss)
+def analyze(e: Expr) =
+  aval(e, mtEnv, mtStore, mtTime, (ans => ans))
 \end{lstlisting}
 
 \subsection{Caching Fixed-Points}
@@ -996,6 +990,68 @@ def analyze(e: Expr) = aval(e, mtEnv, mtStore, mtTime,
 fix point cache
 
 \begin{lstlisting}
+case class Config(e: Expr, env: Env, store: BStore, time: Time)
+case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
+  def inGet(config: Config): Set[VS] = in.getOrElse(config, Set())
+  def outGet(config: Config): Set[VS] = out.getOrElse(config, Set())
+  def outContains(config: Config): Boolean = out.contains(config)
+  def outUpdate(config: Config, vss: Set[VS]): Cache = Cache(in, out.update(config, vss))
+}
+\end{lstlisting}
+
+adding cache to eval
+
+The definition of Ans is changed to a case class that contains a set of @VS@ and
+a cache.
+\begin{lstlisting}
+case class Ans(vss: Set[VS], cache: Cache)
+\end{lstlisting}
+
+\begin{lstlisting}
+def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, cont: Cont): Ans = {
+  val config = Config(e, env, store, time)
+  if (cache.outContains(config)) return cont(Ans(cache.outGet(config), cache))
+
+  val new_cache = cache.outUpdate(config, cache.inGet(config))
+  val new_time = (e::time).take(k)
+
+  e match {
+    case Let(x, App(f, ae), e) =>
+      val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
+      nd[Clos, Ans](closures, Ans(Set[VS](), new_cache), { case (clos, Ans(acc, cache), closnd) =>
+        val Clos(Lam(v, body), c_env) = clos
+        val baddr = allocBind(v, new_time)
+        val new_env = c_env + (v -> baddr)
+        val new_store = store.update(baddr, atomicEval(ae, env, store))
+        aval(body, new_env, new_store, new_time, cache, { case Ans(bodyvss, bodycache) =>
+          nd[VS, Ans](bodyvss, Ans(Set[VS](), bodycache), { case (vs, Ans(acc_vss, cache), bdnd) =>
+            val VS(vals, time, store) = vs
+            val baddr = allocBind(x, time)
+            val new_env = env + (x -> baddr)
+            val new_store = store.update(baddr, vals)
+            aval(e, new_env, new_store, time, cache, { case Ans(evss, ecache) => bdnd(Ans(acc_vss ++ evss, ecache)) })
+          },
+          { case Ans(evss, cache) => closnd(Ans(evss ++ acc, cache)) })
+        })
+      },
+      { case Ans(vss, cache) => cont(Ans(vss, cache.outUpdate(config, vss))) })
+
+    case ae if isAtomic(ae) =>
+      val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
+      cont(Ans(vs, new_cache.outUpdate(config, vs)))
+  }
+}
+def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
+  def iter(cache: Cache): Ans = {
+    val Ans(vss, new_cache) = aval(e, env, store, mtTime, cache, { 
+      val initConfig = Config(e, env, store, mtTime)
+      case Ans(vss, cache) => Ans(vss, cache.outUpdate(initConfig, vss)) 
+    })
+    if (new_cache.out == cache.out) { Ans(vss, new_cache) }
+    else { iter(Cache(new_cache.out, new_cache.out)) }
+  }    
+  iter(mtCache)
+}
 \end{lstlisting}
 
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
@@ -1063,48 +1119,40 @@ with delimited control operators @reset@ and @shift@.
 TODO: This version does not use delimited controls.
 
 \begin{lstlisting}
-def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): (Set[VS], Cache) = {
-  val config = Config(e, env, time)
-  if (cache.outContains(config)) return (cache.outGet(config), cache)
+def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans = {
+  val config = Config(e, env, store, time)
+  if (cache.outContains(config)) {
+    return Ans(cache.outGet(config), cache)
+  }
 
-  val new_cache = cache.outUpdate(config, cache.inGet(config))
+  var new_cache = cache.outUpdate(config, cache.inGet(config))
   val new_time = (e::time).take(k)
-
   e match {
     case Let(x, App(f, ae), e) =>
       val closures = aeval(f, env, store).toList.asInstanceOf[List[Clos]]
-      val app_vss_cache = for (Clos(Lam(v, body), c_env) <- closures) yield {
+      val letvs = for (Clos(Lam(v, body), c_env) <- closures) yield {
         val baddr = allocBind(v, new_time)
         val new_env = c_env + (v -> baddr)
         val new_store = store.update(baddr, aeval(ae, env, store))
-        aval(body, new_env, new_store, new_time, new_cache) //TODO: Do we have to use the latest cache?
+        val Ans(bdv, bdcache) = aval(body, new_env, new_store, new_time, new_cache)
+        new_cache = bdcache
+        val evs = for (VS(vals, time, store) <- bdv) yield {
+          val baddr = allocBind(x, time)
+          val new_env = env + (x -> baddr)
+          val new_store = store.update(baddr, vals)
+          val Ans(ev, ecache) = aval(e, new_env, new_store, time, new_cache)
+          new_cache = ecache
+          ev
+        }
+        evs.foldLeft(Set[VS]())(_ ++ _)
       }
-
-      val app_vss = app_vss_cache.map(_._1).foldLeft(Set[VS]())(_ ++ _)
-      val app_cache = app_vss_cache.map(_._2).foldLeft(mtCache)(_.outJoin(_))
-
-      val e_vss = for (VS(vals, time, store) <- app_vss.toList) yield {
-        val baddr = allocBind(x, time)
-        val new_env = env + (x -> baddr)
-        val new_store = store.update(baddr, vals)
-        aval(e, new_env, new_store, time, app_cache) //TODO: Do we have to use the latest cache?
-      }
-      val result = e_vss.map(_._1).foldLeft(Set[VS]())(_ ++ _)
-      (result, e_vss.map(_._2).foldLeft(mtCache)(_.outJoin(_)).outUpdate(config, result))
+      val letv = letvs.foldLeft(Set[VS]())(_ ++ _)
+      Ans(letv, new_cache.outUpdate(config, letv))
 
     case ae if isAtomic(ae) =>
-      val ds = aeval(ae, env, store)
-      (Set(VS(ds, new_time, store)), new_cache.outUpdate(config, VS(ds, new_time, store)))
+      val vs = Set(VS(aeval(ae, env, store), new_time, store))
+      Ans(vs, new_cache.outUpdate(config, vs))
   }
-}
-
-def analyze(e: Expr) = {
-  def iter(cache: Cache): (Set[VS], Cache) = {
-    val (vss, new_cache) = aval(e, mtEnv, mtStore, mtTime, cache)
-    if (new_cache.out == cache.out) (vss, new_cache)
-    else iter (Cache(new_cache.out, new_cache.out))
-  }
-  iter(mtCache)
 }
 \end{lstlisting}
 
