@@ -841,7 +841,7 @@ AAM we start from.
 Because transforming to higher-order functions forces us to sequentialize 
 the order of abstract evaluation.
 We choose to start from AAM with unbounded-stack just because it has a 
-straightforward correspondence of pushdown semantics to refunctionalized AAM.
+straightforward correspondence of pushdown semantics to the refunctionalized AAM.
 
 \begin{lstlisting}
 def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
@@ -987,7 +987,8 @@ def analyze(e: Expr) =
 
 \subsection{Caching Fixed-Points}
 
-fix point cache
+We will apply the fixed-point caching algorithm as described in
+\citeauthor{darais2017abstracting}'s abstract definitional interpreter.
 
 \begin{lstlisting}
 case class Config(e: Expr, env: Env, store: BStore, time: Time)
@@ -1162,10 +1163,6 @@ May be insert to section refunc.
 
 \subsection{Store Widening}
 
-\subsection{Higher-Order Controls?}
-
-TODO: analyze programs with call/cc, shift, reset.
-
 \subsection{Precise Call/Return Match}
 
 show the precision of stack
@@ -1182,36 +1179,36 @@ show that number of continuation is finite.
 
 \subsection{Complexity}
 
-\section{Perspective}
-
-\subsection{Defunctionalization}
-
-specify higher-order definitional interpreters using first-order means (cite)
-
-\subsection{Refunctionalization}
-
+%\section{Perspective}
+%\subsection{Defunctionalization}
+%specify higher-order definitional interpreters using first-order means (cite)
+%\subsection{Refunctionalization}
 %\section{Detour: Shiver's \textit{k}-CFA?}
 
 \section{Related Work}
 
-\textbf{Pushdown Control-flow Analysis}
+\textbf{Abstracting Abstract Machines.}
+
+\textbf{Defunctionalization and Refunctionalization.}
+
+\textbf{Pushdown Control-flow Analysis.}
 In recent years, there are significant efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
 gilray2016pushdown, johnson2015abstracting} to achieve precise call/return 
-match based on small-step AAM which is what we described in section \ref{aam}.
+match based on small-step abstracting abstract machines.
 
 CFA2 is the first solution that solves the return-flows problem\cite{vardoulakis2010cfa2}.
 But CFA2 has several drawbacks: it works on only continuation-passing style programs, 
-and not supports polyvariant analysis, in addition with an exponential time complexity.
+and not supports polyvariant analysis, in addition with an exponential time
+complexity.
+
 TODO: summarize PDCFA, AAC
 
-\citeauthor{gilray2016pushdown} proposed a polyvariant address allocator for continuations
-under small-step abstracting abstract machines that is both simple to implement and
-computational inexpensive. 
-Based on the AAM we presented in Section \ref{aam}, the only change in code is
+\citeauthor{gilray2016pushdown} proposed a polyvariant continuation-addresses allocator
+for small-step AAM to achieve pushdown analysis \cite{gilray2016pushdown}.
+The method is both simple to implement and computational inexpensive.
+Based on the AAM we presented in Section \ref{aam}, the only change in the code is
 not only keeping track of the entry-point expression of callee, but also holding the target environment
-when allocating a continuation address.
-The target environment is the binding environment extended from closure's environment
-(namely @val new_env = env_c + (v -> baddr)@). All the other part of the code remain the same.
+when allocating a continuation addresses.
 The following code shows the implementation:
 
 \begin{lstlisting}
@@ -1219,30 +1216,37 @@ case class P4FContAddr(tgt: Expr, tgtEnv: Env) extends KAddr
 def allocKont(tgtExpr: Expr, tgtEnv: Env): KAddr = P4FContAddr(tgtExpr, tgtEnv)
 \end{lstlisting}
 
-TODO: explain the reason why it works.
-
+The target environment is used for successor states and extended from closure's
+environment (namely @val new_env = env_c + (v -> baddr)@).
+All the other part of the code would not be changed.
 Notably, this change only causes constant-factor increase in time complexity of 
 the analysis if the store is widened.
 
-TOOD: why only needs the target env. correspondence?
-
 \textbf{Abstracting Definitional Interpreters.}
-On the other side of small-step AAM, with the insight from Reynold's seminal paper 
-\emph{Definitional interpreters for higher-order programming languages} \cite{reynolds1972definitional}
-that the defined language will inherit properties from the defining language, 
-\citeauthor{darais2017abstracting} construct abstracting 
-definitional interpreters that automatically inherit the pushdown control-flow 
-property from its defining language.
+Reynold's seminal paper \emph{Definitional interpreters for higher-order
+  programming languages} \cite{reynolds1972definitional} shows that in
+definitional interpreters the defined language can inherit properties from the defining language.
+With this insight, \citeauthor{darais2017abstracting} construct abstracting 
+definitional interpreters that automatically inherits the pushdown control-flow 
+property from its defining language
+because the defined language just uses the stack the meta-language \cite{darais2017abstracting}.
+\citeauthor{darais2017abstracting}'s abstracting definitional interpreters work
+on direct-style programs, and is written in monadic style. One of the advantages
+of monadic abstract interpreters is modular and composable, therefore deploying
+different sensitivities or features is just applying a different monad.
+Prior to that, \citeauthor{Sergey:2013:MAI:2491956.2491979} show a monadic
+abstract interpreter for small-step semantics.
 
-\citeauthor{darais2017abstracting}'s abstracting definitional interpreters is written
-in monadic style.
-
-composable.
-TODO: connection to this paper.
-TODO: although they establish pushdown control-flow analysis in different ways, 
-is there a correspondence between different methods?
-
-\textbf{Defunctionalization and Refunctionalization.}
+This paper is inspired a lot from \citeauthor{darais2017abstracting}'s work.
+Instead of just showing the final form of abstract definitional interpreters,
+We reveal that refunctionalization plays an important role for inheriting
+stack from the meta-language.
+The target of the series of transformations in this paper is abstract definitional
+interpreters, and we additionaly demonstrate abstract interpreters written in both
+monadic- and direct-style.
+The difference is ours work for A-Normal Form $\lambda$-calculus instead of plain
+$\lambda$-calculus, our work also can be easily adopted to plain
+$\lambda$-calculus.
 
 \section{Conclusion}
 
