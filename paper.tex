@@ -231,63 +231,90 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 
 Abstracting abstract machines (AAMs) and abstract definitional interpreters (ADIs) are, broadly speaking, both examples of abstract interpreters. \note{JD: need more bullet points here and I can fill this in}
 
-\subsection{Contributions}
+\note{rest of intro goes here}
 
-% the essence of abstracting definitional interpreter.
-
-We summarize our contributions as follows:
+The rest of this paper is structured as follows: we begin by reviewing some background
+necessary for this work in Section~\ref{background}, as well as introducing some of the basic
+code structures used throughout the paper. We then address the main contribution of this
+paper, which is the filling of the gap between small-step AAM and big-step ADI by developing a
+series of systematic transformations. Those transformations are summarized here, with their
+associated section:
 
 \begin{itemize}
-\item The main contribution of this paper is the filling of the gap
-  between small-step AAM and big-step ADI by developing a series of
-  systematic transformations.
-  We show that the correspondence between abstract
-  machines and interpreters exists not only in concrete semantics artifact,
-  but also in abstract semantics artifact.
-  Galois connection?
-  \note{JD: Section number?}
-
-\item A new understanding of pushdown control-flow analysis by
-  refunctionalization.
-  We present an abstract interpreter obtained from refunctionalizing
-  a small-step abstracting abstract machine.
-  This abstract interpreter naturally exhibits the pushdown control-flow property,
-  as the refunctionalization forces us to sequentialize the
-  abstract execution.
-  We also analyze its correctness, soundness, and termination.
-
-\item Further, we show that defunctionalization and refunctionalization
-  of abstract interpreters play important roles for the call stack of the analyzed language.
-  Given this insight, we reveal precisely \emph{why} small-step AAM has no pushdown
-  control-flow property (without extra efforts), as well as explain
-  why ADI naturally extends pushdown control-flow property from its
-  defining language.
+\item We show how \textbf{linearization} (Section~\ref{linear}) can be used to...
+\item In Section~\ref{fusing}, we then present the \textbf{fusing} transformation, and present...
+\item Section~\ref{disen} discusses \textbf{disentangling}, which shows...
+\item \textbf{Refunctionalization} is shown in Section~\ref{refunc}, and brings a new understanding of pushdown control-flow analysis. In this section, we present an abstract interpreter obtained from refunctionalizing a small-step abstracting abstract machine which naturally exhibits the pushdown control-flow property (as refunctionalization requires abstract execution to be sequentialized).
+\item The last transformation we show is that of transforming a definitional abstract interpreter to a \textbf{direct-style} interpreter (Section~\ref{directstyle}).
 
 \end{itemize}
 
-\subsection{Outline}
+These transformations are used throughout the paper, with refunctionalization and
+defunctionalization of abstract interpreters playing important roles for the call stack of
+the analyzed language (i.e., Scala)\note{right?}. All of this insight allows the revelation of
+precisely \emph{why} small-step AAM does not have the pushdown control-flow property
+(without extra effort), as well as explains why ADI naturally extends pushdown control-flow
+property from its defining language.
 
-\note{TR: can this be merged with contributions? (they currently lack section refs)}
-The remainder of this paper is organized as follows.
-We begin by describing the target language we will analyze in Section~\ref{background},
-including a concrete CESK machine as small-step operational semantics for it.
-We continue with a review of abstracting abstract machines (AAM) as an abstract interpretation
-counterpart of CESK machines. Following this, Section~\ref{linear} shows a conversion from the
-nondeterministic choices of closures to another layer of continuations,
-therefore linearizing the abstract execution.
-Section~\ref{fusing} then discusses fusing the driver and step functions to a single
-function.
-We further identify in Section~\ref{disen} the first-order data type representations of
-continuations, and disentangle the code blocks for dispatching data types to separate
-functions.
-Section~\ref{refunc} then represents the refunctionalized abstract abstract machines.
-In this section, the continuations represented by data types become higher-order
-functions.
-In Section~\ref{directstyle}, we transform the refunctionalized AAM to two
-different direct style, one is implemented with monads, the other is using
-delimited controls.
+We complete this paper by discussing related work in Section~\ref{sec:related}, followed by concluding thoughts in Section~\ref{sec:conclusion}.
 
-Finally, we discuss related work in Section~\ref{sec:related}, followed by concluding thoughts in Section~\ref{sec:conclusion}.
+% \subsection{Contributions}
+
+% the essence of abstracting definitional interpreter.
+
+% We summarize our contributions as follows:
+
+% \begin{itemize}
+% \item The main contribution of this paper is the filling of the gap
+%   between small-step AAM and big-step ADI by developing a series of
+%   systematic transformations.
+%   We show that the correspondence between abstract
+%   machines and interpreters exists not only in concrete semantics artifacts,
+%   but also in abstract semantics artifacts.
+%   Galois connection?
+%   \note{JD: Section number?}
+
+% \item A new understanding of pushdown control-flow analysis by
+%   refunctionalization.
+%   We present an abstract interpreter obtained from refunctionalizing
+%   a small-step abstracting abstract machine.
+%   This abstract interpreter naturally exhibits the pushdown control-flow property,
+%   as the refunctionalization forces us to sequentialize the
+%   abstract execution.
+%   We also analyze its correctness, soundness, and termination.
+
+% \item Further, we show that defunctionalization and refunctionalization
+%   of abstract interpreters play important roles for the call stack of the analyzed language.
+%   Given this insight, we reveal precisely \emph{why} small-step AAM has no pushdown
+%   control-flow property (without extra efforts), as well as explain
+%   why ADI naturally extends pushdown control-flow property from its
+%   defining language.
+
+% \end{itemize}
+
+% \subsection{Outline}
+
+% \note{TR: can this be merged with contributions? (they currently lack section refs)}
+% The remainder of this paper is organized as follows.
+% We begin by describing the target language we will analyze in Section~\ref{background},
+% including a concrete CESK machine as small-step operational semantics for it.
+% We continue with a review of abstracting abstract machines (AAM) as an abstract interpretation
+% counterpart of CESK machines. Following this, Section~\ref{linear} shows a conversion from the
+% nondeterministic choices of closures to another layer of continuations,
+% therefore linearizing the abstract execution.
+% Section~\ref{fusing} then discusses fusing the driver and step functions to a single
+% function.
+% We further identify in Section~\ref{disen} the first-order data type representations of
+% continuations, and disentangle the code blocks for dispatching data types to separate
+% functions.
+% Section~\ref{refunc} then represents the refunctionalized abstract abstract machines.
+% In this section, the continuations represented by data types become higher-order
+% functions.
+% In Section~\ref{directstyle}, we transform the refunctionalized AAM to two
+% different direct styles: one implemented with monads, the other using
+% delimited controls.
+
+% Finally, we discuss related work in Section~\ref{sec:related}, followed by concluding thoughts in Section~\ref{sec:conclusion}.
 
 \todo{Add section numbers to the figure}\note{TR: put this into a proper figure, add known danvy sequence
 for concrete evaluators at the bottom (in grey or dashed lines)}
