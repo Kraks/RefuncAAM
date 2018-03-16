@@ -91,7 +91,8 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 \begin{document}
 
 %% Title information
-\title{Pushdown Control-Flow Analysis via Refunctionalization (Functional Pearl)}         %% [Short Title] is optional;
+%\title{Pushdown Control-Flow Analysis via Refunctionalization (Functional Pearl)}         %% [Short Title] is optional;
+\title{Refunctionalization of Abstracting Abstract Machines (Functional Pearl)}         %% [Short Title] is optional;
                                         %% when present, will be used in
                                         %% header instead of Full Title.
 %\titlenote{with title note}             %% \titlenote is optional;
@@ -168,30 +169,29 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   small-step abstract machines. Recent progress applies the same idea 
   on definitional interpreters and obtains big-step 
   abstract definitional interpreters (ADI) written in monadic style.
-  Danvy shows the correspondence between concrete abstract machines and interpreters.
   Yet, the relations between small-step abstracting abstract machines and 
   big-step abstracting definitional interpreters is not well studied.
 
   In this paper, we show their correspondence and how to syntactically transform small-step 
   abstract abstract machines into big-step abstract definitional 
   interpreters.
-  The transformations include fusing, disentangling, refunctionalizing 
-  and monadification (or un-CPS to direct-style with delimited continuations). 
-  All of them properly handle the 
-  collecting semantics and the non-determinism of abstract interpretation. 
-  After each transformation, we also obtain an intermediate form of 
-  abstract interpreter.
-
-  Following the idea that evaluation contexts are defunctionalized 
-  continuations, we also found that refunctionalization sequentializes the 
-  non-deterministic abstract evaluation.
-  Remarkably, we reveal how precise call/return matching in control-flow 
-  analysis can be obtained by properly refunctionalizing a small-step abstract interpreter.
-  As well as we explain how it been lost by defunctionalizing the higher-order
-  continuations into an first-order data type. 
+  The transformations include linearization, fusing, disentangling, refunctionalizing 
+  and monadification (or un-CPS to direct-style). Linearization expresses
+  non-deterministic choices into first-order data types, and then refunctionalization
+  sequentializes the evaluation order by higher-order functions.
+  All of transformations properly handle the collecting semantics and the
+  non-determinism of abstract interpretation. 
+  %After each transformation, we also obtain an intermediate form of abstract interpreter.
   
-  TODO: Maybe something Shiver's formulation of CFA in denotational style. 
+  Following the idea that in deterministic languages,
+  evaluation contexts in reduction semantics are defunctionalized continuations,
+  we further show in non-deterministic languages, evaluation contexts are refunctionalized to
+  extended continuations style.
+  Remarkably, we reveal how precise call/return matching in control-flow 
+  analysis is obtained by refunctionalizing a small-step abstract
+  abstract machine with properly caching.
  
+  %As well as we explain how it been lost by defunctionalizing the higher-order continuations into an first-order data type. 
 \end{abstract}
 
 %% 2012 ACM Computing Classification System (CSS) concepts
