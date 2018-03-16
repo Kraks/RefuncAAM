@@ -267,6 +267,7 @@ We summarize our contributions as follows:
 
 \subsection{Outline}
 
+\note{TR: can this be merged with contributions? (they currently lack section refs)}
 The remainder of this paper is organized as follows.
 We begin by describing the target language we will analyze in Section~\ref{background},
 including a concrete CESK machine as small-step operational semantics for it.
@@ -288,7 +289,8 @@ delimited controls.
 
 Finally, we discuss related work in Section~\ref{sec:related}, followed by concluding thoughts in Section~\ref{sec:conclusion}.
 
-\todo{Add section numbers to the figure}
+\todo{Add section numbers to the figure}\note{TR: put this into a proper figure, add known danvy sequence 
+for concrete evaluators at the bottom (in grey or dashed lines)}
 
 \begin{tikzpicture}
   \matrix (m) [matrix of math nodes, row sep=2.5em, column sep=3.7em]
@@ -379,12 +381,10 @@ To begin, we now present the concrete syntax of a call-by-value $\lambda$-calcul
 in ANF \cite{flanagan1993essence}.
 
 \begin{lstlisting}
-e $\in$ Exp ::= ae
-          | (let ([x (ae ae)]) e)
-ae $\in$ AExp ::= x
-            | lam
-lam $\in$ Lam ::= (lambda (x) e)
-x ... are variable names
+  e $\in$ Exp ∂::= ae | (let ([x (ae ae)]) e)
+ ae $\in$ AExp ::= ∂x | lam
+lam $\in$ Lam ∂::= (lambda (x) e)
+  x $\in$ Var   (variable names)
 \end{lstlisting}
 
 In ANF, an expression is an atomic expression or a @let@ expression.
@@ -396,7 +396,9 @@ both can be evaluated in a single step.
 We also assume that all the variable names in the program are unique.
 
 The abstract syntax can be straightforwardly described in Scala as follows:
-TODO: update the abstract syntax.
+\note{TR: grammar below isn't ANF. Either make it so, or clarify that 
+we assume ANF only as convention and don't need/want to enforce it in
+the term structure}
 
 \begin{lstlisting}
 sealed trait Expr
@@ -1566,6 +1568,7 @@ $\lambda$-calculus, our work also can be easily adopted to plain
 $\lambda$-calculus.
 
 \section{Conclusion}\label{sec:conclusion}
+\note{todo}
 
 %% Acknowledgments
 \begin{acks}                            %% acks environment is optional
@@ -1588,9 +1591,9 @@ $\lambda$-calculus.
 \bibliography{references}
 
 %% Appendix
-\appendix
-\section{Appendix}
+% \appendix
+% \section{Appendix}
 
-Text of appendix \ldots
+% Text of appendix \ldots
 
 \end{document}
