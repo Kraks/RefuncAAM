@@ -948,16 +948,19 @@ caller which is contained in the top frame of stack.
 But, since we have added non-determinism into state, an empty list of frames means
 we have the reached the halt of \textit{one computation path}, and we should
 determine the next state indicates by @NDCont@.
-So we have a pattern matching on @ndk@: 1) If the closure set is an empty set,
+So we have a pattern matching on @ndk@:
+\begin{itemize}
+  \item If the closure set is an empty set,
 then we had tried all the closures of this fork point and should move the the
 next fork point. Since the @NDCont@ is represented by a list and we always
 append new element from its front, we are resuming to the most recent fork point by
 popping up the front-most element.
-2) Otherwise, we pop a closure from the set, then build new
+\item Otherwise, we pop a closure from the set, then build new
 environment and new store for the body expression of the closure;
 we use the same frame list and time that are copied from the fork point rather
 than current one.
 The non-determinism continuation @new_ndk@ is also updated by removal of that closure.
+\end{itemize}
 
 \begin{lstlisting}
 def drive(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1106,69 +1109,143 @@ def ndcontinue(nds: NDState, seen: Set[State]): Set[State] = {
 \end{lstlisting}
 
 The shape for function @ndcontinue@ is similar to function @continue@, after
-all, they both use @List@ as a representation of continuation.
+all, they both use @List@ as a representation of continuations.
+When the closure set is empty, we recursively call @drive_step@ with the rest
+of @ndk@, since in this case the normal stack @konts@ is still empty, so
+the state will be dispatched to @ndcontinue@ again.
+Otherwise, we invoke @drive_step@ with the body expression of the next closure object.
 
 \section{Refunctionalization} \label{refunc}
 
-As we pointed earlier, refunctionalizing evaluation contexts to higher-order
-continuation functions forces us to somehow sequentialize the abstract evaluation.
-We identify that in order to sequentialize abstract evaluation, there are three
-fundamental differences with concrete evaluation: 
-1) The dereferencing store addresses is non-deterministic, therefore the returning
-may also be non-deterministic.
-2) We need sound collecting semantics rather than valuation semantics.
-3) The abstract evaluation has to be terminating.
+Refunctionalization transforms first-order data type represented
+evaluation contexts to higher-order functions.
+Besides sequentializing the order of abstract evaluation by functions,
+this transformation can be also regarded as allocating continuation functions of
+the defined language in the heap of the meta language.
 
-allocating continuations of defined language on the heap of defining language.
+In this section, several other notable changes have been made:
+\begin{itemize}
+\item We do not have the concept of @state@ (or @NDState@) anymore.
+  The components of the states are lifted as arguments of the evaluation
+  function.
+\item Since our final target is abstract definitional interpreters while still
+non-deterministic, start from this section, our abstract semantic artifact
+returns a set of final values insteaf of collected states.
+\item As we are getting close to the
+abstract definitional interperters, the name of @drive_step@ is updated to
+@aeval@ (for \emph{abstract eval}).
+\end{itemize}
+
+For clearity, in this section, we first show how to refunctionalize the normal continuation and
+non-deterministic continuation without collecting semantics.
+Then adding an appropriate caching algorithm to make sure the analysis will
+terminate at some fixed-point is just changing the program to cache-passing style.
+Finally, we examine how computable pushdown control-flow analysis is established
+through refunctionalization and caching.
 
 \subsection{First Try}
 
-Transform to Extended Continuation-Passing Style (ECPS), continuation and meta-continuation.
-simply trun evaluation contexts into higher-order continuations.
-We establish pushdown control-flow, but this is not computable.
+To properly represented final values, we introduce the case class @VS@ which
+contains a set of storable values, a time stamp, and a store.
+\begin{lstlisting}
+case class VS(vals: Set[Storable], time: Time, store: BStore)
+\end{lstlisting}
+An instance of @VS@ represents the computational result of one path in
+the non-deterministic evaluation.
+The reason that we include a store is there might be a case two pathes have the
+same values but different accumulated side effects such as memory allocations.
+Since the whole computation is non-deterministic, the type of final result
+values is a collection @Set[VS]@. For convenience, we define it as answer type @Ans@:
+\begin{lstlisting}
+type Ans = Set[VS]
+\end{lstlisting}
 
+As we mentioned previously, the components of states are lifted as arguments to
+@aeval@:
+\begin{lstlisting}
+def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = ......
+type Cont = Ans => Ans
+\end{lstlisting}
+
+An additional argument @continue@ which has type @Cont@ is also introduced.
+Recall that in the disentangled AAM, the second case in function @drive_step@
+makes a call to @continue@. Here, the reemerging @continue@ is a function
+with type @Ans => Ans@. The function @aeval@ does not return, instead, it calls
+@continue@ with the result values.
+
+\textbf{Non-Determinism Abstraction.}
+To handle the inevitable non-determinism, we defined a generic function @nd@ as follows:
 \begin{lstlisting}
 def nd[T,S](ts: Set[T], acc: S, f: (T, S, S => S) => S, g: S => S): S = {
   if (ts.isEmpty) g(acc)
   else f(ts.head, acc, (vss: S) => nd(ts.tail, vss, f, g))
 }
+\end{lstlisting}
 
-type Ans = Set[VS]
-type Cont = Ans => Ans
+Given a set of element of type @T@, an initial accumulated value of type @S@, a function @f@
+that works on element type @T@ and accumulated type @S@, and a function @g@ that
+works on and returns value of type @S@, @nd@ applies @f@ to each element in the
+set iteratively, accumulates the value and finally applies @g@ on it. 
+Seeing this one may bring @fold@ to mind, indeed, it is an implementation of
+@fold@ in continuation style. But here we have two continuations, one for the
+next element in the set, and one for the final result.
+Sometime it is also called extended continuation-passing style (ECPS) that has a continuation and a
+meta-continuation \cite{Danvy:1990:AC:91556.91622}.
+\todo{correspondence to disentangled version, refunc the NDCont}
 
-def aval(e: Expr, env: Env, store: BStore, time: Time, cont: Cont): Ans = {
+\textbf{First Version of Evaluation Function.}
+Since our first version of @aeval@ just implements the non-deterministic
+evaluation, and given the defined @nd@, the evaluation function can be easily
+defined.
+The outer call to function @nd@ evaluates over a set of possible closures of
+@f@. For each closures, we go into its body with new environment and store.
+Remember that function @aeval@ returns a set of @VS@ to its continuation,
+so the @bodyvss@ is a set of @VS@ that represents values from possible
+computation pathes when evaluating @body@.
+
+Then for the inner call of function @nd@ evaluates over the set of body values.
+For each @VS@, we use the time and store
+The inner application of @aeval@ returns values of one computation path to its
+continuation, where the continuation will accumulate the result and transfer
+evaluation to the next body value.
+
+\begin{lstlisting}
+def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = {
   val new_time = (e::time).take(k)
   e match {
     case Let(x, App(f, ae), e) =>
       val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-      nd[Clos, Ans](closures, Set[VS](), { case (clos, acc, closnd) =>
+      nd[Clos, Ans](closures, Set[VS](), { case (clos, accouter, closnd) =>
         val Clos(Lam(v, body), c_env) = clos
         val baddr = allocBind(v, new_time)
         val new_env = c_env + (v -> baddr)
         val new_store = store.update(baddr, atomicEval(ae, env, store)) 
-        aval(body, new_env, new_store, new_time, (bodyvss: Set[VS]) => {
-          nd[VS, Ans](bodyvss, Set[VS](), { case (vs, acc_vss, bdnd) => 
+        aeval(body, new_env, new_store, new_time, (bodyvss: Set[VS]) => {
+          nd[VS, Ans](bodyvss, Set[VS](), { case (vs, accinner, bdnd) => 
             val VS(vals, time, store) = vs
             val new_env = env + (x -> baddr)
             val new_store = store.update(baddr, vals)
-            aval(e, new_env, new_store, time, (evss: Ans) => bdnd(acc_vss ++ evss))
+            aeval(e, new_env, new_store, time, 
+                  /* accumulate the values of one path, and call next body value*/
+                  (evss: Ans) => bdnd(accinner ++ evss)) 
           },
-          (evss: Ans) => closnd(evss ++ acc))
+          /* accumulate the values of pathes to accouter, and call next closure */
+          (evss: Ans) => closnd(evss ++ accouter)) 
         })
       }, 
-      cont)
+      continue)
     case ae if isAtomic(ae) => 
       val ds = atomicEval(ae, env, store)
-      cont(Set(VS(ds, new_time, store))) 
+      continue(Set(VS(ds, new_time, store))) 
   } 
 }
+\end{lstlisting}
 
-def mtTime = List()
-def mtEnv = Map[String, BAddr]()
-def mtStore = Store[BAddr, Storable](Map())
-
+At the end, the initial invocation to @aeval@ is passed with an indentify
+function as halting continuation.
+\begin{lstlisting}
 def analyze(e: Expr) =
-  aval(e, mtEnv, mtStore, mtTime, (ans => ans))
+  aeval(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List(), (ans => ans))
 \end{lstlisting}
 
 \subsection{Caching Fixed-Points}
@@ -1195,7 +1272,7 @@ case class Ans(vss: Set[VS], cache: Cache)
 \end{lstlisting}
 
 \begin{lstlisting}
-def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, cont: Cont): Ans = {
+def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, cont: Cont): Ans = {
   val config = Config(e, env, store, time)
   if (cache.outContains(config)) return cont(Ans(cache.outGet(config), cache))
 
@@ -1210,13 +1287,13 @@ def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, cont: Cont)
         val baddr = allocBind(v, new_time)
         val new_env = c_env + (v -> baddr)
         val new_store = store.update(baddr, atomicEval(ae, env, store))
-        aval(body, new_env, new_store, new_time, cache, { case Ans(bodyvss, bodycache) =>
+        aeval(body, new_env, new_store, new_time, cache, { case Ans(bodyvss, bodycache) =>
           nd[VS, Ans](bodyvss, Ans(Set[VS](), bodycache), { case (vs, Ans(acc_vss, cache), bdnd) =>
             val VS(vals, time, store) = vs
             val baddr = allocBind(x, time)
             val new_env = env + (x -> baddr)
             val new_store = store.update(baddr, vals)
-            aval(e, new_env, new_store, time, cache, { case Ans(evss, ecache) => bdnd(Ans(acc_vss ++ evss, ecache)) })
+            aeval(e, new_env, new_store, time, cache, { case Ans(evss, ecache) => bdnd(Ans(acc_vss ++ evss, ecache)) })
           },
           { case Ans(evss, cache) => closnd(Ans(evss ++ acc, cache)) })
         })
@@ -1230,7 +1307,7 @@ def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, cont: Cont)
 }
 def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
   def iter(cache: Cache): Ans = {
-    val Ans(vss, new_cache) = aval(e, env, store, mtTime, cache, { 
+    val Ans(vss, new_cache) = aeval(e, env, store, mtTime, cache, { 
       val initConfig = Config(e, env, store, mtTime)
       case Ans(vss, cache) => Ans(vss, cache.outUpdate(initConfig, vss)) 
     })
@@ -1306,7 +1383,7 @@ with delimited control operators @reset@ and @shift@.
 TODO: This version does not use delimited controls.
 
 \begin{lstlisting}
-def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans = {
+def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans = {
   val config = Config(e, env, store, time)
   if (cache.outContains(config)) {
     return Ans(cache.outGet(config), cache)
@@ -1321,13 +1398,13 @@ def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans = {
         val baddr = allocBind(v, new_time)
         val new_env = c_env + (v -> baddr)
         val new_store = store.update(baddr, aeval(ae, env, store))
-        val Ans(bdv, bdcache) = aval(body, new_env, new_store, new_time, new_cache)
+        val Ans(bdv, bdcache) = aeval(body, new_env, new_store, new_time, new_cache)
         new_cache = bdcache
         val evs = for (VS(vals, time, store) <- bdv) yield {
           val baddr = allocBind(x, time)
           val new_env = env + (x -> baddr)
           val new_store = store.update(baddr, vals)
-          val Ans(ev, ecache) = aval(e, new_env, new_store, time, new_cache)
+          val Ans(ev, ecache) = aeval(e, new_env, new_store, time, new_cache)
           new_cache = ecache
           ev
         }
