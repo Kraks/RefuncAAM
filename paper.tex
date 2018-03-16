@@ -267,9 +267,24 @@ the essence of abstracting definitional interpreter.
 The paper is organized as follows. 
 
 In section \ref{background}, we first describe the target language we will
-analyze and a concrete CESK machine as operational semantics for it.
+analyze and a concrete CESK machine as small-step operational semantics for it.
 Then we review abstracting abstract machines (AAM) as an abstract interpretation
-counterpart of CESK machines.
+counterpart of CESK machines. In section \ref{linear}, we convert the
+non-deterministic choices of closures to another layer of continuations,
+therefore linearize the abstract execution.
+Section \ref{fusing} fuses the driver function and step function to one single
+function.
+In section \ref{disen}, we further identify the first-order data type representations of
+continuations, and disentangle the code blocks for dispatching data types to separate
+functions.
+Section \ref{refunc} represents the refunctionalized abstract abstract machines,
+In this part, the continuations represented by data type trun to higher-order
+functions.
+In Section \ref{directstyle}, we transform the refunctionalized AAM to two
+different direct style, one is implemented with monads, the other is using
+delimited controls.
+
+\todo{Add section numbers to the figure}
 
 \begin{tikzpicture}
   \matrix (m) [matrix of math nodes, row sep=2.5em, column sep=3.7em]
@@ -1376,7 +1391,7 @@ it is still helplessness for separating the return-flows.
 \todo{how refunc and caching help}
 
 %probably Store Widening \& Abstract Garbage Collection
-\section{To Direct-Style}
+\section{To Direct-Style} \label{directstyle}
 
 In previous section, we presented a refunctionalized AAM that in extended continuation-passing style. 
 To obtain a definitional abstract interpreter, we need to transform it further to direct-style. 
