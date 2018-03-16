@@ -267,25 +267,26 @@ We summarize our contributions as follows:
 
 \subsection{Outline}
 
-The paper is organized as follows.
-
-In section \ref{background}, we first describe the target language we will
-analyze and a concrete CESK machine as small-step operational semantics for it.
-Then we review abstracting abstract machines (AAM) as an abstract interpretation
-counterpart of CESK machines. In section \ref{linear}, we convert the
-non-deterministic choices of closures to another layer of continuations,
-therefore linearize the abstract execution.
-Section \ref{fusing} fuses the driver function and step function to one single
+The remainder of this paper is organized as follows.
+We begin by describing the target language we will analyze in Section~\ref{background},
+including a concrete CESK machine as small-step operational semantics for it.
+We continue with a review of abstracting abstract machines (AAM) as an abstract interpretation
+counterpart of CESK machines. Following this, Section~\ref{linear} shows a conversion from the
+nondeterministic choices of closures to another layer of continuations,
+therefore linearizing the abstract execution.
+Section~\ref{fusing} then discusses fusing the driver and step functions to a single
 function.
-In section \ref{disen}, we further identify the first-order data type representations of
+We further identify in Section~\ref{disen} the first-order data type representations of
 continuations, and disentangle the code blocks for dispatching data types to separate
 functions.
-Section \ref{refunc} represents the refunctionalized abstract abstract machines,
-In this part, the continuations represented by data type turn to higher-order
+Section~\ref{refunc} then represents the refunctionalized abstract abstract machines.
+In this section, the continuations represented by data types become higher-order
 functions.
-In Section \ref{directstyle}, we transform the refunctionalized AAM to two
+In Section~\ref{directstyle}, we transform the refunctionalized AAM to two
 different direct style, one is implemented with monads, the other is using
 delimited controls.
+
+Finally, we discuss related work in Section~\ref{sec:related}, followed by concluding thoughts in Section~\ref{sec:conclusion}.
 
 \todo{Add section numbers to the figure}
 
@@ -1489,7 +1490,7 @@ show that number of continuation is finite.
 %\subsection{Refunctionalization}
 %\section{Detour: Shiver's \textit{k}-CFA?}
 
-\section{Related Work}
+\section{Related Work}\label{sec:related}
 
 \textbf{Abstracting Abstract Machines.}
 
@@ -1564,7 +1565,7 @@ The difference is ours work for A-Normal Form $\lambda$-calculus instead of plai
 $\lambda$-calculus, our work also can be easily adopted to plain
 $\lambda$-calculus.
 
-\section{Conclusion}
+\section{Conclusion}\label{sec:conclusion}
 
 %% Acknowledgments
 \begin{acks}                            %% acks environment is optional
