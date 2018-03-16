@@ -298,7 +298,7 @@ counterpart of CESK machines.
   }
   { 
     [start chain] \chainin (m-2-1);
-    \chainin (m-2-2) [join={node[above,labeled] {\text{fusion}}}];
+    \chainin (m-2-2) [join={node[above,labeled] {\begin{smallmatrix} \text{linearizing} \\ \text{+} \\ \text{fusing} \end{smallmatrix}}     }];
     \chainin (m-2-3) [join={node[above,labeled] {\text{disentangling}}}];
     \chainin (m-2-4) [join={node[above,labeled] {\text{refunc.}}}];
     \chainin (m-2-5) [join={node[above,labeled] {\text{monadify}}}];
@@ -418,7 +418,9 @@ type Kont = List[Frame]
 case class State(e: Expr, env: Env, store: Store, k: Kont)
 \end{lstlisting}
 
-It is worth noting that the continuation class @Kont@ is defined as a list of frames.
+It is worth noting that the continuation class @Kont@ is defined as a list of
+frames.
+The frame can be considered as evaluation context in reduction semantics.
 The frame class @Frame@ stores the information of a single call-site, 
 i.e., the information that can be used to resume the interrupted computation.
 A @Frame@ constitutes of a variable name @x@ to be bind later, a control expression
@@ -529,7 +531,8 @@ an environment, a store and continuation, and in addition with a time-stamp.
 But there are several notable differences between AAM's store and CESK machine's store.
 In AAM, the store maps addresses to sets of values, so it stores all possible values
 for a particular address. Thus dereferencing addresses becomes non-deterministic.
-Also, the store performs joining \todo{?} rather than overwriting when updating elements of the store.
+Also, the store performs joining rather than overwriting when updating elements
+of the store.
 Third, the continuations are likewise allocated on store instead of formed a linked list,
 and the continuation in a state then turns into a continuation address.
 
@@ -640,9 +643,11 @@ def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
 The structure of function @step@ is similar to the concrete CESK machine, 
 except non-determinism which makes @step@ return a list of reachable successor states.
 In the beginning of @step@, we call function @tick@ to update the time.
-Then we have two cases to consider: 1) The current control expression is @Let@,
+Then we have two cases to consider:
+
+1) The current control expression is @Let@,
 and then the result of @App(f, ae)@ will be bound to variable @x@.
-Firstly we retrieve the set of closures that @f@ may represents.
+Firstly we retrieve the set of closures that @f@ may represent.
 For each closure in the set, we do almost the same as what we did in the concrete 
 CESK machines. But note that since the continuation is allocated on store (@kstore@),
 a new continuation address @new_kaddr@ is constructed, and a new frame
@@ -665,8 +670,7 @@ also comes from the frame.
 def step(s: State): List[State] = {
   val new_time = tick(s)
   s match {
-    case State(Let(x, App(f, ae), e), env, bstore, kstore, kaddr, time) 
-      if isAtomic(ae) =>
+    case State(Let(x, App(f, ae), e), env, bstore, kstore, kaddr, time) =>
       val closures = atomicEval(f, env, bstore).toList
       for (Clos(Lam(v, body), env_c) <- closures) yield {
         val baddr = allocBind(v, new_time)
@@ -676,8 +680,7 @@ def step(s: State): List[State] = {
         val new_kstore = kstore.update(new_kaddr, Cont(Frame(x, e, env), kaddr))
         State(body, new_env, new_bstore, new_kstore, new_kaddr, new_time)
       }
-    case State(ae, env, bstore, kstore, kaddr, time) 
-      if isAtomic(ae) =>
+    case State(ae, env, bstore, kstore, kaddr, time) if isAtomic(ae) =>
       val conts = kstore(kaddr).toList
       for (Cont(Frame(x, e, env_f), f_kaddr) <- conts) yield {
         val baddr = allocBind(x, new_time)
@@ -794,11 +797,14 @@ def step(s: State): List[State] = {
         State(body, new_env, new_store, frame::konts, new_time)
       }
     case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
-      val Frame(x, e, env_f)::konts = konts
-      val baddr = allocBind(x, new_time)
-      val new_env = env_f + (x -> baddr)
-      val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-      List(State(e, new_env, new_store, konts, new_time))
+      konts match {
+        case Nil => List()
+        case Frame(x, e, env_f)::konts =>
+          val baddr = allocBind(x, new_time)
+          val new_env = env_f + (x -> baddr)
+          val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+          List(State(e, new_env, new_store, konts, new_time))
+      }
   }
 }
 \end{lstlisting}
@@ -806,8 +812,6 @@ def step(s: State): List[State] = {
 In the first case of pattern matching, we may have multiple choices of closure for callee @f@.
 For each closure in the set, a new frame is constructed and pushed onto the stack.
 The code for handling the second case is the same as the concrete CESK machines.
-The function @drive@ is also updated (but not shown here) to prevent passing a state with
-empty frame list into function @step@.
 
 \textbf{Note on Computability.}
 Unfortunately, even though, other components in states are finite, 
@@ -829,97 +833,191 @@ Function @f1@ and @f2@ mutually invokes each other, and the stack will be
 alternatively pushing frame @f1@ and @f2@ onto the top of current stack, 
 but no existing two stack components are identical in the state space.
 
-\section{Fusing} \label{fusing}
+\section{Linearization} \label{linear}
 
 In last section, we showed that by keeping an unabstracted stack in the state 
-space we can recover the precise call/return match. In this section, we start
-our first step of transformation: \textit{fusing} an AAM with unbounded-stack.
-
-In fact, as later we will eliminate the stack and transform it to continuations
-that are represented by higher-order functions, it does not matter what kind of 
-AAM we start from. 
+space we can recover the precise call/return match.
+From this section, we start describing the transformations step by step.
+Our base machine is the AAM with unbounded stack.
+In fact, as later we will transform the stack to higher-order functions
+represented continuations, it does not matter what kind of AAM we start from. 
 Because transforming to higher-order functions forces us to sequentialize 
-the order of abstract evaluation.
-We choose to start from AAM with unbounded-stack just because it has a 
-straightforward correspondence of pushdown semantics to the refunctionalized AAM.
+the order of abstract evaluation, and neither need to construct a frame of list
+nor to allocate continuations in store.
+We choose to start from AAM with unbounded stack just because it has a 
+equivalence of stack model to the final abstract definitional interpreters.
+
+\todo{Unbounded Stack AAM is PD, justify this}
+
+In Danvy's paper \textit{Defunctionalized Interpreters for Programming
+  Languages}, he metioned for deterministic languages, a reduction semantics
+is a structural operational semantics in continuation style, where the reduction
+context is a defunctionalized continuation \cite{Danvy:2008:DIP:1411204.1411206}.
+Here we are facing a problem:
+the underlying semantics of AAM is fundamentally non-deterministic.
+But the evaluation context (the @Frame@ in our program) is not
+non-deterministic, and the work list @todo@ actually implicitly handles the non-determinism,
+if we simply refunctionalize the frames to functions, it would not helps toward
+abstract definitional interpreters.
+
+In order to address this problem, our first step of tramsformations
+is to linearize all the non-deterministic choices.
+This step turns the @step@ function to be deterministic.
+Likewise the @Frame@ saves the information of the caller in concrete executions,
+we introduce another layer of controls, and define a case class @NDCont@
+that saves the information at a fork point when we have multiple target closures.
+We also add a new field @ndk@ to the definition of state which is called
+@NDState@ now.
 
 \begin{lstlisting}
-def drive_step(todo: List[State], seen: Set[State]): Set[State] = todo match {
-  case Nil => seen
-  case hd::tl =>
-    if (seen.contains(hd)) return drive_step(tl, seen)
-
-    val new_time = tick(hd)
-    val new_states = hd match {
-      case State(Let(x, App(f, ae), e), env, bstore, konts, time) 
-        if isAtomic(ae) =>
-        for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
-          val frame = Frame(x, e, env)
-          val baddr = allocBind(v, new_time)
-          val new_env = env_c + (v -> baddr)
-          val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-          State(body, new_env, new_store, frame::konts, new_time)
-        }
-      case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
-        konts match {
-          case Nil => List()
-          case Frame(x, e, f_env)::konts =>
-            val baddr = allocBind(x, new_time)
-            val new_env = f_env + (x -> baddr)
-            val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-            List(State(e, new_env, new_store, konts, new_time))
-        }
-    }
-    drive_step(new_states ++ tl, seen + hd)
+case class NDCont(cls: List[Clos], argvs: Set[Storable], store: BStore, time: Time, frames: List[Frame])
+case class NDState(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time, ndk: List[NDCont]) {
+  def toState: State = State(e, env, bstore, konts, time)
 }
+\end{lstlisting}
 
-def analyze(e: Expr): Set[State] = drive_step(List(inject(e)), Set())
+A @NDCont@ contains a list of closures that are possible functions to be invoked,
+a set of values that will be bind to the function's formal argument,
+and the store, time, and frames at the fork point.
+In the definition of @NDState@, an auxiliary function @toState@ is added that
+converts itself to @State@.
+
+Now the type of function @step@ becomes @NDState => NDState@.
+The following code shows the first case of matching an instance of @NDState@ in
+the @step@.
+
+\begin{lstlisting}
+case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>
+  val closures = atomicEval(f, env, bstore).toList.asInstanceOf[List[Clos]]
+  val Clos(Lam(v, body), c_env) = closures.head
+  val frame = Frame(x, e, env)
+  val new_frames = frame::konts
+  val baddr = allocBind(v, new_time)
+  val new_env = c_env + (v -> baddr)
+  val argvs = atomicEval(ae, env, bstore)
+  val new_store = bstore.update(baddr, argvs)
+  val new_ndk = NDCont(closures.tail, argvs, bstore, new_time, new_frames)::ndk
+  NDState(body, new_env, new_store, new_frames, new_time, new_ndk)
+\end{lstlisting}
+
+By atomically evaluating @f@, we obtain a set of closures.
+The transition is deterministic to the first element of the closure set.
+So we just prepare new environment, new store, and new frame list only for the
+first closure in that set.
+A new non-deterministic continuation @new_ndk@ is also constructed,
+which contains the rest of closures, the values of argument @ae@, the store,
+the time and the new frame list.
+We use the store before updating because for different closures they may form
+different binding addresses @baddr@.
+We also use the new frames, because all the closures at this fork point share
+the same stack and return point.
+
+In the second case shown in below we will see how this @NDCont@ controls
+the non-determinism.
+
+\begin{lstlisting}
+case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
+  konts match {
+    case Nil => ndk match {
+      case NDCont(Nil, _, _, _, _)::ndk => 
+        NDState(ae, env, bstore, konts, time, ndk) /* transfer to the next fork point */
+      case NDCont(cls, argvs, bstore, time, frames)::ndk => 
+        val Clos(Lam(v, body), c_env) = cls.head
+        val baddr = allocBind(v, time)
+        val new_env = c_env + (v -> baddr)
+        val new_store = bstore.update(baddr, argvs)
+        val new_ndk = NDCont(cls.tail, argvs, bstore, tile, frames)::ndk
+        /* resume the fork point with the next closure */
+        NDState(body, new_env, new_store, frames, time, new_ndk) 
+    }
+    case Frame(x, e, f_env)::konts =>
+      val baddr = allocBind(x, newTime)
+      val new_env = f_env + (x -> baddr)
+      val new_store = bstore.update(baddr, aeval(ae, env, bstore))
+      NDState(e, new_env, new_store, konts, newTime, ndk) /* normal return */
+  }
+\end{lstlisting}
+
+If the normal continuation @konts@ is an empty list, then it means we have reached
+the halt of computation; otherwise, we should return the values of @ae@ to its
+caller which is contained in the top frame of stack.
+
+But, since we have added non-determinism into state, an empty list of frames means
+we have the halt of \textit{one computation path}, and we should determine the next state
+by @NDCont@.
+So we have a pattern matching on @ndk@: 1) If the closure set is an empty set,
+then we had tried all the closures of this fork point and should move the the
+next fork point. 2) Otherwise, we pop a closure from the set, then build new
+environment and new store for the body expression of the closure;
+we use the same frame list and time that are copied from the fork point rather
+than current one.
+The non-determinism continuation @new_ndk@ is also updated by removal of that closure.
+
+\begin{lstlisting}
+def drive(nds: NDState, seen: Set[State]): Set[State] = {
+  nds match {
+    case NDState(ae, _, _, Nil, _, Nil) if isAtomic(ae) => seen
+    case nds =>
+      val s = nds.toState
+      if (seen.contains(s)) drive(step(nds), seen)
+      else drive(step(nds), seen + s)
+  }
+}
+\end{lstlisting}
+
+The function @drive@ is also changed: there is no work list anymore, because all the
+potentially unexplored states are embedded in to the continuation for
+non-determinism.
+The termination of the analysis is when we reach a @NDState@ that the expression
+is atomic, and both the normal continuation and non-determinism continuation are
+empty list. This corresponds to the case that @todo@ list is empty.
+
+Now, we obtain a linearized abstract abstract machine. If we image that the classical
+AAM explores a graph of reachable states, then the linearized AAM flatten this
+graph.
+
+\section{Fusing} \label{fusing}
+
+Fusing is a tramsformation that combines function @step@ and @drive@ to one.
+The fused function @drive_step@ basically formed by merging function
+@step@ into function @drive@.
+@drive_step@ takes a @NDState@ and a set of explored states as argument,
+and returns a set of reachable states once terminates.
+
+\begin{lstlisting}
+def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
+  nds match {
+    case NDState(ae, _, _, Nil, _, Nil) if isAtomic(ae) => seen
+    case nds =>
+      val newTime = tick(nds)
+      val new_ndstate = nds match {
+        case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndkonts) =>
+          ......
+        case NDState(ae, env, bstore, konts, time, ndkonts) if isAtomic(ae) =>
+          ......
+      }
+      val s = nds.toState
+      if (seen.contains(s)) drive_step(new_ndstate, seen)
+      else drive_step(new_ndstate, seen + s)
+  }
+}
+\end{lstlisting}
+
+Now we have a single function to perform both abstract evaluation and intermediate
+states collecting. Given @inject(e)@ as the inital state and empty set as
+initial reached set, we can easily define the entrance function @analyze@.
+
+\begin{lstlisting}
+def analyze(e: Expr): Set[State] = drive_step(inject(e), Set())
 \end{lstlisting}
 
 \section{Disentangling} \label{disen}
 
-for plain direct-style, the continue function handles more cases.
-\todo{a defunctionalized object for non-determinism}
+In last section, the fused AAM combines all the functions into one and
+looks like a ``big-step'' interpreter, although it still has the machine
+state representation inside. In the disentangling transformation, we 
 
 \begin{lstlisting}
-def aval(state: State, todo: List[State], seen: Set[State]): Set[State] = { 
-  if (seen.contains(state)) return collect(todo, seen)
-
-  val newTime = tick(state)
-  state match {
-    case State(Let(x, App(f, ae), e), env, bstore, konts, time) if isAtomic(ae) =>
-      val newStates = for (Clos(Lam(v, body), c_env) <- atomicEval(f, env, bstore).toList) yield {
-        val frame = Frame(x, e, env)
-        val baddr = allocBind(v, newTime)
-        val newEnv = c_env + (v -> baddr)
-        val newStore = bstore.update(baddr, atomicEval(ae, env, bstore))
-        State(body, newEnv, newStore, frame::konts, newTime)
-      }   
-      collect(newStates ++ todo, seen + state)
-    case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
-      continue(konts, atomicEval(ae, env, bstore), bstore, newTime, todo, seen + state)
-  }   
-}
-
-def collect(todo: List[State], seen: Set[State]): Set[State] = { 
-  todo match {
-    case Nil => seen
-    case hd::tl => aval(hd, tl, seen)
-  } 
-}
-
-def continue(konts: List[Frame], ds: Set[Storable], bstore: BStore, time: Time,
-              todo: List[State], seen: Set[State]): Set[State] = konts match {
-  case Nil => collect(todo, seen)
-  case Frame(x, e, f_env)::konts =>
-    val baddr = allocBind(x, time)
-    val newEnv = f_env + (x -> baddr)
-    val newStore = bstore.update(baddr, ds) 
-    val newState = State(e, newEnv, newStore, konts, time)
-    collect(newState::todo, seen)
-}
-
-def analyze(e: Expr): Set[State] = aval(inject(e), List(), Set()) 
 \end{lstlisting}
 
 \section{Refunctionalization} \label{refunc}
@@ -1191,6 +1289,18 @@ show that number of continuation is finite.
 
 \textbf{Defunctionalization and Refunctionalization.}
 
+Defunctionalization and refunctionalization build connections between abstract
+machines and interpreters.
+
+For deterministic languages, a reduction semantics is a structural operational
+semantics in continuation style, where the reduction context is a
+defunctionalized continuation.
+Unfortunately, the abstract abstract machines is non-deterministic, where
+the non-determinism is handled by a work list.
+We can turn this explicit non-determinism into the reduction context of
+AAM.
+
+
 \textbf{Pushdown Control-flow Analysis.}
 In recent years, there are significant efforts \cite{vardoulakis2010cfa2, earl2012introspective, 
 gilray2016pushdown, johnson2015abstracting} to achieve precise call/return 
@@ -1201,7 +1311,7 @@ But CFA2 has several drawbacks: it works on only continuation-passing style prog
 and not supports polyvariant analysis, in addition with an exponential time
 complexity.
 
-TODO: summarize PDCFA, AAC
+\todo{PDCFA, AAC}
 
 \citeauthor{gilray2016pushdown} proposed a polyvariant continuation-addresses allocator
 for small-step AAM to achieve pushdown analysis \cite{gilray2016pushdown}.
