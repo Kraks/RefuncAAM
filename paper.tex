@@ -289,8 +289,9 @@ delimited controls.
 
 Finally, we discuss related work in Section~\ref{sec:related}, followed by concluding thoughts in Section~\ref{sec:conclusion}.
 
-\todo{Add section numbers to the figure}\note{TR: put this into a proper figure, add known danvy sequence 
+\todo{Add section numbers to the figure}\note{TR: put this into a proper figure, add known danvy sequence
 for concrete evaluators at the bottom (in grey or dashed lines)}
+\note{JD: should these be abstracting abstract machines?}
 
 \begin{tikzpicture}
   \matrix (m) [matrix of math nodes, row sep=2.5em, column sep=3.7em]
@@ -366,19 +367,19 @@ interpreters.
 
 Traditionally, continuation-passing style (CPS) is a popular intermediate representation
 for analyzing functional programs because it exposes control transfer explicitly
-and simplifies the analysis \cite{Shivers:1991:SSC:115865.115884, Shivers:1988:CFA:53990.54007}.
-Here, we choose to use $\lambda$-calculus in administrative normal form (ANF)
-which is a direct-style intermediate representation as target for clarity
+and simplifies analysis~\cite{Shivers:1991:SSC:115865.115884, Shivers:1988:CFA:53990.54007}.
+Here, we choose to use $\lambda$-calculus in administrative normal form (ANF),
+which is a direct-style intermediate representation, as our target for clarity,
 but without losing simplicity and generality.
-Although we just show the core calculus language, it can be easily extended
-to support recursive bindings (such as @letrec@), conditionals, primitive types and
+Although we only show the core calculus language, it can be easily extended
+to support recursive bindings (such as @letrec@), conditionals, primitive types, and
 operations on primitive types. These cases would be trivial to implement,
-so we omit them in the paper.
+so we elide them in this paper.
 The transformations we will show in the rest of this paper
 also work on abstract machines for plain direct-style $\lambda$-calculus languages.
 
 To begin, we now present the concrete syntax of a call-by-value $\lambda$-calculus language
-in ANF \cite{flanagan1993essence}.
+in ANF~\cite{flanagan1993essence}.
 
 \begin{lstlisting}
   e $\in$ Exp ∂::= ae | (let ([x (ae ae)]) e)
@@ -387,12 +388,12 @@ lam $\in$ Lam ∂::= (lambda (x) e)
   x $\in$ Var   (variable names)
 \end{lstlisting}
 
-In ANF, an expression is an atomic expression or a @let@ expression.
-The restriction is that all the function applications must be administrated in a @let@ expression,
-and then bound to a variable name under the current environment.
-Both the operator and operand of function applications are an atomic expressions.
-The atomic expressions $ae$ are either a variable, or a literal @lambda@ term, which
-both can be evaluated in a single step.
+In ANF, an expression is either an atomic expression or a @let@ expression.
+A restriction exists which states that all function applications must be administrated
+within a @let@ expression and then bound to a variable name under the current environment.
+Both the operator and operand of function applications are atomic expressions.
+An atomic expression $ae$ is either a variable or a literal @lambda@ term, either of which
+can be evaluated in a single step.
 We also assume that all the variable names in the program are unique.
 
 The abstract syntax can be straightforwardly described in Scala as follows:
@@ -415,15 +416,15 @@ case class Let(x: String, e: App, body: Expr) extends Expr
 The CESK machine is an
 abstract machine for describing semantics of and evaluating $\lambda$-calculus \cite{felleisen1987calculus}.
 The CESK machine models program execution as state transitions in a small-step fashion.
-As its name suggested, a machine state has four components:
+As its name suggests, a machine state has four components:
 1) \textit{Control} is the expression currently being evaluated.
 2) \textit{Environment} is a map that contains the address of a variable in the lexical scope.
-3) \textit{Store} models the heap of a program. It maps from addresses to values.
-The addresses space is numbers starting from 0.
-In our toy language, the only category of value is the closure, i.e., a function paired with an environment.
+3) \textit{Store} models the heap of a program as a map from addresses to values.
+The address space consists of numbers (0-indexed).
+In our toy language, the only category of value is a closure, i.e., a function paired with an environment.
 4) \textit{Continuation} represents the program stack. \todo{explain more on stack}
 
-We show the Scala representations for the components of CESK machine.
+The Scala representations for the components of CESK machine are as follows:
 
 \begin{lstlisting}
 type Addr = Int
@@ -440,21 +441,21 @@ case class State(e: Expr, env: Env, store: Store, k: Kont)
 \end{lstlisting}
 
 It is worth noting that the continuation class @Kont@ is defined as a list of
-frames.
-The frame can be considered as evaluation context in reduction semantics.
-The frame class @Frame@ stores the information of a single call-site,
-i.e., the information that can be used to resume the interrupted computation.
-A @Frame@ constitutes of a variable name @x@ to be bind later, a control expression
-that resumes to, and its environment. (TODO: mention that frame list vs KArg/KFun)
+frames, where a frame can be considered an evaluation context in reduction semantics.
+We represent frames using the @Frame@ class, which stores the information of a single
+call-site, i.e., the information that can be used to resume the interrupted computation.
+A @Frame@ constitutes a variable name @x@ to be bound later, a control expression
+to which the program may resume, and its environment. \note{JD: someone check this and make sure I got it right}
+\todo{mention that frame list vs KArg/KFun}
 
-\subsubsection{Single-step Transition}
-Before going into describing how the machine evaluates expressions, we firstly define several helper functions.
-As we mentioned in section \ref{anfsyntax}, the atomic expressions are either a variable, or
-a literal @lambda@ term. So the atomic expression evaluator @atomicEval@ handles these two
-cases and evaluates atomic expressions to closures in a straightforward way.
+\subsubsection{Single-Step Transition}
+Before describing how the machine evaluates expressions, we must first define several helper
+functions. As mentioned in Section~\ref{anfsyntax}, atomic expressions are either a variable
+or a literal @lambda@ term. As such, the atomic expression evaluator @atomicEval@ handles
+these two cases and evaluates atomic expressions to closures in a straightforward way.
 The @alloc@ function generates a fresh address, and always allocates unique integer
 in the domain of store.
-The @isAtomic@ function is used as a predicate of the expression is atomic.
+The @isAtomic@ function is used as a predicate to determine if the expression is atomic.
 
 \begin{lstlisting}
 def atomicEval(e: Expr, env: Env, store: Store): Storable = e match {
@@ -466,7 +467,7 @@ def isAtomic(e: Expr): Boolean = e.isInstanceOf[Var] || e.isInstanceOf[Lam]
 \end{lstlisting}
 
 Now, we can faithfully describe the state transition function @step@,
-that given a machine state, determines its successor state.
+that, when given a machine state, determines its successor state.
 
 \begin{lstlisting}
 def step(s: State): State = s match {
