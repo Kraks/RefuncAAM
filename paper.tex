@@ -1161,10 +1161,19 @@ type Ans = Set[VS]
 \end{lstlisting}
 
 As we mentioned previously, the components of states are lifted as arguments to
-@aeval@:
+@aeval@. Therefore, the pattern matching on state also becomes just matching on
+expression @e@.
 \begin{lstlisting}
-def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = ......
 type Cont = Ans => Ans
+def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = {
+  val new_time = (e::time).take(k)
+  e match {
+    case Let(x, App(f, ae), e) =>
+      ......
+    case ae if isAtomic(ae) => 
+      ......
+  }
+}
 \end{lstlisting}
 
 An additional argument @continue@ which has type @Cont@ is also introduced.
@@ -1195,51 +1204,55 @@ meta-continuation \cite{Danvy:1990:AC:91556.91622}.
 
 \textbf{First Version of Evaluation Function.}
 Since our first version of @aeval@ just implements the non-deterministic
-evaluation, and given the defined @nd@, the evaluation function can be easily
-defined.
-The outer call to function @nd@ evaluates over a set of possible closures of
-@f@. For each closures, we go into its body with new environment and store.
-Remember that function @aeval@ returns a set of @VS@ to its continuation,
-so the @bodyvss@ is a set of @VS@ that represents values from possible
-computation pathes when evaluating @body@.
+evaluation, and given the defined @nd@, the evaluation function @aeval@ can be easily
+defined. For the case that @e@ is a @let@ expression,
+the overall idea is to perform a two step depth-first evluation. \todo{refine}
 
-Then for the inner call of function @nd@ evaluates over the set of body values.
-For each @VS@, we use the time and store
-The inner application of @aeval@ returns values of one computation path to its
+\begin{lstlisting}
+case Let(x, App(f, ae), e) =>
+  val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
+  nd[Clos, Ans](closures, Set[VS](), { case (clos, accouter, closnd) =>
+    val Clos(Lam(v, body), c_env) = clos
+    val baddr = allocBind(v, new_time)
+    val new_env = c_env + (v -> baddr)
+    val new_store = store.update(baddr, atomicEval(ae, env, store)) 
+    aeval(body, new_env, new_store, new_time, (bodyvss: Set[VS]) => {
+      nd[VS, Ans](bodyvss, Set[VS](), { case (vs, accinner, bdnd) => 
+        val VS(vals, time, store) = vs
+        val new_env = env + (x -> baddr)
+        val new_store = store.update(baddr, vals)
+        aeval(e, new_env, new_store, time, 
+              /* accumulate the values of one path, and call next body value*/
+              (evss: Ans) => bdnd(accinner ++ evss)) 
+      },
+      /* accumulate the values of pathes to accouter, and call next closure */
+      (evss: Ans) => closnd(evss ++ accouter)) 
+    })
+  }, 
+  continue)
+\end{lstlisting}
+
+The outer function call @nd@ evaluates over the set of possible closures of
+@f@. For each closures, we go into its body with new environment and new store.
+Remember that the function @aeval@ returns a set of @VS@ to its continuation,
+so the continuation argument @bodyvss@ is a set of @VS@ that represents values
+from multiple computation pathes when evaluating this single @body@ expression.
+
+Then for the inner call of function @nd@ evaluates over the set of body values @bodyvss@.
+For each @VS@, the time stamp and store in @VS@ will be instantiated to
+@aeval@.
+The inner application of @aeval@ returns set of values of one computation path to its
 continuation, where the continuation will accumulate the result and transfer
 evaluation to the next body value.
 
 \begin{lstlisting}
-def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = {
-  val new_time = (e::time).take(k)
-  e match {
-    case Let(x, App(f, ae), e) =>
-      val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-      nd[Clos, Ans](closures, Set[VS](), { case (clos, accouter, closnd) =>
-        val Clos(Lam(v, body), c_env) = clos
-        val baddr = allocBind(v, new_time)
-        val new_env = c_env + (v -> baddr)
-        val new_store = store.update(baddr, atomicEval(ae, env, store)) 
-        aeval(body, new_env, new_store, new_time, (bodyvss: Set[VS]) => {
-          nd[VS, Ans](bodyvss, Set[VS](), { case (vs, accinner, bdnd) => 
-            val VS(vals, time, store) = vs
-            val new_env = env + (x -> baddr)
-            val new_store = store.update(baddr, vals)
-            aeval(e, new_env, new_store, time, 
-                  /* accumulate the values of one path, and call next body value*/
-                  (evss: Ans) => bdnd(accinner ++ evss)) 
-          },
-          /* accumulate the values of pathes to accouter, and call next closure */
-          (evss: Ans) => closnd(evss ++ accouter)) 
-        })
-      }, 
-      continue)
-    case ae if isAtomic(ae) => 
-      val ds = atomicEval(ae, env, store)
-      continue(Set(VS(ds, new_time, store))) 
-  } 
-}
+case ae if isAtomic(ae) => 
+  val ds = atomicEval(ae, env, store)
+  continue(Set(VS(ds, new_time, store))) 
 \end{lstlisting}
+
+If the expression is atomic, then we just need to construct a new instance of
+@VS@, return it to the @continue@ function.
 
 At the end, the initial invocation to @aeval@ is passed with an indentify
 function as halting continuation.
@@ -1320,13 +1333,19 @@ def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
 
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
 
+In the last section, we just established a computable pushdown control-flow
+analysis through refunctionalization and caching. In this section,
+we examine how pushdown control-flow is obtained and what we have done to
+achieve it.
+
+\textbf{The Problem of Return-flows.}
 Pushdown control-flow is a property in analysis that precisely models
 the runtime call-stack of the analyzed program. 
 A pushdown control-flow analysis provides as exact as runtime return-flow 
 when analyzing the program, but traditional control-flow analysis collapses 
 the state space into a finite space thus causes imprecise stack modeling.
 
-To see how traditional CFA suffers from spurious return-flows, 
+To see how traditional control-flow analysis suffers from spurious return-flows, 
 we can consider the following example:
 
 \begin{lstlisting}
@@ -1336,21 +1355,25 @@ we can consider the following example:
       x)))
 \end{lstlisting}
 
-In traditional $k$-CFA algorithm and the AAM we showed in section \ref{aam}, 
-the return-flow of invocation @(id 2)@
-is going to both call-sites @(id 1)@ and @(id 2)@. Therefore, the
-returned value @2@ for variable @y@ is also propagated to 
+In $k$-CFA algorithm or the abstract abstract machine we showed in section
+\ref{aam},
+The call sites @(id 2)@ and @(id 1)@ share the same return flow,
+so the of invocation @(id 2)@ returns to both call-sites @[x (id 1)]@ and @[y (id 2)]@.
+Therefore, the returned value @2@ for variable @y@ is also propagated to 
 variable @x@ and then imprecise analysis result is arose.
 This return-flow merging is inevitable even we increase the context-sensitivity.
-If we use the monovariant analysis (i.e. 0CFA), the analyzing result would be @x@ and 
-@y@ point to set @{1, 2}@, because the algorithm not distinguishes
+If we use the monovariant analysis (i.e., 0CFA), the analyzing result would be @x@ and 
+@y@ point to value set @{1, 2}@, because the algorithm not distinguishes
 @z@ comes from different call-sites.
 Under $1$-CFA, the algorithm is able to distinguish that variable @z@ of function
 @id@ has two different values at two call-sites, so variable @y@ 
-would not be polluted by @1@. 
-But two call-sites still share the same continuation and
+would not be polluted by @1@.
+However, variable @x@ still points to value set @{1, 2}@.
+Because two call-sites still share the same continuation and
 it is still helplessness for separating the return-flows.
-TODO: do need more details to explain this example? (as in P4F paper)
+
+\textbf{Call/Return Matching through Refunctionalization and Caching.}
+\todo{how refunc and caching help}
 
 %probably Store Widening \& Abstract Garbage Collection
 \section{To Direct-Style}
