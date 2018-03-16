@@ -167,7 +167,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   Abstracting abstract machines (AAM) is a systematic methodology
   for constructing abstract interpreters that are derived from concrete
   small-step abstract machines. Recent progress applies the same idea
-  on definitional interpreters and obtains big-step
+  on definitional interpreters, and obtains big-step
   abstract definitional interpreters (ADI) written in monadic style.
   Yet, the relations between small-step abstracting abstract machines and
   big-step abstracting definitional interpreters is not well studied.
@@ -175,12 +175,12 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   In this paper, we show their correspondence and how to syntactically transform small-step
   abstract abstract machines into big-step abstract definitional
   interpreters.
-  The transformations include linearization, fusing, disentangling, refunctionalizing
+  The transformations include linearization, fusing, disentangling, refunctionalizing,
   and monadification (or un-CPS to direct-style). Linearization expresses
-  non-deterministic choices into first-order data types, and then refunctionalization
+  non-deterministic choices into first-order data types, after which refunctionalization
   sequentializes the evaluation order by higher-order functions.
-  All of transformations properly handle the collecting semantics and the
-  non-determinism of abstract interpretation.
+  All transformations properly handle the collecting semantics and the
+  nondeterminism of abstract interpretation.
   %After each transformation, we also obtain an intermediate form of abstract interpreter.
 
   Following the idea that in deterministic languages,
