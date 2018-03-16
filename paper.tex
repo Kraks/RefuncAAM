@@ -229,35 +229,38 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 
 \section{Introduction}
 
-broadly speaking, AAM and ADI they are both abstract interpreters.
+Abstracting abstract machines (AAMs) and abstract definitional interpreters (ADIs) are, broadly speaking, both examples of abstract interpreters. \note{JD: need more bullet points here and I can fill this in}
 
 \subsection{Contributions}
 
-the essence of abstracting definitional interpreter.
+% the essence of abstracting definitional interpreter.
+
+We summarize our contributions as follows:
 
 \begin{itemize}
-\item The main contribution of this paper is filling the gap
+\item The main contribution of this paper is the filling of the gap
   between small-step AAM and big-step ADI by developing a series of
   systematic transformations.
-  The correspondence between abstract
+  We show that the correspondence between abstract
   machines and interpreters exists not only in concrete semantics artifact,
   but also in abstract semantics artifact.
   Galois connection?
+  \note{JD: Section number?}
 
 \item A new understanding of pushdown control-flow analysis by
   refunctionalization.
   We present an abstract interpreter obtained from refunctionalizing
-  an small-step abstracting abstract machine.
-  This abstract interpreter naturally enjoys pushdown control-flow property
-  because the refunctionalization forces us to sequentialize the
+  a small-step abstracting abstract machine.
+  This abstract interpreter naturally exhibits the pushdown control-flow property,
+  as the refunctionalization forces us to sequentialize the
   abstract execution.
-  We also analyze its correctness, soundness and termination.
+  We also analyze its correctness, soundness, and termination.
 
 \item Further, we show that defunctionalization and refunctionalization
-  of abstract interpreters play important roles for call stack of analyzed language.
-  Given this insight, we reveal that why small-step AAM has no pushdown
-  control-flow property (if without extra efforts), as well as explain
-  that why ADI naturally extends pushdown control-flow property from its
+  of abstract interpreters play important roles for the call stack of the analyzed language.
+  Given this insight, we reveal precisely \emph{why} small-step AAM has no pushdown
+  control-flow property (without extra efforts), as well as explain
+  why ADI naturally extends pushdown control-flow property from its
   defining language.
 
 \end{itemize}
