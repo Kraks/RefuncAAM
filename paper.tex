@@ -1353,6 +1353,8 @@ evaluation, given the defined @nd@, the evaluation function @aeval@ can be easil
 defined. In the case that @e@ is a @let@ expression,
 we invoke @nd@ for twice and perform a nesting two-step, depth-first evaluation
 over possible values of @App(f, ae)@.
+The values of branches from on fork point will be accumulated, and then
+returned to the upper fork point.
 
 \begin{lstlisting}
 case Let(x, App(f, ae), e) =>
@@ -1612,15 +1614,17 @@ These coincidences should not be a surprise since existing literature is extraor
 in showing the correspondence between monads and continuation-passing style as well as
 delimited controls since their very beginning era \cite{Danvy:1990:AC:91556.91622, wadler1992essence, danvy1992representing, moggi1991notions}.
 
-In this section, we present the second version that uses delimited controls.
+In this section, we present the second version that uses delimited control operators.
 
 \subsection{Un-CPS by Delimited Controls} \label{uncps}
 
-As previously identified, there are two layers of continuations: one for the normal stack of the analyzed language, and the other for the nondeterministic choices of closures.
+As previously identified, there are two layers of continuations: one for the normal stack of the 
+analyzed language, and the other for the nondeterministic choices of closures.
 This corresponds to the extended continuation-passing style.
 But in our defining language (Scala), the delimited controls rely on the continuation-passing transformation which is only one layer.
 
-To address this problem, we introduce two operators @nd@ and @ndcps@ for handling non-deterministic choices.
+To address this problem, we reintroduce two operators @nd@ and @ndcps@ for handling non-deterministic choices
+in a way that mimics extended continuation-passing style.
 
 \textbf{Nondeterminism Operators, Again.}
 The first operator @nd@ is simplified from the previous one, but specialized with type @Ans@ and @Cache@. 
@@ -1628,7 +1632,7 @@ We may still keep the types to be generic, but the purpose of presentation clear
 reveals that cache should be monotonically accumulated to the rest of computation.
 Now @nd@ only takes a function @f@ that applies on type @(T, Cache)@ where value of type @T@ comes from the set,
 and @nd@ does recursive call on itself over elements in the set @ts@.
-We also move the accumulation operation (@acc++f(ts.head)@) inside of @nd@.
+We also move the accumulation operation (@++@) inside of @nd@.
 
 \begin{lstlisting}
 def nd[T](ts: Set[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
@@ -1637,7 +1641,7 @@ def nd[T](ts: Set[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
 }
 \end{lstlisting}
 
-The second operator @ndcps@ is implemented with delimited controls but simply calls our 
+The second operator @ndcps@ is implemented with delimited control operator @shift@ but simply calls our 
 first operator @nd@ in body.
 \begin{lstlisting}
 def ndcps[T](ts: Set[T], acc: Ans): (T, Cache) @cps[Ans] = shift { f: (((T, Cache)) => Ans) =>
@@ -1646,13 +1650,15 @@ def ndcps[T](ts: Set[T], acc: Ans): (T, Cache) @cps[Ans] = shift { f: (((T, Cach
 \end{lstlisting}
 The function @ndcps@ takes two arguments: a set of elements with type @T@, 
 and an initial accumulated value of type @Ans@.
-The @ndcps@ iteratively returns an element from the set which the element has type @T@ and annotated by
- \verb|@cps[Ans]|. This annotation denotes the final returned value of @ndcps@ is type @Ans@.
+The @ndcps@ iteratively returns an element from the set along with the latest cache 
+, and the return type is also annotated by \verb|@cps[Ans]|. 
+This annotation denotes the final returned value of @ndcps@ is type @Ans@.
 The @f@ introduced by the @shift@ operator is the delimited continuation from the call-site of @ndcps@.
 
-We add an annotation \verb|@cps[Set[T]]| on the return type of the @aeval@ function.
-Now, for every nondeterministic choice in the abstract interpreter, we can simply call 
-@ndcps@ on them and write the program sequentially as a concrete interpreter.
+Now we can use these two operators to redefine @aeval@.
+We add an annotation \verb|@cps[Ans]| on the return type of the @aeval@ function.
+Then, for every nondeterministic choice in the abstract interpreter, we can simply call 
+@ndcps@ on the set of possible choices and write the program sequentially as a concrete interpreter.
 @ndcps@ also returns the latest cache to its left-hand side definition.
 The cache is still accumulated to the next call to @ndcps@ or @aeval@, 
 given the fact that the abstract interpreter should always use the latest cache.
@@ -1689,7 +1695,7 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[
 }
 \end{lstlisting}
 
-The function @analyze@ is also changed by adding a @reset@ around the function call to @aeval@.
+The function @analyze@ is also changed by adding a @reset@ operator around the function call to @aeval@.
 The afterwards updating on cache becomes sequential.
 
 \begin{lstlisting}
@@ -1781,7 +1787,7 @@ Notably, this change only causes constant-factor increase in time complexity of
 the analysis if the store is widened.
 
 Our work establish the pushdown control-flow analysis through refunctionalization and a
-proper caching algorithm. The call/return is naturally matched in the stack of 
+proper caching algorithm. The call/return is naturally matched by the stack of 
 the meta language.
 
 \textbf{Abstracting Definitional Interpreters.}
