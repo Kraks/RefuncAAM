@@ -1386,11 +1386,11 @@ case ae if isAtomic(ae) =>
   continue(Set(VS(ds, new_time, store)))
 \end{lstlisting}
 
-If the expression is atomic, then we simply need to construct a new instance of
+If the expression is atomic, then we simply construct a new instance of
 @VS@ and return it to the @continue@ function.
 
-At the end, the initial invocation to @aeval@ is passed with an indentify
-function as halting continuation.
+At the end, the initial invocation to @aeval@ is passed with an identity
+function as a halting continuation:
 \begin{lstlisting}
 def analyze(e: Expr) =
   aeval(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List(), (ans => ans))
@@ -1398,25 +1398,24 @@ def analyze(e: Expr) =
 
 \subsection{Caching Fixed-Points}
 
-Based on the refunctionalized AAM from the last section, we use the same @nd@ nondeterministic operator
-but further extend it to a fixed-point cached evaluation in this section.
+Based on the refunctionalized AAM from the last section, we use the same nondeterministic
+operator @nd@, but further extend it to a fixed-point cached evaluation in this section.
 The fixed-point caching algorithm performs a sound over-approximation of all possible
-concrete reachable pathes and values, and also prevents non-termination when analyzing diverged programs.
+concrete reachable paths and values, and also prevents non-termination when analyzing diverged programs.
 
 \textbf{Configuration.}
-Now we do not have the concept of explicit stack and state,
-but to represent the cache, we introduce the configuration @Config@ as
-a state-like definition which borrows the components from state but without
-continuations.
+We do not have the concept of an explicit stack or state,
+so to represent the cache we introduce a configuration @Config@ as
+a state-like definition which borrows the components from state, sans continuations.
 \begin{lstlisting}
 case class Config(e: Expr, env: Env, store: BStore, time: Time)
 \end{lstlisting}
 
 \textbf{Cache.}
 Recall that the latent assumption of the worklist algorithm in classical AAM
-is if we have seen a state @s@, then it means we also have seen the successors
+is that if we have seen a state @s@, it means we also have seen the successors
 of state @s@.
-The caching algorithm we adopted here replay the same assumption but in a big-step
+The caching algorithm we adopt here replays the same assumption but in a big-step
 manner: if we have seen the configuration @c@, then it means we also have seen
 the values that are evaluated by the configuration @c@.
 Here we will apply the fixed-point caching algorithm as described from
@@ -1433,38 +1432,37 @@ case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
 }
 \end{lstlisting}
 
-The @Cache@ contains two maps @in@ and @out@ which are both mapping from
-configurations to sets of @VS@. The @in@ cache contains mappings from
-last iteration of evaluation, and @out@ cache contains mappings after this
+The @Cache@ contains two maps @in@ and @out@ which are both mappings from
+configurations to sets of @VS@. The @in@ cache contains mappings from the
+previous iteration of evaluation, and the @out@ cache contains mappings after the current
 iteration of evaluation. Once we have evaluated a term to some values,
-we update the @out@ cache. In the next time of iteration, we will use @out@
-from last iteration as @in@ cache for this iteration.
+we update the @out@ cache. In the next iteration, we will use the @out@
+from the previous iteration as the @in@ cache for the current iteration.
 
 \textbf{Cache-Passing Style.}
-Now we can modify out interpreter to cache-passing style.
-First the return type @Ans@ is changed to a case class that contains a set of @VS@ and
+We can now transform our interpreter into cache-passing style.
+We begin by changing the return type @Ans@ to a case class which contains a @VS@ set and
 a cache.
 
 \begin{lstlisting}
 case class Ans(vss: Set[VS], cache: Cache)
 \end{lstlisting}
 
-The skeleton of function @aeval@ largely remain the same.
-Every place has a value of @Ans@ is also replaced as direct pattern matching so
+The skeleton of function @aeval@ largely remains the same.
+Every place which has a value of @Ans@ is also replaced as direct pattern matching so
 that we can use the fields in @Ans@ immediately.
 The cache is used in a monotonic way: each function call to @aeval@ or @nd@ is
 passed with the latest cache from the most recent continuation's result.
 
-When we enter to function @aeval@, we firstly lookup in the @out@ cache,
-if there are some values for current configuration, then we use immediately.
-This corresponds to small-step AAM with a worklist when we have seen a state
-then we can simply discard the state and continue working the rest of worklist @todo@.
+Upon entering @aeval@, we first determine whether the @out@ cache
+contains some values for the current configuration and use them immediately (if present).
+This corresponds to small-step AAM with a worklist: when we have seen a state,
+we can simply discard the state and continue working through the rest of the worklist @todo@.
 
-Otherwise, if we not hit the @out@ cache, we retrieve the values from @in@ cache, and update @out@ cache
-with values from @in@ cache.  The retrieving from @in@ cache may return an empty set of values if
-there is no such mapping for the configuration from the previous iteration.
-It actually first conservatively assumes that all computation can be diverged,
-if not, we will update its values in the mapping after evaluation.
+If, however, we have not hit the @out@ cache, we retrieve the values from the @in@ cache, and update the @out@ cache
+with values from the @in@ cache. This retrieval from the @in@ cache may return an empty set of values if there is no such mapping for the configuration from the previous iteration.
+In reality, we first conservatively assume that all computations can be diverged, and
+if not, we update its values in the mapping after evaluation.
 In terms of partial orders and lattices, it is the case that starts
 the Kleene iteration from the bottom of the lattice.
 
