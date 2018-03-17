@@ -1237,36 +1237,36 @@ Otherwise, we invoke @drive_step@ with the body expression of the next closure o
 
 \section{Refunctionalization} \label{refunc}
 
-Refunctionalization transforms first-order data type represented
+Refunctionalization transforms first-order data types represented as \note{``represented as'' or ``representing?'' It should be representing, right?}
 evaluation contexts to higher-order functions.
 Besides sequentializing the order of abstract evaluation by functions,
 this transformation can be also regarded as allocating continuation functions of
-the defined language in the heap of the meta language.
+the defined language in the heap of the metalanguage.
 
 In this section, several other notable changes have been made:
 \begin{itemize}
 \item We do not have the concept of @state@ (or @NDState@) anymore.
-  The components of the states are lifted as arguments of the evaluation
-  function.
-\item Since our final target is abstract definitional interpreters while still
-nondeterministic, start from this section, our abstract semantic artifact
+The components of the states are lifted as arguments of the evaluation
+function.
+\item Since our final target is an abstract definitional interpreter (though still
+nondeterministic), starting from this section our abstract semantic artifact
 returns a set of final values instead of collected states.
-\item As we are getting close to the
+\item As we are getting close to achieving
 abstract definitional interpreters, the name of @drive_step@ is updated to
 @aeval@ (for \emph{abstract eval}).
 \end{itemize}
 
-For clarity, in this section, we first show how to refunctionalize the normal continuation and
+For clarity, we first show how to refunctionalize normal continuations and
 nondeterministic continuation without collecting semantics.
-Then adding an appropriate caching algorithm to make sure the analysis will
-terminate at some fixed-point is just changing the program to cache-passing style.
-Finally, we examine how computable pushdown control flow analysis is established
+Then, adding an appropriate caching algorithm to make sure the analysis will
+terminate at some fixed-point is a simple transformation of the program to cache-passing
+style. Finally, we examine how computable pushdown control flow analysis is established
 through refunctionalization and caching.
 
 \subsection{First Try}
 
-To properly represented final values, we introduce the case class @VS@ which
-contains a set of storable values, a time stamp, and a store.
+To properly represent final values, we introduce the case class @VS@ which
+contains a set of storable values, a timestamp, and a store.
 \begin{lstlisting}
 case class VS(vals: Set[Storable], time: Time, store: BStore)
 \end{lstlisting}
