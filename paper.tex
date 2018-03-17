@@ -1499,10 +1499,10 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: 
 }
 \end{lstlisting}
 
-After done the evaluation, we obtain a set of @VS@ and need to update the @out@ cache.
-In the first case of pattern matching, it happens inside of the last continuation of
-outer @nd@.
-For the second case, we update the @out@ cache before calling the continuation @continue@.
+After completing the evaluation, we obtain a set of @VS@ objects and must update the @out@ cache.
+In the first case of pattern matching, this happens inside the last continuation of the
+outer @nd@ call.
+For the second case, we update the @out@ cache before calling the @continue@ continuation.
 
 \begin{lstlisting}
 def analyze(e: Expr) = {
@@ -1518,12 +1518,12 @@ def analyze(e: Expr) = {
 }
 \end{lstlisting}
 
-Finally, the @analyze@ function as the entrance of the analysis does a looping iteration
+Finally, the @analyze@ function (as the entrance of the analysis) does a looping iteration
 to find the fixed-point on caches starting from an empty cache.
 If the @out@ cache of this iteration is equivalent to the @out@ cache from the last iteration,
 then we have reached a fixed-point that over-approximates the concrete evaluations,
 and thus can be returned.
-Otherwise, a next iteration with the new @out@ cache will be activated.
+Otherwise, the next iteration with the new @out@ cache will be activated.
 Note that the continuation of the initial call to @aeval@ sets up the values for the
 initial configuration in the final cache.
 
