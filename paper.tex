@@ -1618,7 +1618,7 @@ The @ndcps@ itself is implemented with delimited controls.
 The function takes two arguments: a set of elements with type @T@ and an initial 
 accumulated value of type @Set[S]@. 
 Function @ndcps@ iteratively returns a value of type @T@ with annotated by
-@@cps[Set[T]]@ that denotes the final returned value of @ndcps@ is type @Set[T]@.
+\texttt{\@ cps[Set[T]]} that denotes the final returned value of @ndcps@ is type @Set[T]@.
 The @f@ introduced by the @shift@ operator is the delimited continuation at the 
 call-site of @ndcps@. 
 
@@ -1636,8 +1636,11 @@ def ndcps[T,S](ts: Set[T], acc: Set[S]): T @cps[Set[S]] = shift { f: (T => Set[S
 }
 \end{lstlisting}
 
-We add an annotation @@cps[Ans]@ on the return type of function @aeval@.
-Now for every non-deterministic choices in the abstract interpreter 
+We add an annotation \texttt{ cps[Ans]} on the return type of function @aeval@.
+Now for every non-deterministic choices in the abstract interpreter, we can simply use
+@ndcps@ on them and write the program sequentially as a concrete interpreter.
+The cache is still accumulated to the next call to @ndcps@ or @aeval@ given the 
+fact that the abstract interpreter should always use the latest cache.
 
 \begin{lstlisting}
 def aeval(e: Expr, env: Env, store: BStore, time: Time): Ans @cps[Ans] = {
@@ -1662,6 +1665,8 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time): Ans @cps[Ans] = {
   }
 }
 \end{lstlisting}
+
+The function @analyze@ is also changed by adding a @reset@ around the function call to @aeval@.
 
 \begin{lstlisting}
 def analyze(e: Expr) = {
