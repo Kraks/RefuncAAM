@@ -951,17 +951,15 @@ However, no two existing stack components are identical in the state space.
 
 \section{Linearization} \label{linear}
 
-In the last section, we showed that by keeping an unabstracted stack in the state
-space we can recover the precise call/return match.
-From this section, we start describing the transformations step by step.
-Our base machine is the AAM with unbounded stack.
-In fact, as later we will transform the stack to higher-order functions
-represented continuations, it does not matter what kind of AAM we start from.
-Because transforming to higher-order functions forces us to sequentialize
-the order of abstract evaluation, and neither need to construct a frame of list
-nor to allocate continuations in the store.
-We choose to start from AAM with unbounded stack just because it has a
-equivalence of stack model to the final abstract definitional interpreters.
+In the previous section, we show that by keeping an unabstracted stack in the state
+space, we can recover the precise call/return match.
+In this and following sections, we begin describing the transformations step by step.
+Our base machine for now is the AAM with unbounded stack, though
+as we will later transform the stack to higher-order functions
+represent \note{``representing'' or ``represented by''?} continuations, it does not matter what kind of AAM we start from.
+This is because transforming to higher-order functions forces us to sequentialize
+the order of abstract evaluation, and neither versions of AAM requires construction of a frame of lists \note{should this be frame of lists? sounds weird}, nor to allocate continuations in the store.
+Thus, our choice to start from an AAM with unbounded stack is motivated simply because it has an equivalent stack model to abstract definitional interpreters (our final target).
 
 \todo{Unbounded Stack AAM is PD, justify this}
 
