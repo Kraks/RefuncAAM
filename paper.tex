@@ -1643,10 +1643,10 @@ def ndcps[T,S](ts: Set[T], acc: Set[S]): T @cps[Set[S]] = shift { f: (T => Set[S
 
 The function @ndcps@ takes two arguments: a set of elements with type @T@, and an initial accumulated value of type @Set[S]@.
 The @ndcps@ function iteratively returns a value of type @T@ with annotated by
-\texttt{\@ cps[Set[T]]} \note{JD: Tiark, can you fix the at sign? I fixed it for the other paper, but my fix doesn't work here} that denotes the final returned value of @ndcps@ is type @Set[T]@.
+\verb|@cps[Set[T]]| that denotes the final returned value of @ndcps@ is type @Set[T]@.
 The @f@ introduced by the @shift@ operator is the delimited continuation at the call-site of @ndcps@.
 
-We add an annotation \texttt{ cps[Ans]} on the return type of the @aeval@ function.
+We add an annotation \verb|@cps[Ans]| on the return type of the @aeval@ function.
 Now, for every nondeterministic choice in the abstract interpreter, we can simply call @ndcps@ on them and write the program sequentially as a concrete interpreter.
 The cache is still accumulated by the next call to @ndcps@ or @aeval@, given the fact that the abstract interpreter should always use the latest cache.
 
