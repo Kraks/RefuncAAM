@@ -344,7 +344,7 @@ obtained.
      [start chain, color=gray] \chainin (m-3-1);
      {
        [start branch=C] \chainin (m-3-5)
-       [join={node[above, labeled] {\text{Known as Danvy's correspondence for concrete semantics artifacts }}}];
+       [join={node[above, labeled] {\text{Known as Danvy's correspondences for concrete semantics artifacts }}}];
      }
    }
  \end{tikzpicture}
@@ -990,10 +990,10 @@ Our base machine for now is the AAM with unbounded stack, though
 as we will later transform the stack to higher-order functions
 representing continuations, it does not matter what kind of AAM we start from.
 This is because transforming to higher-order functions forces us to sequentialize
-the order of abstract evaluation, and neither versions of AAM requires construction of a frame of lists \note{should this be frame of lists? sounds weird}, nor to allocate continuations in the store.
-Thus, our choice to start from an AAM with unbounded stack is motivated simply because it has an equivalent stack model to abstract definitional interpreters (our final target).
-
-\todo{Unbounded Stack AAM is PD, justify this}
+the order of abstract evaluation, and neither requiring construction of a frame on stack, 
+nor to allocate continuations in the store.
+Thus, our choice to start from an AAM with unbounded stack is motivated simply because 
+it has an equivalent stack model to abstract definitional interpreters (our final target).
 
 In Danvy's paper \textit{Defunctionalized Interpreters for Programming
   Languages}, he mentions that for deterministic languages, a reduction semantics
