@@ -262,15 +262,17 @@ definitional interpreters, and the question that how can we interdrive each othe
 well studied.
 The fundamental difference between concrete semantics artifacts and abstract semantics 
 artifacts is non-determinism. In addition to insure termination, abstract semantics 
-artifacts usually equipped with a cache of explored state that is guaranteed to reach 
+artifacts are usually equipped with a cache of explored state that is guaranteed to reach 
 the least fixed-point eventually.
 In this functional peral, we practically answer the question and relate AAM and ADI 
 by presenting a series of syntactical transformations on the program from
 small-step abstract abstract machines to big-step abstract definitional interpreters.
 
-\subsection{Outline}
+In addition, the abstract abstract machines with unbounded stack naturally corresponds 
+to abstract definitional interpreters. We show after refunctionalizing an AAM with unbounded
+stack and with proper caching algorithm, the pushdown control-flow analysis can be obtained.
 
-\note{rest of intro goes here}
+\subsection{Outline}
 
 The rest of this paper is structured as follows: we begin by reviewing some background
 necessary for this work in Section~\ref{background}, as well as introducing some of the basic
@@ -280,24 +282,37 @@ series of systematic transformations. Those transformations are summarized here,
 associated section:
 
 \begin{itemize}
-\item We show how \textbf{linearization} (Section~\ref{linear}) can be used to...
-\item In Section~\ref{fusing}, we then present the \textbf{fusing} transformation, and present...
-\item Section~\ref{disen} discusses \textbf{disentangling}, which shows...
-\item \textbf{Refunctionalization} is shown in Section~\ref{refunc}, and brings a new understanding 
-  of pushdown control-flow analysis. In this section, we present an abstract interpreter obtained 
-  from refunctionalizing a small-step abstracting abstract machine which naturally exhibits the 
-  pushdown control-flow property (as refunctionalization requires abstract execution to be sequentialized).
-\item The last transformation we show is that of transforming a definitional abstract interpreter 
-  to a \textbf{direct-style} interpreter (Section~\ref{directstyle}).
+\item We show \textbf{linearization} in Section~\ref{linear}. By expressing the 
+  non-deterministic choices as first-order data type, we linearize the execution 
+  of abstract abstract machines, therefore the transition of machine state becomes deterministic.
+    Notably, this introduces anther layer of controls that also will be refunctionalized later.
+
+\item In Section~\ref{fusing}, we then present the \textbf{fusing} transformation. 
+  The fusing transformation simply combines the single-step function @step@ and the driving
+  function into one, but keeps all the machine state representation.
+
+\item Section~\ref{disen} discusses \textbf{disentangling}, which disassemble the fused AAM to be
+  several individual functions, and each function handles one data type represented continuation.
+
+\item \textbf{Refunctionalization} is shown in Section~\ref{refunc} which sequentializes
+  the order of abstract execution by higher-order functions.
+  For clarity, we first present the refunctionalized AAM without caching. Then we adopt
+    a different caching algorithm to guarantee the termination of abstract interpretation.
+  In this section, we also review pushdown control-flow analysis and examine how computable 
+    and precise call/return match is obtained through these transformations so far.
+
+\item The last transformation we show is that of transforming the refunctionalized AAM
+  to a \textbf{direct-style} interpreter (Section~\ref{directstyle}) by using delimited
+    controls.
 
 \end{itemize}
 
 These transformations are used throughout the paper, with refunctionalization and
 defunctionalization of abstract interpreters playing important roles for the call stack of
-the analyzed language. All of this insight allows the revelation of
-precisely \emph{why} small-step AAM does not have the pushdown control-flow property
-(without extra effort), as well as explains why ADI naturally extends pushdown control-flow
-property from its defining language.
+the analyzed language. By refunctionalization, the call stack of the analyzed language
+is blended into the call stack of the defining language. This provides another perspective to 
+explain why \citeauthor{darais2017abstracting}'s abstract definitional interpreters 
+is able to extend the the pushdown control-flow property from its defining language.
 
 We complete this paper by discussing related work in Section~\ref{sec:related}, followed by concluding thoughts in Section~\ref{sec:conclusion}.
 
@@ -742,7 +757,8 @@ except nondeterminism which makes @step@ return a list of reachable successor st
 In the beginning of @step@, we call function @tick@ to update the time.
 Then we have two cases to consider:
 
-1) The current control expression is @Let@,
+\begin{itemize}
+  \item The current control expression is @Let@,
 and then the result of @App(f, ae)@ will be bound to variable @x@.
 Firstly we retrieve the set of closures that @f@ may represent.
 For each closure in the set, we do almost the same as what we did in the concrete
@@ -751,7 +767,7 @@ a new continuation address @new_kaddr@ is constructed, and a new frame
 @Frame(x, e, env)@ paired with the current continuation address @kaddr@
 is joined into @new_kaddr@. Finally, a list of successors states is generated.
 
-2) An atomic expression @ae@ sits on the control position of the state.
+  \item An atomic expression @ae@ sits on the control position of the state.
 The value of @ae@ is being returned to its caller.
 We dereference the continuation address @kaddr@ and obtain a set of
 continuations @conts@.
@@ -762,6 +778,7 @@ the values that @ae@ represents. In every generated states,
 the control becomes the expression @e@ in the frame,
 and as we can tell from the name, continuation address @f_kaddr@
 also comes from the frame.
+\end{itemize}
 
 \begin{lstlisting}
 def step(s: State): List[State] = {
