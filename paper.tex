@@ -769,17 +769,14 @@ continuation is allocated on the store @kstore@, so a new continuation address @
 must be constructed and a new frame @Frame(x, e, env)@ paired with the current continuation
 address @kaddr@ is merged into @new_kaddr@. Finally, a list of successor states is generated.
 
-  \item An atomic expression @ae@ sits on the control position of the state.
-The value of @ae@ is being returned to its caller.
-We dereference the continuation address @kaddr@ and obtain a set of
-continuations @conts@.
-For each continuation in the set, we construct an environment based on the
-environment of the frame (@env_f@), and bind @x@ to a newly created binding
-address @baddr@; also update the store with @baddr@ and
-the values that @ae@ represents. In every generated states,
-the control becomes the expression @e@ in the frame,
-and as we can tell from the name, continuation address @f_kaddr@
-also comes from the frame.
+  \item In the second case, an atomic expression @ae@ sits on the control position of the
+state. Here, the value of @ae@ is being returned to its caller.
+In order to accomplish this, we dereference the continuation address @kaddr@ and obtain a set
+of continuations @conts@. For each continuation in the set, we construct an environment based
+on the environment @env_f@ of the frame, and bind @x@ to a newly created binding address
+@baddr@. We must also update the store with @baddr@ and the values that @ae@ represents. In
+every generated state, the control becomes the expression @e@ in the frame, and as we can
+tell from the name, the continuation address @f_kaddr@ also comes from the frame.
 \end{itemize}
 
 \begin{lstlisting}
