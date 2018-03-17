@@ -541,17 +541,17 @@ the rest of the stack @ks@.
 
 \subsubsection{Valuation}
 
-To run the program, we first use function @inject@ to construct an initial machine
+To run the program, we first use the @inject@ function (below) to construct an initial machine
 state given an expression @e@. The initial state contains an empty environment,
-store and stack.
+store, and stack.
 \begin{lstlisting}
 def inject(e: Expr): State = State(e, Map(), Map(), Nil)
 \end{lstlisting}
 
-Then the @drive@ function is used to evaluate
-to a final state by iteratively apply @step@ on current state until we reach a state
-that the control is an atomic expression and the continuation stack is empty.
-And of course, we can extract the value from the final state at last.
+The @drive@ function is then used to evaluate
+to a final state by iteratively applying @step@ on the current state until a state is reached
+ion which the control is an atomic expression and the continuation stack is empty.
+Naturally, we can then extract the value from the final state at last.
 
 \begin{lstlisting}
 def drive(s: State): State = s match {
@@ -561,7 +561,7 @@ def drive(s: State): State = s match {
 def eval(e: Expr): State = drive(inject(e))
 \end{lstlisting}
 
-\subsection{Abstracting Abstract Machine} \label{aam}
+\subsection{Abstracting Abstract Machines} \label{aam}
 Abstracting abstract machines (AAM) is a systematic methodology that derives sound
 abstract interpreters for higher-order functional languages from concrete
 abstract machines \cite{van2012systematic, van2010abstracting}.
