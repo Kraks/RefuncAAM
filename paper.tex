@@ -1109,11 +1109,12 @@ graph to a linear sequence.
 
 \section{Fusing} \label{fusing}
 
-Fusing is a transformation that combines function @step@ and @drive@ to one.
-The fused function @drive_step@ basically formed by merging function
-@step@ into function @drive@.
-@drive_step@ takes a @NDState@ and a set of explored states as argument,
-and returns a set of reachable states once terminates.
+Fusing is a transformation that combines the @step@ and @drive@ functions into a single
+function.
+The fused function @drive_step@ is essentially formed by merging the functionality of
+@step@ into the @drive@ function.
+@drive_step@ takes an @NDState@ and a set of explored states as an argument
+and returns a set of reachable states once it terminates. \note{Do we really need this section? It seems unlikely that this requires its own section. Could we just append to the last section: For convenience, we combine these functions into one, called \texttt{drivestep}?}
 
 \begin{lstlisting}
 def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1134,9 +1135,10 @@ def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
 }
 \end{lstlisting}
 
-Now we have a single function to perform both abstract evaluation and intermediate
-states collecting. Given @inject(e)@ as the initial state and an empty set as
-initial reached set, we can easily define the entrance function @analyze@ as follow.
+With this, have a single function to perform both abstract evaluation and the collection of
+intermediate states. Given @inject(e)@ as an initial state and an empty set as the
+initial set of states reached, we can easily define the entrance function @analyze@ as
+follows:
 
 \begin{lstlisting}
 def analyze(e: Expr): Set[State] = drive_step(inject(e), Set())
@@ -1144,20 +1146,18 @@ def analyze(e: Expr): Set[State] = drive_step(inject(e), Set())
 
 \section{Disentangling} \label{disen}
 
-In the last section, the fused AAM combines all the functions into one and
-looks like a ``big-step'' interpreter, although it still has the machine
+With fusing complete, our AAM
+appears similar to a ``big-step'' interpreter, although it still has the machine
 state representation inside.
 In the disentangling transformation, we
-identify the first-order data type represented evaluation contexts,
-and lift the code blocks that handles these evaluation contexts to be individual functions.
+identify the first-order data types which represent evaluation contexts
+and lift the code blocks that handle these evaluation contexts to be individual functions.
 
-Since there are two layers of continuations, as a result,
-we obtain three mutually recursive functions, @drive_step@,
-@continue@ and @ndcontinue@. The function @drive_step@ plays the same
-role as before; @continue@ handles the evaluation context (@Frame@) of the analyzed
-language, which the function is called from @drive_step@ when encountering an atomic
-expression; @ndcontinue@ dispatches nondeterministic continuations @NDCont@,
-and is invoked from @continue@ when the normal stack is empty.
+Since there are two layers of continuations,
+we obtain three mutually recursive functions: @drive_step@, which plays the same
+role as before; @continue@, which is called from @drive_step@ when encountering an atomic expression, and handles the evaluation context (@Frame@) of the analyzed
+language; and @ndcontinue@, which dispatches nondeterministic continuations @NDCont@,
+and which is invoked from @continue@ when the normal stack is empty.
 
 \begin{lstlisting}
 def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1179,12 +1179,10 @@ def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
 }
 \end{lstlisting}
 
-The above code shows the skeleton of function @drive_step@.
-In the first case of pattern matching, the code for constructing new
-environment, store and frames is omitted.
-At the end of this case, we invoke @drive_step@ recursively.
-The code for the second case is replaced by a function call to @continue@.
-Now a vague shape of interpreter in continuation style is emerged.
+The above code shows the skeleton of @drive_step@.
+At the end of the first case of pattern matching, we invoke @drive_step@ recursively\footnote{The code for constructing new environments, stores, and frames is elided for simplicity of presentation.}.
+The code for the second case is replaced entirely by a function call to @continue@.
+The astute reader will notice a vague shape of interpreter in continuation style has emerged.
 
 \begin{lstlisting}
 def continue(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1201,16 +1199,16 @@ def continue(nds: NDState, seen: Set[State]): Set[State] = {
 }
 \end{lstlisting}
 
-The function @continue@ is largely what we have for the second case in
-@drive_step@, except a function call to @ndcontinue@ is placed when
-the the normal continuation is empty.
+@continue@ is largely what we have for the second case in
+@drive_step@, except that @ndcontinue@ is called when
+the normal continuation is empty.
 Since we are analyzing a language in ANF, the first-order data representation of
-continuation is simplified to @List@.
-An empty list @Nil@ represents the halt of a computation path.
-A cons @::@ means the top frame of the list holds the binding variable, and
+continuations is simplified to a Scala @List@.
+An empty list @Nil@ represents the halt of a computation path, whereas
+a cons @::@ means the top frame of the list holds the binding variable and
 evaluation context.
-An analogue to this in standard CEK machines would be an abstract class (e.g., @cont@) with three
-variants @halt@, @arg(value, cont)@ and @arg(exp, env, cont)@.
+An analogy to this in standard CEK machines would be an abstract class (e.g., @cont@) with
+three variants: @halt@, @arg(value, cont)@, and @arg(exp, env, cont)@.
 
 \begin{lstlisting}
 def ndcontinue(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1230,8 +1228,8 @@ def ndcontinue(nds: NDState, seen: Set[State]): Set[State] = {
 }
 \end{lstlisting}
 
-The shape for function @ndcontinue@ is similar to function @continue@, after
-all, they both use @List@ as a representation of continuations.
+The shape for @ndcontinue@ is similar to @continue@; after
+all, they both use a @List@ representation for continuations.
 When the closure set is empty, we recursively call @drive_step@ with the rest
 of @ndk@, since in this case the normal stack @konts@ is still empty, so
 the state will be dispatched to @ndcontinue@ again.
