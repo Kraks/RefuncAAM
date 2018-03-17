@@ -1517,47 +1517,9 @@ In this section, we present the version that using delimited controls.
 
 \subsection{Un-CPS by Delimited Controls} \label{uncps}
 
-On another path, here, we introduce direct-style abstracting definitional interpreter
-with delimited control operators @reset@ and @shift@.
-
-TODO: This version does not use delimited controls.
+As we identified before, 
 
 \begin{lstlisting}
-def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans = {
-  val config = Config(e, env, store, time)
-  if (cache.outContains(config)) {
-    return Ans(cache.outGet(config), cache)
-  }
-
-  var new_cache = cache.outUpdate(config, cache.inGet(config))
-  val new_time = (e::time).take(k)
-  e match {
-    case Let(x, App(f, ae), e) =>
-      val closures = aeval(f, env, store).toList.asInstanceOf[List[Clos]]
-      val letvs = for (Clos(Lam(v, body), c_env) <- closures) yield {
-        val baddr = allocBind(v, new_time)
-        val new_env = c_env + (v -> baddr)
-        val new_store = store.update(baddr, aeval(ae, env, store))
-        val Ans(bdv, bdcache) = aeval(body, new_env, new_store, new_time, new_cache)
-        new_cache = bdcache
-        val evs = for (VS(vals, time, store) <- bdv) yield {
-          val baddr = allocBind(x, time)
-          val new_env = env + (x -> baddr)
-          val new_store = store.update(baddr, vals)
-          val Ans(ev, ecache) = aeval(e, new_env, new_store, time, new_cache)
-          new_cache = ecache
-          ev
-        }
-        evs.foldLeft(Set[VS]())(_ ++ _)
-      }
-      val letv = letvs.foldLeft(Set[VS]())(_ ++ _)
-      Ans(letv, new_cache.outUpdate(config, letv))
-
-    case ae if isAtomic(ae) =>
-      val vs = Set(VS(aeval(ae, env, store), new_time, store))
-      Ans(vs, new_cache.outUpdate(config, vs))
-  }
-}
 \end{lstlisting}
 
 \section{Refunctionalized AAM}
