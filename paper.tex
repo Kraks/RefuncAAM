@@ -251,11 +251,11 @@ By changing the underlying monads, the definition of the interpreter is not modi
 but we can recover different semantics, including the concrete semantics and various
 abstract semantics such as context-sensitivity and abstract garbage collection \cite{Sergey:2013:MAI:2491956.2491979}.
 
-Broadly speaking, abstract abstract machines and abstract definitional 
+Broadly speaking, abstract abstract machines and abstract definitional
 interpreters are both some kind of abstract interpreters.
 They are obtained by applying a combination of abstractions to their
 concrete counterparts, abstract machines and definitional interpreters, respectively.
-An interesting question would be how we can interderive these abstract semantics artifacts 
+An interesting question would be how we can interderive these abstract semantics artifacts
 from the other one.
 
 In the concrete world, the relations among reduction semantics, abstract machines,
@@ -686,9 +686,9 @@ We then define a generic class @Store[K,V]@ that performs joining when updating 
 in a store (below). By parameterizing @Store[K,V]@ with @[BAddr, Storable]@ and
 @[KAddr, Cont]@, we obtain @BStore@ and @KStore@, respectively.
 
-We note that both the value store and continuation store are monotonic; 
-it continuously grows and never shrinks. This property guarantees that 
-a fixed point of store can always be reached through Kleene's 
+We note that both the value store and continuation store are monotonic;
+it continuously grows and never shrinks. This property guarantees that
+a fixed point of store can always be reached through Kleene's
 iteration when analyzing the program
 
 \begin{lstlisting}
@@ -708,7 +708,7 @@ The codomain of binding stores @Storable@ is the same as previously defined for 
 The codomain of continuation stores @Cont@, on the other hand, is comprised of
 a @Frame@ object and a continuation address @KAddr@.
 To mimic the runtime call stack, @KAddr@ plays the role of
-representing the remaining stack frames. 
+representing the remaining stack frames.
 But since the continuation store may contain multiple continuations,
 the dereferencing of continuation addresses is also nondeterministic.
 
@@ -1291,16 +1291,15 @@ case class VS(vals: Set[Storable], time: Time, store: BStore)
 \end{lstlisting}
 An instance of @VS@ represents the computational result of one path in
 the nondeterministic evaluation.
-The reason that we include a store is there might be a case two pathes have the
-same values but different accumulated side effects such as memory allocations.
-Since the whole computation is nondeterministic, the type of final result
-values is a collection @Set[VS]@. For convenience, we define it as answer type @Ans@:
+The reason that we include a store is that there might be a case in which two paths have the same values but different accumulated side effects (e.g., memory allocations).
+Since the whole computation is nondeterministic, the type of the final result
+values is a collection @Set[VS]@. For convenience, we define it as a type @Ans@:
 \begin{lstlisting}
 type Ans = Set[VS]
 \end{lstlisting}
 
-As we mentioned previously, the components of states are lifted as arguments to
-@aeval@. Therefore, the pattern matching on state also becomes just matching on
+As previously mentioned, the components of states are lifted as arguments to
+@aeval@. Therefore, the pattern matching on the state becomes just a match on
 expression @e@.
 \begin{lstlisting}
 type Cont = Ans => Ans
@@ -1316,13 +1315,13 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = {
 \end{lstlisting}
 
 An additional argument @continue@ which has type @Cont@ is also introduced.
-Recall that in the disentangled AAM, the second case in function @drive_step@
+Recall that in the disentangled AAM, the second case in @drive_step@
 makes a call to @continue@. Here, the reemerging @continue@ is a function
-with type @Ans => Ans@. The function @aeval@ does not return, instead, it calls
+with type @Ans => Ans@. The function @aeval@ does not return: instead, it calls
 @continue@ with the result values.
 
-\textbf{NonDeterminism Abstraction.}
-To handle the inevitable nondeterminism, we defined a generic function @nd@ as follows:
+\textbf{Nondeterminism Abstraction.}
+To handle the inevitable nondeterminism, we define a generic function @nd@ as follows:
 \begin{lstlisting}
 def nd[T,S](ts: Set[T], acc: S, f: (T, S, S => S) => S, g: S => S): S = {
   if (ts.isEmpty) g(acc)
@@ -1330,22 +1329,19 @@ def nd[T,S](ts: Set[T], acc: S, f: (T, S, S => S) => S, g: S => S): S = {
 }
 \end{lstlisting}
 
-Given a set of element of type @T@, an initial accumulated value of type @S@, a function @f@
+Given a set of elements of type @T@, an initial accumulated value of type @S@, a function @f@
 that works on element type @T@ and accumulated type @S@, and a function @g@ that
-works on and returns value of type @S@, @nd@ applies @f@ to each element in the
-set iteratively, accumulates the value and finally applies @g@ on it.
-Seeing this one may bring @fold@ to mind, indeed, it is an implementation of
-@fold@ in continuation style. But here we have two continuations, one for the
-next element in the set, and one for the final result.
-Sometime it is also called extended continuation-passing style (ECPS) that has a continuation and a
-meta-continuation \cite{Danvy:1990:AC:91556.91622}.
+works on and returns a value of type @S@, @nd@ applies @f@ to each element in the
+set iteratively, accumulates the value, and finally applies @g@ to it.
+Readers familiar with functional programming may think of @fold@ at this point; indeed, it is an implementation of @fold@ in continuation style. But here we have two continuations, one for the next element in the set, and one for the final result.
+This is sometimes referred to as an extended continuation-passing style (ECPS) that has a continuation and a meta-continuation \cite{Danvy:1990:AC:91556.91622}.
 \todo{correspondence to disentangled version, refunc the NDCont}
 
 \textbf{Evaluation without Caching.}
-Since our first version of @aeval@ just implements the nondeterministic
-evaluation, and given the defined @nd@, the evaluation function @aeval@ can be easily
-defined. For the case that @e@ is a @let@ expression,
-the overall idea is to perform a two step depth-first evaluation. \todo{refine}
+Since our first version of @aeval@ implements the nondeterministic
+evaluation, given the defined @nd@, the evaluation function @aeval@ can be easily
+defined. In the case that @e@ is a @let@ expression,
+the overall idea is to perform a two-step, depth-first evaluation. \todo{refine}
 
 \begin{lstlisting}
 case Let(x, App(f, ae), e) =>
@@ -1372,15 +1368,15 @@ case Let(x, App(f, ae), e) =>
 \end{lstlisting}
 
 The outer function call @nd@ evaluates over the set of possible closures of
-@f@. For each closures, we go into its body with new environment and new store.
-Remember that the function @aeval@ returns a set of @VS@ to its continuation,
-so the continuation argument @bodyvss@ is a set of @VS@ that represents values
-from multiple computation pates when evaluating this single @body@ expression.
+@f@. For each such closure, we go into its body with a new environment and a new store.
+Remember that the function @aeval@ returns a set of @VS@ objects to its continuation,
+so the continuation argument @bodyvss@ is a set of @VS@ objects which represent values
+from multiple computation paths when evaluating this single @body@ expression.
 
-Then for the inner call of function @nd@ evaluates over the set of body values @bodyvss@.
-For each @VS@, the time stamp and store in @VS@ will be instantiated to
+We next consider the inner call of function @nd@ which evaluates over the set of body values @bodyvss@.
+For each @VS@, the timestamp and store in @VS@ will be instantiated to
 @aeval@.
-The inner application of @aeval@ returns set of values of one computation path to its
+The inner application of @aeval@ returns a set of values of one computation path to its
 continuation, where the continuation will accumulate the result and transfer
 evaluation to the next body value.
 
@@ -1409,8 +1405,8 @@ concrete reachable pathes and values, and also prevents non-termination when ana
 
 \textbf{Configuration.}
 Now we do not have the concept of explicit stack and state,
-but to represent the cache, we introduce the configuration @Config@ as 
-a state-like definition which borrows the components from state but without 
+but to represent the cache, we introduce the configuration @Config@ as
+a state-like definition which borrows the components from state but without
 continuations.
 \begin{lstlisting}
 case class Config(e: Expr, env: Env, store: BStore, time: Time)
@@ -1419,7 +1415,7 @@ case class Config(e: Expr, env: Env, store: BStore, time: Time)
 \textbf{Cache.}
 Recall that the latent assumption of the worklist algorithm in classical AAM
 is if we have seen a state @s@, then it means we also have seen the successors
-of state @s@. 
+of state @s@.
 The caching algorithm we adopted here replay the same assumption but in a big-step
 manner: if we have seen the configuration @c@, then it means we also have seen
 the values that are evaluated by the configuration @c@.
@@ -1437,15 +1433,15 @@ case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
 }
 \end{lstlisting}
 
-The @Cache@ contains two maps @in@ and @out@ which are both mapping from 
-configurations to sets of @VS@. The @in@ cache contains mappings from 
+The @Cache@ contains two maps @in@ and @out@ which are both mapping from
+configurations to sets of @VS@. The @in@ cache contains mappings from
 last iteration of evaluation, and @out@ cache contains mappings after this
-iteration of evaluation. Once we have evaluated a term to some values, 
+iteration of evaluation. Once we have evaluated a term to some values,
 we update the @out@ cache. In the next time of iteration, we will use @out@
 from last iteration as @in@ cache for this iteration.
 
 \textbf{Cache-Passing Style.}
-Now we can modify out interpreter to cache-passing style. 
+Now we can modify out interpreter to cache-passing style.
 First the return type @Ans@ is changed to a case class that contains a set of @VS@ and
 a cache.
 
@@ -1453,19 +1449,19 @@ a cache.
 case class Ans(vss: Set[VS], cache: Cache)
 \end{lstlisting}
 
-The skeleton of function @aeval@ largely remain the same. 
-Every place has a value of @Ans@ is also replaced as direct pattern matching so 
+The skeleton of function @aeval@ largely remain the same.
+Every place has a value of @Ans@ is also replaced as direct pattern matching so
 that we can use the fields in @Ans@ immediately.
 The cache is used in a monotonic way: each function call to @aeval@ or @nd@ is
 passed with the latest cache from the most recent continuation's result.
 
-When we enter to function @aeval@, we firstly lookup in the @out@ cache, 
+When we enter to function @aeval@, we firstly lookup in the @out@ cache,
 if there are some values for current configuration, then we use immediately.
-This corresponds to small-step AAM with a worklist when we have seen a state 
+This corresponds to small-step AAM with a worklist when we have seen a state
 then we can simply discard the state and continue working the rest of worklist @todo@.
 
 Otherwise, if we not hit the @out@ cache, we retrieve the values from @in@ cache, and update @out@ cache
-with values from @in@ cache.  The retrieving from @in@ cache may return an empty set of values if 
+with values from @in@ cache.  The retrieving from @in@ cache may return an empty set of values if
 there is no such mapping for the configuration from the previous iteration.
 It actually first conservatively assumes that all computation can be diverged,
 if not, we will update its values in the mapping after evaluation.
@@ -1488,8 +1484,8 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: 
         aeval(body, new_env, new_store, new_time, cache, { case Ans(bodyvss, bodycache) =>
           nd[VS, Ans](bodyvss, Ans(Set[VS](), bodycache), { case (vs, Ans(acc_vss, cache), bdnd) =>
             ......
-            aeval(e, new_env, new_store, time, cache, { case Ans(evss, ecache) => 
-              bdnd(Ans(accinner ++ evss, ecache)) 
+            aeval(e, new_env, new_store, time, cache, { case Ans(evss, ecache) =>
+              bdnd(Ans(accinner ++ evss, ecache))
             })
           },
           { case Ans(evss, cache) => closnd(Ans(evss ++ accouter, cache)) })
@@ -1506,8 +1502,8 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: 
 \end{lstlisting}
 
 After done the evaluation, we obtain a set of @VS@ and need to update the @out@ cache.
-In the first case of pattern matching, it happens inside of the last continuation of 
-outer @nd@. 
+In the first case of pattern matching, it happens inside of the last continuation of
+outer @nd@.
 For the second case, we update the @out@ cache before calling the continuation @continue@.
 
 \begin{lstlisting}
@@ -1580,7 +1576,7 @@ it is still helplessness for separating the return-flows.
 %probably Store Widening \& Abstract Garbage Collection
 \section{To Direct-Style} \label{directstyle}
 
-In previous section, we presented a refunctionalized AAM with @nd@ operator 
+In previous section, we presented a refunctionalized AAM with @nd@ operator
 in extended continuation-passing style.
 To obtain definitional abstract interpreters, we now transform it further to direct-style.
 
@@ -1592,20 +1588,20 @@ To do this at this point, we actually have multiple choices:
   \item By representing the extended continuation-passing style with delimited controls,
     we derive a new form of abstract interpreters in direct-style.
   \item In fact, we may also just use the same caching algorithm but with side effect such as
-    assignments and mutations to update the cache and then achieve the same 
-    definitional interpreter with pushdown control flows. In this case, nondeterminism can be 
+    assignments and mutations to update the cache and then achieve the same
+    definitional interpreter with pushdown control flows. In this case, nondeterminism can be
     well handled by for comprehension.
 \end{itemize}
 
 These coincidence should not be a surprise since there are extraordinarily rich literatures
-show the correspondence between monads and continuation-passing style as well as delimited 
+show the correspondence between monads and continuation-passing style as well as delimited
 controls since their very beginning era. \todo{cite}
 
 In this section, we present the version that using delimited controls.
 
 \subsection{Un-CPS by Delimited Controls} \label{uncps}
 
-As we identified before, 
+As we identified before,
 
 \begin{lstlisting}
 \end{lstlisting}
