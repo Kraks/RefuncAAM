@@ -92,7 +92,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 
 %% Title information
 %\title{Pushdown Control Flow Analysis via Refunctionalization (Functional Pearl)}         %% [Short Title] is optional;
-\title{Refunctionalization of Abstracting Abstract Machines (Functional Pearl)}         %% [Short Title] is optional;
+\title{Refunctionalization of Abstract Abstract Machines (Functional Pearl)}         %% [Short Title] is optional;
                                         %% when present, will be used in
                                         %% header instead of Full Title.
 %\titlenote{with title note}             %% \titlenote is optional;
@@ -285,9 +285,9 @@ to abstract definitional interpreters. We show after refunctionalizing an AAM wi
 stack, and with the proper caching algorithm, the pushdown control-flow analysis can be
 obtained.
 
-\subsection{Outline}
+\subsection{Contribution}
 
-The rest of this paper is structured as follows: we begin by reviewing some background
+We begin by reviewing some background
 necessary for this work in Section~\ref{background}, as well as introducing some of the basic
 code structures used throughout the paper. We then address the main contribution of this
 paper, which is the filling of the gap between small-step AAM and big-step ADI by developing a
@@ -383,9 +383,8 @@ We complete this paper by discussing related work in Section~\ref{sec:related}, 
 
 % Finally, we discuss related work in Section~\ref{sec:related}, followed by concluding thoughts in Section~\ref{sec:conclusion}.
 
-\todo{Add section numbers to the figure}\note{TR: put this into a proper figure, add known danvy sequence
+\note{TR: put this into a proper figure, add known danvy sequence
 for concrete evaluators at the bottom (in grey or dashed lines)}
-\note{JD: should these be abstracting abstract machines?}
 
 \begin{tikzpicture}
   \matrix (m) [matrix of math nodes, row sep=2.5em, column sep=3.7em]
@@ -462,24 +461,24 @@ interpreters.
 Traditionally, continuation-passing style (CPS) is a popular intermediate representation
 for analyzing functional programs because it exposes control transfer explicitly
 and simplifies analysis~\cite{Shivers:1991:SSC:115865.115884, Shivers:1988:CFA:53990.54007}.
-Here, we choose to use $\lambda$-calculus in administrative normal form (ANF),
+Here, we choose to use $\lambda$-calculus in administrative normal form (ANF) \cite{flanagan1993essence},
 which is a direct-style intermediate representation, as our target for clarity,
 but without losing simplicity and generality.
+The transformations we will show in the rest of this paper
+also work on abstract machines for plain direct-style $\lambda$-calculus languages.
 Although we only show the core calculus language, it can be easily extended
 to support recursive bindings (such as @letrec@), conditionals, primitive types, and
 operations on primitive types. These cases would be trivial to implement,
 so we elide them in this paper.
-The transformations we will show in the rest of this paper
-also work on abstract machines for plain direct-style $\lambda$-calculus languages.
 
 To begin, we present the concrete syntax of a call-by-value $\lambda$-calculus language
-in ANF~\cite{flanagan1993essence}.
+in ANF.
 
 \begin{lstlisting}
-  e $\in$ Exp ∂::= ae | (let ([x (ae ae)]) e)
- ae $\in$ AExp ::= ∂x | lam
-lam $\in$ Lam ∂::= (lambda (x) e)
-  x $\in$ Var   (variable names)
+    e $\in$ Exp ∂::= ae | (let ([x (ae ae)]) e)
+   ae $\in$ AExp ::= ∂x | lam
+  lam $\in$ Lam ∂::= (lambda (x) e)
+    x $\in$ Var   (variable names)
 \end{lstlisting}
 
 In ANF, an expression is either an atomic expression or a @let@ expression.
