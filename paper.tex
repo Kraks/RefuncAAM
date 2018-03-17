@@ -285,14 +285,82 @@ to abstract definitional interpreters. We show after refunctionalizing an AAM wi
 stack, and with the proper caching algorithm, the pushdown control-flow analysis can be
 obtained.
 
+\begin{figure}
+\begin{center}
+ \begin{tikzpicture}
+   \matrix (m) [matrix of math nodes, row sep=2.5em, column sep=3.7em]
+     {
+         &  &  &  &
+       \begin{smallmatrix} \text{abstract} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\
+       \begin{smallmatrix} \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
+       \begin{smallmatrix} \text{big-step} \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  &
+       \begin{smallmatrix} \text{disentangled}  \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
+       \begin{smallmatrix} \text{refunctionalized}  \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
+       \begin{smallmatrix} \text{monadic} \\ \text{abstracting} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix}  \\
+       \begin{smallmatrix} \text{abstract} \\ \text{machines} \end{smallmatrix} &
+         &
+       %\begin{smallmatrix} \text{big-step} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  &
+         &
+       %\begin{smallmatrix} \text{disentangled} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
+         &
+       %\begin{smallmatrix} \text{refunctionalized} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
+       \begin{smallmatrix} \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\
+     };
+   {
+     [start chain] \chainin (m-2-4);
+     \chainin (m-1-5) [join={node[sloped,anchor=center,above,labeled] {\text{un-CPS}}}];
+     \chainin (m-2-5) [join={node[above,labeled] {\text{}}}];
+     \chainin (m-1-5) [join={node[above,labeled] {\text{}}}];
+   }
+   {
+     [start chain] \chainin (m-2-1);
+     \chainin (m-2-2) [join={node[above,labeled] {\begin{smallmatrix} \text{linearizing} \\ \text{+} \\ \text{fusing} \end{smallmatrix}}     }];
+     \chainin (m-2-3) [join={node[above,labeled] {\text{disentangling}}}];
+     \chainin (m-2-4) [join={node[above,labeled] {\text{refunc.}}}];
+     \chainin (m-2-5) [join={node[above,labeled] {\text{monadify}}}];
+   }
+   {
+     [start chain]
+     \chainin (m-3-1);
+     { [start branch=A] \chainin (m-2-1)
+       [join={node[left, labeled] {\alpha}}];
+     }
+   }
+     %\chainin (m-2-2);
+     %\chainin (m-2-3);
+     %\chainin (m-2-4);
+   {
+     [start chain]
+     \chainin (m-3-5);
+     { [start branch=B] \chainin (m-2-5)
+       [join={node[right, labeled] {\alpha}}];
+     }
+     {
+       [start branch=D, color=gray] \chainin (m-3-1)
+       [join={node[right, labeled] {\text{}}}];
+     }
+   }
+   {
+     [start chain, color=gray] \chainin (m-3-1);
+     {
+       [start branch=C] \chainin (m-3-5)
+       [join={node[above, labeled] {\text{Known as Danvy's correspondence for concrete semantics artifacts }}}];
+     }
+   }
+ \end{tikzpicture}
+ \caption{Transformations from AAM to ADI} \label{fig:trans}
+\end{center}
+\end{figure}
+
 \subsection{Contribution}
 
 We begin by reviewing some background
 necessary for this work in Section~\ref{background}, as well as introducing some of the basic
 code structures used throughout the paper. We then address the main contribution of this
 paper, which is the filling of the gap between small-step AAM and big-step ADI by developing a
-series of systematic transformations. Those transformations are summarized here, with their
-associated section:
+series of systematic transformations. Figure \ref{fig:trans} shows the transformations.
+
+Those transformations are summarized here, with their associated section:
 
 \begin{itemize}
 \item We show \textbf{linearization} in Section~\ref{linear}. By expressing the
@@ -386,73 +454,7 @@ We complete this paper by discussing related work in Section~\ref{sec:related}, 
 % \note{TR: put this into a proper figure, add known danvy sequence
 % for concrete evaluators at the bottom (in grey or dashed lines)}
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=100mm,scale=1.0]{figures/lines.png}
-\end{center}
-\end{figure}
-
-% \begin{tikzpicture}
-%   \matrix (m) [matrix of math nodes, row sep=2.5em, column sep=3.7em]
-%     {
-%         &  &  &  &
-%       \begin{smallmatrix} \text{abstract} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\
-%       \begin{smallmatrix} \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
-%       \begin{smallmatrix} \text{big-step} \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  &
-%       \begin{smallmatrix} \text{disentangled}  \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
-%       \begin{smallmatrix} \text{refunctionalized}  \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
-%       \begin{smallmatrix} \text{monadic} \\ \text{abstracting} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix}  \\
-%       \begin{smallmatrix} \text{abstract} \\ \text{machines} \end{smallmatrix} &
-%         &
-%       %\begin{smallmatrix} \text{big-step} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  &
-%         &
-%       %\begin{smallmatrix} \text{disentangled} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
-%         &
-%       %\begin{smallmatrix} \text{refunctionalized} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
-%       \begin{smallmatrix} \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\
-%     };
-%   {
-%     [start chain] \chainin (m-2-4);
-%     \chainin (m-1-5) [join={node[sloped,anchor=center,above,labeled] {\text{un-CPS}}}];
-%     \chainin (m-2-5) [join={node[above,labeled] {\text{}}}];
-%     \chainin (m-1-5) [join={node[above,labeled] {\text{}}}];
-%   }
-%   {
-%     [start chain] \chainin (m-2-1);
-%     \chainin (m-2-2) [join={node[above,labeled] {\begin{smallmatrix} \text{linearizing} \\ \text{+} \\ \text{fusing} \end{smallmatrix}}     }];
-%     \chainin (m-2-3) [join={node[above,labeled] {\text{disentangling}}}];
-%     \chainin (m-2-4) [join={node[above,labeled] {\text{refunc.}}}];
-%     \chainin (m-2-5) [join={node[above,labeled] {\text{monadify}}}];
-%   }
-%   {
-%     [start chain]
-%     \chainin (m-3-1);
-%     { [start branch=A] \chainin (m-2-1)
-%       [join={node[left, labeled] {\alpha}}];
-%     }
-%   }
-%     %\chainin (m-2-2);
-%     %\chainin (m-2-3);
-%     %\chainin (m-2-4);
-%   {
-%     [start chain]
-%     \chainin (m-3-5);
-%     { [start branch=B] \chainin (m-2-5)
-%       [join={node[right, labeled] {\alpha}}];
-%     }
-%     {
-%       [start branch=D, color=gray] \chainin (m-3-1)
-%       [join={node[right, labeled] {\text{}}}];
-%     }
-%   }
-%   {
-%     [start chain, color=gray] \chainin (m-3-1);
-%     {
-%       [start branch=C] \chainin (m-3-5)
-%       [join={node[above, labeled] {\text{Known Danvy Sequence for Concrete Evaluators}}}];
-%     }
-%   }
-% \end{tikzpicture}
+%\includegraphics[width=100mm,scale=1.0]{figures/lines.png}
 
 \iffalse
 \subsection{Style}
