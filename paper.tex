@@ -461,7 +461,7 @@ so we elide them in this paper.
 The transformations we will show in the rest of this paper
 also work on abstract machines for plain direct-style $\lambda$-calculus languages.
 
-To begin, we now present the concrete syntax of a call-by-value $\lambda$-calculus language
+To begin, we present the concrete syntax of a call-by-value $\lambda$-calculus language
 in ANF~\cite{flanagan1993essence}.
 
 \begin{lstlisting}
@@ -807,14 +807,14 @@ def step(s: State): List[State] = {
 
 \subsubsection{$k$-Call-Sensitive Instantiation} \label{kcfainst}
 
-A history of the last $k$ call sites is used as a finite program contour in
-$k$-call-sensitive analysis.
+In $k$-call-sensitive analysis, a history of the last $k$ call sites is
+used as a finite program counter.
 The history is represented as a list of expressions and embedded
 in the allocated addresses.
 
-Every time before transferring to successor states, we use function @tick@ to
-fresh the time stamp and use this new time stamp for successors when allocating addresses.
-The function @tick@ returns the $k$ front-most expressions given the current state and its
+Before transferring to successor states, we must use the @tick@ function to
+refresh the timestamp, and then use this new timestamp for successors when allocating addresses.
+The @tick@ function returns the $k$ front-most expressions given the current state and its
 time history.
 
 \begin{lstlisting}
@@ -823,19 +823,19 @@ def tick(s: State): Time = (s.e :: s.time).take(k)
 \end{lstlisting}
 
 If we instantiate $k$ to be $0$, the history degenerates to an empty list,
-and we obtain a monovariant analysis, which does
-not differentiate values at different call sites. In this case, the address
+and we obtain a monovariant analysis (i.e., it does
+not differentiate values at different call sites). In this case, the address
 space collapses to the space of variable names.
 Note that regarding the ambiguity in $k$-CFA\cite{Gilray:2016:ACP:2951913.2951936},
-the code here actually implements call+return sensitivity.
+the code here actually implements call+return \note{call+return, call/return, etc.? Check this} sensitivity.
 
 \subsubsection{Collecting Semantics}
 
-To run (analyze) a program, as same as the CESK machines,
-we first use function @inject@ to construct the initial state given the program.
-Note that the initial continuation store has a built-in mapping that maps continuation address
-@Halt@ to an empty set of continuations.
-We also provide an empty program contour as initial time.
+Similar to the CESK machines, to run (analyze) a program
+we first use the @inject@ function to construct the initial state given to the program.
+Note that the initial continuation store has a built-in mapping that maps the continuation
+address for @Halt@ to an empty set of continuations.
+We also provide an empty program counter as our initial time.
 \begin{lstlisting}
 def inject(e: Expr): State =
   State(e, Map(),
@@ -844,17 +844,17 @@ def inject(e: Expr): State =
         Halt, List())
 \end{lstlisting}
 
-However, comparing with the concrete CESK machine, the
+However, in contrast to the concrete CESK machine, the
 @drive@ function performs collecting semantics instead of the valuation
 semantics. That is, for the purpose of analyzing programs, the function @drive@
 collects all the intermediate machine states as the program is abstractly executing.
-The following code shows a variant of the work list algorithm to find the fixed-point
-of set of states.
+The following code shows a variant of the worklist algorithm to find the fixed-point
+of the set of states.\note{JD: I changed all of this to worklist instead of work list in favor of the worklist algorithm. Change this back if it's wrong.}
 Function @drive@ always applies function @step@ to the head element @hd@ of
-the work list @todo@ if @hd@ is unseen, then inserts the result of @step@ to
-the rest of work list; and in the meantime adds @hd@ to the explored states set.
-If the work list is empty, then @drive@ just returns the set of reachable states
-up to now.
+the worklist @todo@ if @hd@ is unseen. It then inserts the result of @step@ to
+the rest of worklist, and in the meantime adds @hd@ to the explored states set.
+If the worklist is empty, @drive@ simply returns the set of reachable states
+up to the current execution point.
 
 \begin{lstlisting}
 def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
@@ -866,36 +866,37 @@ def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
 def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
 \end{lstlisting}
 
-Finally, a user could use function @analyze@ to obtain all reachable states for a given program.
+Finally, a user may invoke the @analyze@ function to obtain all reachable states for a given
+program.
 
 %\subsection{Monadic Abstract Interpreter}
 %Maybe not here?
 
 \subsection{One Step Back: Unabstracted Stack}
 
-In this section, we describe a variant of AAM that leaves the stack to be
-unbounded. That uses a precise call stack as we did in the concrete CESK machine.
+In this section, we describe a variant of AAM that allows the stack to be
+unbounded which uses a precise call stack as we did in the concrete CESK machine.
 Instead of allocating continuations in the store and embedding
 addresses of continuations in states, we intend to use a list of frames
 to explicitly model the stack.
-By doing so, we recover the call stack as precise as runtime's
+By doing so, we recover the call stack as precise as runtimes
 (so called pushdown control flow analysis), but since
 the stack is unbounded, the analysis is potentially not computable.
 For readers who are not familiar with pushdown analysis, we have a detailed
-discussion in Section \ref{pdcfarevisit}.
-The reason we show it here is to establish an artifact with precise call/return match
+discussion in Section~\ref{pdcfarevisit}.
+The reason we show it here is to establish an artifact with precise call/return matching
 used for the next step of transformation.
 
-In the definition of state @State@, the continuation store disappears, and
-component @konts@ becomes a list of frames. The other components keep the same.
+In the definition of @State@, the continuation store disappears, and
+component @konts@ becomes a list of frames. The other components remain unchanged.
 
 \begin{lstlisting}
 case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
 \end{lstlisting}
 
-The state transition function @step@ shows below is still
-nondeterministic, but the only nondeterminism happens when dereferencing the callee @f@
-from function applications @App(f, ae)@.
+The state transition function @step@ shown below is still
+nondeterministic, but the only nondeterminism happening is when dereferencing the callee @f@
+from the function application @App(f, ae)@.
 
 \begin{lstlisting}
 def step(s: State): List[State] = {
@@ -924,14 +925,16 @@ def step(s: State): List[State] = {
 
 In the first case of pattern matching, we may have multiple choices of closure for callee @f@.
 For each closure in the set, a new frame is constructed and pushed onto the stack.
-The code for handling the second case is the same as the concrete CESK machines.
+The code for handling the second case (atomic expressions) is the same as the concrete CESK
+machines.
 
 \textbf{Note on Computability.}
-Unfortunately, even though, other components in states are finite,
-this AAM with unbounded stack is still not computable.
-Because the unbounded stack can grow to arbitrary depth which implies that the state space is possibly
-infinite, therefore the analysis may not terminate for all programs if we simply enumerate reachable states.
-To see this, consider a program that has two mutually recursive functions:
+Unfortunately, even though other components in the states are finite,
+this AAM with an unbounded stack is still not computable.
+This is because the unbounded stack can grow to arbitrary depth which implies that the state
+space is possibly infinite; the analysis may therefore not terminate for all programs if we
+simply enumerate reachable states. To see this, consider a program that has two mutually
+recursive functions:
 
 \begin{lstlisting}
 (letrec ([f1 (lambda (x)
@@ -942,9 +945,9 @@ To see this, consider a program that has two mutually recursive functions:
     z))
 \end{lstlisting}
 
-Function @f1@ and @f2@ mutually invokes each other, and the stack will be
-alternatively pushing frame @f1@ and @f2@ onto the top of current stack,
-but no existing two stack components are identical in the state space.
+Function @f1@ and @f2@ mutually invoke each other, so the stack will
+alternate pushing frames @f1@ and @f2@ onto the top of current stack.
+However, no two existing stack components are identical in the state space.
 
 \section{Linearization} \label{linear}
 
