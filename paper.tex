@@ -229,7 +229,36 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 
 \section{Introduction}
 
-Abstracting abstract machines (AAMs) and abstract definitional interpreters (ADIs) are, broadly speaking, both examples of abstract interpreters. \note{JD: need more bullet points here and I can fill this in}
+Abstracting abstract machines (AAM) is a systematic methodology proposed by \citeauthor{van2012systematic}
+for constructing abstract interpreters of higher-order functional languages \cite{van2012systematic, van2010abstracting}. 
+Given a concrete small-step abstract machine, (e.g, the CESK machine, Krivine's machine or etc), 
+by allocating continuations in the store and bound both the value addresses and continuation
+addresses to be finite, we obtain an abstract interpreter with finite state space which 
+can be used for performing sound static analysis.
+One can further instantiate different polyvariant control-flow analysis by using different address allocators \cite{Gilray:2016:ACP:2951913.2951936}.
+
+Applying the same idea on big-step definitional interpreters, \citeauthor{darais2017abstracting} 
+build abstract definitional interpreters (ADI) that are written in monadic style \cite{darais2017abstracting}
+By changing the underlying
+monads, the definition of interpreter has no change, but we can recover different semantics 
+including the concrete semantics and various abstract semantics.
+
+Broadly speaking, abstract abstract machines and abstract definitional interpreters are both
+abstract interpreters. They are obtained by applying a combination of abstractions to their
+concrete counterparts, abstract machines and definitional interperters, perspectively.
+The relations between abstract machines, definitional interpreters, and monadic interpreters 
+is intensively studied by Danvy and his collaborator in the past years 
+\cite{Ager:2003:FCE:888251.888254, Danvy:2001:DW:773184.773202, danvy2004refocusing, Danvy:2008:DIP:1411204.1411206, AGER2004223, ager2005functional, Danvy:2006:RW:2171265.2171268}.
+
+But in terms of their abstract semantic artifacts, 
+the relations between small-step abstract abstract machines and big-step abstract 
+definitional interpreters, and the question that how can we interdrive each other is not
+well studied.
+In this functional peral, we practical answer this question by presenting a series of 
+syntactical transformations on the program from small-step abstract abstract machines 
+to big-step abstract definitional interpreters.
+
+\subsection{outline}
 
 \note{rest of intro goes here}
 
@@ -244,14 +273,18 @@ associated section:
 \item We show how \textbf{linearization} (Section~\ref{linear}) can be used to...
 \item In Section~\ref{fusing}, we then present the \textbf{fusing} transformation, and present...
 \item Section~\ref{disen} discusses \textbf{disentangling}, which shows...
-\item \textbf{Refunctionalization} is shown in Section~\ref{refunc}, and brings a new understanding of pushdown control flow analysis. In this section, we present an abstract interpreter obtained from refunctionalizing a small-step abstracting abstract machine which naturally exhibits the pushdown control-flow property (as refunctionalization requires abstract execution to be sequentialized).
-\item The last transformation we show is that of transforming a definitional abstract interpreter to a \textbf{direct-style} interpreter (Section~\ref{directstyle}).
+\item \textbf{Refunctionalization} is shown in Section~\ref{refunc}, and brings a new understanding 
+  of pushdown control-flow analysis. In this section, we present an abstract interpreter obtained 
+  from refunctionalizing a small-step abstracting abstract machine which naturally exhibits the 
+  pushdown control-flow property (as refunctionalization requires abstract execution to be sequentialized).
+\item The last transformation we show is that of transforming a definitional abstract interpreter 
+  to a \textbf{direct-style} interpreter (Section~\ref{directstyle}).
 
 \end{itemize}
 
 These transformations are used throughout the paper, with refunctionalization and
 defunctionalization of abstract interpreters playing important roles for the call stack of
-the analyzed language (i.e., Scala)\note{right?}. All of this insight allows the revelation of
+the analyzed language. All of this insight allows the revelation of
 precisely \emph{why} small-step AAM does not have the pushdown control-flow property
 (without extra effort), as well as explains why ADI naturally extends pushdown control-flow
 property from its defining language.
