@@ -1322,7 +1322,7 @@ Sometime it is also called extended continuation-passing style (ECPS) that has a
 meta-continuation \cite{Danvy:1990:AC:91556.91622}.
 \todo{correspondence to disentangled version, refunc the NDCont}
 
-\textbf{First Version of Evaluation Function.}
+\textbf{Evaluation without Caching.}
 Since our first version of @aeval@ just implements the nondeterministic
 evaluation, and given the defined @nd@, the evaluation function @aeval@ can be easily
 defined. For the case that @e@ is a @let@ expression,
@@ -1405,7 +1405,7 @@ The caching algorithm we adopted here replay the same assumption but in a big-st
 manner: if we have seen the configuration @c@, then it means we also have seen
 the values that are evaluated by the configuration @c@.
 
-The case class @Cache@ is defined as follow:
+The case class @Cache@ and its operations are defined as follow:
 
 \begin{lstlisting}
 case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
@@ -1417,54 +1417,77 @@ case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
 \end{lstlisting}
 
 The @Cache@ contains two maps @in@ and @out@ which are both mapping from 
-configurations to sets of @VS@. 
-
-When we enter to function @aeval@
+configurations to sets of @VS@. The @in@ cache contains mappings from 
+last iteration of evaluation, and @out@ cache contains mappings after this
+iteration of evaluation. Once we have evaluated a term to some values, 
+we update the @out@ cache. In the next time of iteration, we will use @out@
+from last iteration as @in@ cache for this iteration.
 
 \textbf{Cache-Passing Style.}
-
-The definition of Ans is changed to a case class that contains a set of @VS@ and
+Now we can modify out interpreter to cache-passing style. 
+First the return type @Ans@ is changed to a case class that contains a set of @VS@ and
 a cache.
+
 \begin{lstlisting}
 case class Ans(vss: Set[VS], cache: Cache)
 \end{lstlisting}
 
+The skeleton of function @aeval@ largely remain the same. 
+Every place has a value of @Ans@ is also replaced as direct pattern matching so 
+that we can use the fields in @Ans@ immediately.
+The cache is used in a monotonic way: each function call to @aeval@ or @nd@ is
+passed with the latest cache from the most recent continuation's result.
+
+When we enter to function @aeval@, we firstly lookup in the @out@ cache, 
+if there are some values for current configuration, then we use immediately.
+This corresponds to small-step AAM with a worklist when we have seen a state 
+then we can simply discard the state and continue working the rest of worklist @todo@.
+
+Otherwise, if we not hit the @out@ cache, we retrieve the values from @in@ cache, and update @out@ cache
+with values from @in@ cache.  The retrieving from @in@ cache may return an empty set of values if 
+there is no such mapping for the configuration from the previous iteration.
+It actually first conservatively assumes that all computation can be diverged,
+if not, we will update its values in the mapping after evaluation.
+In terms of partial orders and lattices, it is also the case we start 
+the Kleene iteration from the bottom of the lattice.
+
 \begin{lstlisting}
 def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
   val config = Config(e, env, store, time)
+  /* lookups the out cache, uses the values if contains this config */
   if (cache.outContains(config)) return continue(Ans(cache.outGet(config), cache))
-
+  /* uses the values from in cache */
   val new_cache = cache.outUpdate(config, cache.inGet(config))
   val new_time = (e::time).take(k)
-
   e match {
     case Let(x, App(f, ae), e) =>
       val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
       nd[Clos, Ans](closures, Ans(Set[VS](), new_cache), { case (clos, Ans(acc, cache), closnd) =>
-        val Clos(Lam(v, body), c_env) = clos
-        val baddr = allocBind(v, new_time)
-        val new_env = c_env + (v -> baddr)
-        val new_store = store.update(baddr, atomicEval(ae, env, store))
+        ......
         aeval(body, new_env, new_store, new_time, cache, { case Ans(bodyvss, bodycache) =>
           nd[VS, Ans](bodyvss, Ans(Set[VS](), bodycache), { case (vs, Ans(acc_vss, cache), bdnd) =>
-            val VS(vals, time, store) = vs
-            val baddr = allocBind(x, time)
-            val new_env = env + (x -> baddr)
-            val new_store = store.update(baddr, vals)
-            aeval(e, new_env, new_store, time, cache, { case Ans(evss, ecache) => bdnd(Ans(acc_vss ++ evss, ecache)) })
+            ......
+            aeval(e, new_env, new_store, time, cache, { case Ans(evss, ecache) => 
+              bdnd(Ans(acc_vss ++ evss, ecache)) 
+            })
           },
           { case Ans(evss, cache) => closnd(Ans(evss ++ acc, cache)) })
         })
       },
+      /* updates the out cache after evaluation */
       { case Ans(vss, cache) => continue(Ans(vss, cache.outUpdate(config, vss))) })
 
     case ae if isAtomic(ae) =>
       val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
-      continue(Ans(vs, new_cache.outUpdate(config, vs)))
+      continue(Ans(vs, new_cache.outUpdate(config, vs))) /* updates the out cache after evaluation */
   }
 }
 \end{lstlisting}
 
+After done the evaluation, we obtain a set of @VS@ and need to update the @out@ cache.
+In the first case of pattern matching, it happens inside of the last continuation of 
+outer @nd@. 
+For the second case, we update the @out@ cache before calling the continuation @continue@.
 
 \begin{lstlisting}
 def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
