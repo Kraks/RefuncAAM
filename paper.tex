@@ -1491,27 +1491,30 @@ it is still helplessness for separating the return-flows.
 %probably Store Widening \& Abstract Garbage Collection
 \section{To Direct-Style} \label{directstyle}
 
-In previous section, we presented a refunctionalized AAM that in extended continuation-passing style.
-To obtain a definitional abstract interpreter, we need to transform it further to direct-style.
-At this point, we have two choices:
-1) By monadifying the continuations into monads, we obtain the \citeauthor{darais2017abstracting}'s
-abstracting definitional interpreter in monadic style.
-2) By representing the extended continuation-passing style with delimited continuations,
-we derive a new form of abstract interpreters in direct-style.
-This coincidence should not be a surprise since there are extraordinarily rich literatures
-show the correspondence between monads and continuations as of their very beginning era
-(TODO: cite Danvy/abs control/esce of fp).
-In fact, we can also just use the same caching algorithm but with side effect such as
-assignments and mutations to achieve the same definitional interpreter with pushdown
-control flows.
-In this section, we present both of versions using monads and delimited controls.
+In previous section, we presented a refunctionalized AAM with @nd@ operator 
+in extended continuation-passing style.
+To obtain definitional abstract interpreters, we now transform it further to direct-style.
 
-\subsection{Monadification} \label{monadify}
+To do this at this point, we actually have multiple choices:
+\begin{itemize}
+  \item By monadifying the continuations into monads, we obtain the abstracting
+    definitional interpreters in monadic style which are what \citeauthor{darais2017abstracting}
+    described \cite{darais2017abstracting}.
+  \item By representing the extended continuation-passing style with delimited controls,
+    we derive a new form of abstract interpreters in direct-style.
+  \item In fact, we may also just use the same caching algorithm but with side effect such as
+    assignments and mutations to update the cache and then achieve the same 
+    definitional interpreter with pushdown control flows. In this case, nondeterminism can be 
+    well handled by for comprehension.
+\end{itemize}
 
-In this section, we show how to transform the refunctionalized AAM to monadic-style
-abstracting definitional interpreters.
+These coincidence should not be a surprise since there are extraordinarily rich literatures
+show the correspondence between monads and continuation-passing style as well as delimited 
+controls since their very beginning era. \todo{cite}
 
-\subsection{Un-CPS} \label{uncps}
+In this section, we present the version that using delimited controls.
+
+\subsection{Un-CPS by Delimited Controls} \label{uncps}
 
 On another path, here, we introduce direct-style abstracting definitional interpreter
 with delimited control operators @reset@ and @shift@.
