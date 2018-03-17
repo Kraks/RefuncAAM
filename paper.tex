@@ -424,7 +424,7 @@ can be evaluated in a single step.
 We also assume that all the variable names in the program are unique.
 
 The abstract syntax can be straightforwardly described in Scala as follows:
-\note{TR: grammar below isn't ANF. Either make it so, or clarify that 
+\note{TR: grammar below isn't ANF. Either make it so, or clarify that
 we assume ANF only as convention and don't need/want to enforce it in
 the term structure}
 
@@ -480,8 +480,8 @@ Before describing how the machine evaluates expressions, we must first define se
 functions. As mentioned in Section~\ref{anfsyntax}, atomic expressions are either a variable
 or a literal @lambda@ term. As such, the atomic expression evaluator @atomicEval@ handles
 these two cases and evaluates atomic expressions to closures in a straightforward way.
-The @alloc@ function generates a fresh address, and always allocates unique integer
-in the domain of store.
+The @alloc@ function generates a fresh address, and always allocates a unique integer
+in the domain of @store@.
 The @isAtomic@ function is used as a predicate to determine if the expression is atomic.
 
 \begin{lstlisting}
@@ -493,8 +493,8 @@ def alloc(store: Store): Addr = store.keys.size + 1
 def isAtomic(e: Expr): Boolean = e.isInstanceOf[Var] || e.isInstanceOf[Lam]
 \end{lstlisting}
 
-Now, we can faithfully describe the state transition function @step@,
-that, when given a machine state, determines its successor state.
+We can now faithfully describe the state transition function @step@,
+which when given a machine state, determines its successor state.
 
 \begin{lstlisting}
 def step(s: State): State = s match {
@@ -515,8 +515,8 @@ def step(s: State): State = s match {
 \end{lstlisting}
 
 In the first case, the control of current state is a @Let@ expression,
-and its right-hand side is an function application.
-By calling evaluator @atomicEval@, we obtain the closure that callee @f@ stands for.
+and its right-hand side is a function application.
+By calling the @atomicEval@ evaluator, we obtain the closure for which the callee @f@ stands.
 The successor state's control then transfers to the @body@ expression of closure,
 with an updated environment and an update store. The new environment is extended
 from closure's environment and mapped @v@ to a fresh address @addr@.
