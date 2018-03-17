@@ -1383,11 +1383,29 @@ def analyze(e: Expr) =
 
 \subsection{Caching Fixed-Points}
 
-We will apply the fixed-point caching algorithm as described in
-\citeauthor{darais2017abstracting}'s abstract definitional interpreter.
+Based on the refunctionalized AAM from the last section, we use the same @nd@ nondeterministic operator
+but further extend it to a fixed-point cached evaluation in this section. \todo{extend this}
 
+\textbf{Configuration.}
+Now we do not have the concept of explicit stack and state,
+but to represent the cache, we introduce the configuration @Config@ as 
+a state-like definition which borrows the components from state but without 
+continuations.
 \begin{lstlisting}
 case class Config(e: Expr, env: Env, store: BStore, time: Time)
+\end{lstlisting}
+
+\textbf{Cache.}
+We will apply the fixed-point caching algorithm as described from
+\citeauthor{darais2017abstracting}'s ADI paper.
+Note that the latent assumption of the worklist algorithm in classical AAM
+is if we have seen a state @s@, then it means we also have seen the successors
+of state @s@. 
+The caching algorithm we adopted here replay the same assumption but in a big-step
+manner: if we have seen the configuration @c@, then it means we also have seen
+the values that are evaluated by the configuration @c@.
+
+\begin{lstlisting}
 case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
   def inGet(config: Config): Set[VS] = in.getOrElse(config, Set())
   def outGet(config: Config): Set[VS] = out.getOrElse(config, Set())
@@ -1396,8 +1414,7 @@ case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
 }
 \end{lstlisting}
 
-adding cache to eval
-
+\textbf{Cache-Passing Style.}
 The definition of Ans is changed to a case class that contains a set of @VS@ and
 a cache.
 \begin{lstlisting}
@@ -1405,9 +1422,9 @@ case class Ans(vss: Set[VS], cache: Cache)
 \end{lstlisting}
 
 \begin{lstlisting}
-def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, cont: Cont): Ans = {
+def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
   val config = Config(e, env, store, time)
-  if (cache.outContains(config)) return cont(Ans(cache.outGet(config), cache))
+  if (cache.outContains(config)) return continue(Ans(cache.outGet(config), cache))
 
   val new_cache = cache.outUpdate(config, cache.inGet(config))
   val new_time = (e::time).take(k)
@@ -1431,13 +1448,17 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, cont: Cont
           { case Ans(evss, cache) => closnd(Ans(evss ++ acc, cache)) })
         })
       },
-      { case Ans(vss, cache) => cont(Ans(vss, cache.outUpdate(config, vss))) })
+      { case Ans(vss, cache) => continue(Ans(vss, cache.outUpdate(config, vss))) })
 
     case ae if isAtomic(ae) =>
       val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
-      cont(Ans(vs, new_cache.outUpdate(config, vs)))
+      continue(Ans(vs, new_cache.outUpdate(config, vs)))
   }
 }
+\end{lstlisting}
+
+
+\begin{lstlisting}
 def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
   def iter(cache: Cache): Ans = {
     val Ans(vss, new_cache) = aeval(e, env, store, mtTime, cache, {
