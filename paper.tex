@@ -170,7 +170,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   on definitional interpreters, and obtains big-step
   abstract definitional interpreters (ADI) written in monadic style.
   Yet, the relations between small-step abstracting abstract machines and
-  big-step abstracting definitional interpreters is not well studied.
+  big-step abstracting definitional interpreters are not well studied.
 
   In this paper, we show their correspondence and how to syntactically transform small-step
   abstract abstract machines into big-step abstract definitional
@@ -229,8 +229,15 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 
 \section{Introduction}
 
-Abstracting abstract machines (AAM) is a systematic methodology proposed by~\citeauthor{van2012systematic}
-for constructing abstract interpreters of higher-order functional languages~\cite{van2012systematic, van2010abstracting}.
+Defining a language by building an interpreter for it can be traced to the very
+early time of programming languages research \cite{landin1966next, reynolds1972definitional}.
+Nowadays, even an undergraduate student in computer science is able to build toy languages
+through interpreters.
+But building a sound abstract interpreter remains as an esoteric and difficult task until recent years.
+
+\citeauthor{van2012systematic} proposed Abstracting Abstract Machines (AAM) methodology which can used
+for constructing abstract interpreters of higher-order functional languages from concrete abstract machines
+~\cite{van2012systematic, van2010abstracting}.
 Given a concrete small-step abstract machine, (e.g, the CESK machine, Krivine's machine, etc.),
 by allocating continuations in the store and bounding both the value addresses and continuation
 addresses to be finite, we obtain an abstract interpreter with a finite state space which
@@ -242,24 +249,28 @@ built abstract definitional interpreters (ADI) that are written in monadic style
 One of the advantages of a monadic interpreter is that it is modular and composable.
 By changing the underlying monads, the definition of the interpreter is not modified,
 but we can recover different semantics, including the concrete semantics and various
-abstract semantics such as context-sensitivity and abstract garbage collection.
+abstract semantics such as context-sensitivity and abstract garbage collection \cite{Sergey:2013:MAI:2491956.2491979}.
 
-Broadly speaking, abstract abstract machines and abstract definitional interpreters are both
-abstract interpreters. They are obtained by applying a combination of abstractions to their
+Broadly speaking, abstract abstract machines and abstract definitional 
+interpreters are both some kind of abstract interpreters.
+They are obtained by applying a combination of abstractions to their
 concrete counterparts, abstract machines and definitional interpreters, respectively.
+An interesting question would be how we can interderive these abstract semantics artifacts 
+from the other one.
+
 In the concrete world, the relations among reduction semantics, abstract machines,
 definitional interpreters, and monadic interpreters is intensively studied by Danvy and his
 collaborators in the past years
 \cite{Ager:2003:FCE:888251.888254, Danvy:2001:DW:773184.773202, danvy2004refocusing, Danvy:2008:DIP:1411204.1411206, AGER2004223, ager2005functional, Danvy:2006:RW:2171265.2171268, danvy2009towards, biernacka2009towards}.
-These abstract machines implement structural operational semantics in continuation style,
+The abstract machines implement structural operational semantics in continuation style,
 where the reduction contexts are defunctionalized continuations. One can derive definitional
 interpreters by refunctionalizing the evaluation contexts of abstract machines,
 and by defunctionalizing the higher-order functions, one may obtain abstract machines in the
 reverse direction.
 
-But in terms of their abstract semantics artifacts,
+On the contrary, in terms of their abstract semantics artifacts,
 the relations between small-step abstract abstract machines and big-step abstract
-definitional interpreters, as well as the ability to derive one from the other is not
+definitional interpreters, as well as the question of deriving one from the other is not
 well-studied.
 The fundamental difference between concrete semantics artifacts and abstract semantics
 artifacts is nondeterminism. In addition to ensuring termination, abstract semantics
