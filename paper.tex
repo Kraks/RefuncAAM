@@ -1462,16 +1462,16 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: 
   e match {
     case Let(x, App(f, ae), e) =>
       val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-      nd[Clos, Ans](closures, Ans(Set[VS](), new_cache), { case (clos, Ans(acc, cache), closnd) =>
+      nd[Clos, Ans](closures, Ans(Set[VS](), new_cache), { case (clos, Ans(accouter, cache), closnd) =>
         ......
         aeval(body, new_env, new_store, new_time, cache, { case Ans(bodyvss, bodycache) =>
           nd[VS, Ans](bodyvss, Ans(Set[VS](), bodycache), { case (vs, Ans(acc_vss, cache), bdnd) =>
             ......
             aeval(e, new_env, new_store, time, cache, { case Ans(evss, ecache) => 
-              bdnd(Ans(acc_vss ++ evss, ecache)) 
+              bdnd(Ans(accinner ++ evss, ecache)) 
             })
           },
-          { case Ans(evss, cache) => closnd(Ans(evss ++ acc, cache)) })
+          { case Ans(evss, cache) => closnd(Ans(evss ++ accouter, cache)) })
         })
       },
       /* updates the out cache after evaluation */
