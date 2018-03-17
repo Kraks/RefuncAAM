@@ -508,8 +508,8 @@ An atomic expression $ae$ is either a variable or a literal @lambda@ term, eithe
 can be evaluated in a single step.
 We also assume that all the variable names in the program are unique.
 
-The abstract syntax in Scala is shown as follows. We assume the source 
-program conforms ANF's convention, and not force it in the term structure 
+The abstract syntax in Scala is shown as follows. We assume the source
+program conforms ANF's convention, and not force it in the term structure
 of Scala constructs.
 
 \begin{lstlisting}
@@ -533,9 +533,9 @@ As its name suggests, a machine state has four components:
 3) \textit{Store} models the heap of a program as a map from addresses to values.
 The address space consists of numbers (0-indexed).
 In our toy language, the only category of value is a closure, i.e., a function paired with an environment.
-4) \textit{Continuation} represents the program stack. In this paper, 
+4) \textit{Continuation} represents the program stack. In this paper,
 we instantiate the stack as a list of frames because the ANF simplifies the evaluation context.
-For direct style $\lambda$-calculus, the continuations of CEK/CESK machines can be presented by 
+For direct style $\lambda$-calculus, the continuations of CEK/CESK machines can be presented by
 variants of a data type.
 
 The Scala representations for the components of the CESK machine are as follows:
@@ -559,7 +559,7 @@ frames, where a frame can be considered an evaluation context in reduction seman
 We represent frames using the @Frame@ class, which stores the information of a single
 call-site, i.e., the information that can be used to resume the interrupted computation.
 A @Frame@ constitutes a variable name @x@ to be bound later, a control expression
-to which the program may resume, and its environment. 
+to which the program may resume, and its environment.
 
 \subsubsection{Single-Step Transition}
 Before describing how the machine evaluates expressions, we must first define several helper
@@ -990,9 +990,9 @@ Our base machine for now is the AAM with unbounded stack, though
 as we will later transform the stack to higher-order functions
 representing continuations, it does not matter what kind of AAM we start from.
 This is because transforming to higher-order functions forces us to sequentialize
-the order of abstract evaluation, and neither requiring construction of a frame on stack, 
+the order of abstract evaluation, and neither requiring construction of a frame on stack,
 nor to allocate continuations in the store.
-Thus, our choice to start from an AAM with unbounded stack is motivated simply because 
+Thus, our choice to start from an AAM with unbounded stack is motivated simply because
 it has an equivalent stack model to abstract definitional interpreters (our final target).
 
 In Danvy's paper \textit{Defunctionalized Interpreters for Programming
@@ -1134,7 +1134,7 @@ function.
 The fused function @drive_step@ is essentially formed by merging the functionality of
 @step@ into the @drive@ function.
 @drive_step@ takes an @NDState@ and a set of explored states as an argument
-and returns a set of reachable states once it terminates. 
+and returns a set of reachable states once it terminates.
 
 \begin{lstlisting}
 def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1337,13 +1337,13 @@ set iteratively, accumulates the value and finally applies @g@ on it.
 
 If we look at @continue@ and @ndcontinue@ in the disentangled AAM, we will find
 that @nd@ is an abstraction of those two functions. In function @continue@,
-there are two out calls to @ndcontinue@ and @drive_step@, this is the reason why 
+there are two out calls to @ndcontinue@ and @drive_step@, this is the reason why
 we have functions @f@ and @g@ in @nd@.
 
-Readers familiar with functional programming may think of @fold@ at this point; indeed, 
-it is an implementation of @fold@ in continuation style. But here we have two 
+Readers familiar with functional programming may think of @fold@ at this point; indeed,
+it is an implementation of @fold@ in continuation style. But here we have two
 continuations, one for the next element in the set, and one for the final result.
-This is sometimes referred to as an extended continuation-passing style (ECPS) 
+This is sometimes referred to as an extended continuation-passing style (ECPS)
 that has a continuation and a meta-continuation \cite{Danvy:1990:AC:91556.91622}.
 
 \textbf{Evaluation without Caching.}
@@ -1640,16 +1640,15 @@ show that number of continuation is finite.
 \section{Related Work}\label{sec:related}
 
 \textbf{Abstract Interpretation and Control-flow Analysis.}
-\citeauthor{cousot1977abstract} invented abstract interpretation as a sound approach 
-to approximate the program's runtime behaviors\cite{cousot1977abstract}.
-Control-flow analysis is one of the instances of abstract interpretation on functional programs 
-that can be traced to Jones \cite{jones1981flow}. 
-\citeauthor{Shivers:1988:CFA:53990.54007} introduces $k$-CFA which uses $k$ recent calling contexts as program 
-contour that differentiates values from different context \cite{Shivers:1988:CFA:53990.54007, Shivers:1991:SSC:115865.115884}.
-The modern formulation of control-flow analysis is the abstracting abstract machines 
+\citeauthor{cousot1977abstract} invented abstract interpretation as a sound approach
+to approximate a program's runtime behavior\cite{cousot1977abstract}.
+Control flow analysis is one instance of abstract interpretation on functional programs
+that can be traced to Jones \cite{jones1981flow}.
+\citeauthor{Shivers:1988:CFA:53990.54007} introduces $k$-CFA which uses $k$ recent calling contexts as program contour that differentiates values from different contexts \cite{Shivers:1988:CFA:53990.54007, Shivers:1991:SSC:115865.115884}.
+The modern formulation of control flow analysis is the abstracting abstract machines
 methodology \cite{van2012systematic, van2010abstracting} which forms the starting point of this paper.
 Modern programming languages such as Java\cite{might2010resolving} and Racket \cite{Tobin-Hochstadt:2012:HSE:2384616.2384655}
-also can be modeled by abstracting abstract machine approach.
+can also be modeled by the abstracting abstract machine approach.
 
 \textbf{Defunctionalization and Refunctionalization.}
 Defunctionalization and refunctionalization build connections between abstract
