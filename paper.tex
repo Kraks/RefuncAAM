@@ -1367,13 +1367,13 @@ case Let(x, App(f, ae), e) =>
   continue)
 \end{lstlisting}
 
-The outer function call @nd@ evaluates over the set of possible closures of
+The outer call to @nd@ evaluates over the set of possible closures of
 @f@. For each such closure, we go into its body with a new environment and a new store.
 Remember that the function @aeval@ returns a set of @VS@ objects to its continuation,
 so the continuation argument @bodyvss@ is a set of @VS@ objects which represent values
 from multiple computation paths when evaluating this single @body@ expression.
 
-We next consider the inner call of function @nd@ which evaluates over the set of body values @bodyvss@.
+We next consider the inner call to @nd@, which evaluates over the set of body values @bodyvss@.
 For each @VS@, the timestamp and store in @VS@ will be instantiated to
 @aeval@.
 The inner application of @aeval@ returns a set of values of one computation path to its
@@ -1386,8 +1386,8 @@ case ae if isAtomic(ae) =>
   continue(Set(VS(ds, new_time, store)))
 \end{lstlisting}
 
-If the expression is atomic, then we just need to construct a new instance of
-@VS@, return it to the @continue@ function.
+If the expression is atomic, then we simply need to construct a new instance of
+@VS@ and return it to the @continue@ function.
 
 At the end, the initial invocation to @aeval@ is passed with an indentify
 function as halting continuation.
@@ -1399,8 +1399,8 @@ def analyze(e: Expr) =
 \subsection{Caching Fixed-Points}
 
 Based on the refunctionalized AAM from the last section, we use the same @nd@ nondeterministic operator
-but further extend it to a fixed-point cached evaluation in this section. 
-The fixed-point caching algorithm performs a sound over-approximation of all possible 
+but further extend it to a fixed-point cached evaluation in this section.
+The fixed-point caching algorithm performs a sound over-approximation of all possible
 concrete reachable pathes and values, and also prevents non-termination when analyzing diverged programs.
 
 \textbf{Configuration.}
@@ -1521,12 +1521,12 @@ def analyze(e: Expr) = {
 \end{lstlisting}
 
 Finally, the @analyze@ function as the entrance of the analysis does a looping iteration
-to find the fixed-point on caches starting from an empty cache. 
+to find the fixed-point on caches starting from an empty cache.
 If the @out@ cache of this iteration is equivalent to the @out@ cache from the last iteration,
 then we have reached a fixed-point that over-approximates the concrete evaluations,
 and thus can be returned.
 Otherwise, a next iteration with the new @out@ cache will be activated.
-Note that the continuation of the initial call to @aeval@ sets up the values for the 
+Note that the continuation of the initial call to @aeval@ sets up the values for the
 initial configuration in the final cache.
 
 \subsection{Pushdown Control Flow Analysis, Revisited} \label{pdcfarevisit}
