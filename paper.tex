@@ -91,7 +91,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 \begin{document}
 
 %% Title information
-%\title{Pushdown Control-Flow Analysis via Refunctionalization (Functional Pearl)}         %% [Short Title] is optional;
+%\title{Pushdown Control Flow Analysis via Refunctionalization (Functional Pearl)}         %% [Short Title] is optional;
 \title{Refunctionalization of Abstracting Abstract Machines (Functional Pearl)}         %% [Short Title] is optional;
                                         %% when present, will be used in
                                         %% header instead of Full Title.
@@ -177,7 +177,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   interpreters.
   The transformations include linearization, fusing, disentangling, refunctionalizing,
   and monadification (or un-CPS to direct-style). Linearization expresses
-  non-deterministic choices into first-order data types, after which refunctionalization
+  nondeterministic choices into first-order data types, after which refunctionalization
   sequentializes the evaluation order by higher-order functions.
   All transformations properly handle the collecting semantics and the
   nondeterminism of abstract interpretation.
@@ -244,7 +244,7 @@ associated section:
 \item We show how \textbf{linearization} (Section~\ref{linear}) can be used to...
 \item In Section~\ref{fusing}, we then present the \textbf{fusing} transformation, and present...
 \item Section~\ref{disen} discusses \textbf{disentangling}, which shows...
-\item \textbf{Refunctionalization} is shown in Section~\ref{refunc}, and brings a new understanding of pushdown control-flow analysis. In this section, we present an abstract interpreter obtained from refunctionalizing a small-step abstracting abstract machine which naturally exhibits the pushdown control-flow property (as refunctionalization requires abstract execution to be sequentialized).
+\item \textbf{Refunctionalization} is shown in Section~\ref{refunc}, and brings a new understanding of pushdown control flow analysis. In this section, we present an abstract interpreter obtained from refunctionalizing a small-step abstracting abstract machine which naturally exhibits the pushdown control-flow property (as refunctionalization requires abstract execution to be sequentialized).
 \item The last transformation we show is that of transforming a definitional abstract interpreter to a \textbf{direct-style} interpreter (Section~\ref{directstyle}).
 
 \end{itemize}
@@ -274,7 +274,7 @@ We complete this paper by discussing related work in Section~\ref{sec:related}, 
 %   Galois connection?
 %   \note{JD: Section number?}
 
-% \item A new understanding of pushdown control-flow analysis by
+% \item A new understanding of pushdown control flow analysis by
 %   refunctionalization.
 %   We present an abstract interpreter obtained from refunctionalizing
 %   a small-step abstracting abstract machine.
@@ -565,39 +565,40 @@ def eval(e: Expr): State = drive(inject(e))
 Abstracting abstract machines (AAM) is a systematic methodology that derives sound
 abstract interpreters for higher-order functional languages from concrete
 abstract machines \cite{van2012systematic, van2010abstracting}.
-An abstracting abstract machine implements computable abstract semantics that
+An abstracting abstract machine implements computable abstract semantics which
 approximates the runtime behaviors of programs.
 Since the state space of concrete execution is possibly infinite,
-to analyze programs, the key insight of AAM approach is to allocate both bindings
+the key insight of AAM approach when analyzing programs is to allocate both bindings
 and continuations on the store, and then bound the addresses space to be finite.
 Since each component of state is finite,
-the abstracted machine-state space is finite, and computable.
+the abstracted machine-state space is also finite, and therefore computable.
 
 In this section, we derive the abstracting abstract machine from concrete
 CESK machines, and also show how to instantiate
-useful $k$-call-sensitive control-flow analysis.
+useful $k$-call-sensitive control flow analysis.
 
 \subsubsection{Machine Components}
 
 Similar to CESK machines, the machine state of AAM has a control expression,
-an environment, a store and continuation, and in addition with a time-stamp.
-But there are several notable differences between AAM's store and CESK machine's store.
-In AAM, the store maps addresses to sets of values, so it stores all possible values
-for a particular address. Thus dereferencing addresses becomes non-deterministic.
-Also, the store performs joining rather than overwriting when updating elements
-of the store.
-Third, the continuations are likewise allocated on store instead of formed a linked list,
-and the continuation in a state then turns into a continuation address.
+an environment, a store, and continuation, as well as a timestamp.
+However, there are several notable differences between AAM's store and CESK machine's store.
+In AAM, the store maps addresses to sets of values; it stores all possible values
+for a particular address. As such, dereferencing addresses becomes nondeterministic.
+Also, the store performs \emph{joining}, rather than overwriting, when updating elements.
+Furthermore, the continuations are likewise allocated on the store instead of formed into a
+linked list, and the continuations are in a state which then turns into a continuation
+address.
 
-For clarity, we divide the store into a binding store @BStore@ and a continuation store @KStore@.
-The binding store maps binding addresses to sets of closure values, and the continuation store maps
-continuation addresses to sets of continuations.
-We define a generic class @Store[K,V]@ that performs joining when updating elements
-in a store. By parameterizing @Store[K,V]@ with @[BAddr, Storable]@ and
-@[KAddr, Cont]@, we obtain @BStore@ and @KStore@, perspectively.
+For clarity, we divide the store into two separate stores: the binding stores @BStore@, and
+the continuation store @KStore@.
+The binding store maps binding addresses to sets of closure values, whereas the continuation
+store maps continuation addresses to sets of continuations.
+We then define a generic class @Store[K,V]@ that performs joining when updating elements
+in a store (below). By parameterizing @Store[K,V]@ with @[BAddr, Storable]@ and
+@[KAddr, Cont]@, we obtain @BStore@ and @KStore@, respectively.
 
-TODO(rephrase): Note that the store is monotonic, the store is always growing and never becoming
-smaller. This property guarantees we eventually will find a fixed point.
+We note that the \note{store? update function? can a store be monotonic?} is monotonic; it continuously grows and never shrinks. This property
+guarantees that in analyzing the \note{update function? store? pick the right word}, a fixed point can always be reached.
 
 \begin{lstlisting}
 case class Store[K,V](map: Map[K, Set[V]]) {
@@ -612,13 +613,13 @@ type BStore = Store[BAddr, Storable]
 type KStore = Store[KAddr, Cont]
 \end{lstlisting}
 
-The co-domain of binding stores @Storable@ is the same
-as we defined for CESK machines.
-The co-domain of continuation stores @Cont@ is comprised of
-a frame @Frame@ and a continuation address @KAddr@.
+The codomain of all binding stores @Storable@ is the same
+as previously defined for CESK machines.
+The codomain of continuation stores @Cont@, on the other hand, is comprised of
+a @Frame@ object and a continuation address @KAddr@.
 To mimic the runtime call stack, @KAddr@ plays the role of
 representing the remaining stack frames.
-TODO: talk about nondet of cont deref?
+\todo{talk about nondet of cont deref?}
 
 \begin{lstlisting}
 abstract class Storable
@@ -629,7 +630,7 @@ case class Cont(frame: Frame, kaddr: KAddr)
 \end{lstlisting}
 
 As a consequence, the components of states are also changed:
-the store is divided into binding store and continuation store;
+the store is divided into binding stores and continuation stores;
 the continuation stack becomes an address.
 By dereferencing this address in a continuation store, we can retrieve the
 actual transfer of controls. The definition of environment @Env@
@@ -679,9 +680,9 @@ def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
 def allocKont(tgtExpr: Expr): KAddr = ContAddr(tgtExpr)
 \end{lstlisting}
 
-\subsubsection{Single-step Transition}
+\subsubsection{Single-Step Transition}
 
-Since dereferencing an address becomes non-deterministic, our @atomicEval@
+Since dereferencing an address becomes nondeterministic, our @atomicEval@
 function also turns to be nondeterministic. Given an atomic expression @e@,
 @atomicEval@ returns a set of storable values, i.e., closures, to the caller.
 If the expression is just a @lambda@ term, then the returned set is a singleton.
@@ -694,7 +695,7 @@ def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
 \end{lstlisting}
 
 The structure of function @step@ is similar to the concrete CESK machine,
-except non-determinism which makes @step@ return a list of reachable successor states.
+except nondeterminism which makes @step@ return a list of reachable successor states.
 In the beginning of @step@, we call function @tick@ to update the time.
 Then we have two cases to consider:
 
@@ -819,7 +820,7 @@ Instead of allocating continuations in the store and embedding
 addresses of continuations in states, we intend to use a list of frames
 to explicitly model the stack.
 By doing so, we recover the call stack as precise as runtime's
-(so called pushdown control-flow analysis), but since
+(so called pushdown control flow analysis), but since
 the stack is unbounded, the analysis is potentially not computable.
 For readers who are not familiar with pushdown analysis, we have a detailed
 discussion in Section \ref{pdcfarevisit}.
@@ -834,7 +835,7 @@ case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Ti
 \end{lstlisting}
 
 The state transition function @step@ shows below is still
-non-deterministic, but the only non-determinism happens when dereferencing the callee @f@
+nondeterministic, but the only nondeterminism happens when dereferencing the callee @f@
 from function applications @App(f, ae)@.
 
 \begin{lstlisting}
@@ -907,14 +908,14 @@ In Danvy's paper \textit{Defunctionalized Interpreters for Programming
 is a structural operational semantics in continuation style, where the reduction
 context is a defunctionalized continuation \cite{Danvy:2008:DIP:1411204.1411206}.
 Here we are facing a problem:
-the underlying semantics of AAM is fundamentally non-deterministic.
+the underlying semantics of AAM is fundamentally nondeterministic.
 But the evaluation context (the @Frame@ in our program) is not
-non-deterministic, and the work list @todo@ actually implicitly handles the non-determinism,
+nondeterministic, and the work list @todo@ actually implicitly handles the nondeterminism,
 if we simply refunctionalize the frames to functions, it would not helps toward
 abstract definitional interpreters.
 
 In order to address this problem, our first step of transformations
-is to linearize all the non-deterministic choices.
+is to linearize all the nondeterministic choices.
 This step turns the @step@ function to be deterministic.
 Likewise the @Frame@ saves the information of the caller in concrete executions,
 we introduce another layer of controls, and define a case class @NDCont@
@@ -922,7 +923,7 @@ that saves the information at a fork point when we have multiple target closures
 We also add a new field @ndk@ to the definition of state which is called
 @NDState@ now.
 For the rest of the paper, to differentiate the two continuations, we would call
-the first one as normal continuation, and the second one as non-deterministic
+the first one as normal continuation, and the second one as nondeterministic
 continuations.
 
 \begin{lstlisting}
@@ -960,7 +961,7 @@ By atomically evaluating @f@, we obtain a set of closures.
 The transition is deterministic to the first element of the closure set.
 So we just prepare new environment, new store, and new frame list only for the
 first closure in that set.
-A new non-deterministic continuation @new_ndk@ is also constructed,
+A new nondeterministic continuation @new_ndk@ is also constructed,
 which contains the rest of closures, the values of argument @ae@, the store,
 the time and the new frame list.
 We use the store before updating because for different closures they may form
@@ -969,7 +970,7 @@ We also use the new frames, because all the closures at this fork point share
 the same stack and return point.
 
 In the second case shown in below we will see how @NDCont@ deal with
-the non-determinism.
+the nondeterminism.
 
 \begin{lstlisting}
 case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
@@ -998,7 +999,7 @@ If the normal continuation @konts@ is an empty list, then it means we have reach
 the halt of computation; otherwise, we should return the values of @ae@ to its
 caller which is contained in the top frame of stack.
 
-But, since we have added non-determinism into state, an empty list of frames means
+But, since we have added nondeterminism into state, an empty list of frames means
 we have the reached the halt of \textit{one computation path}, and we should
 determine the next state indicates by @NDCont@.
 So we have a pattern matching on @ndk@:
@@ -1012,7 +1013,7 @@ popping up the front-most element.
 environment and new store for the body expression of the closure;
 we use the same frame list and time that are copied from the fork point rather
 than current one.
-The non-determinism continuation @new_ndk@ is also updated by removal of that closure.
+The nondeterminism continuation @new_ndk@ is also updated by removal of that closure.
 \end{itemize}
 
 \begin{lstlisting}
@@ -1029,9 +1030,9 @@ def drive(nds: NDState, seen: Set[State]): Set[State] = {
 
 The function @drive@ is also changed: there is no work list anymore, because all the
 potentially unexplored states are embedded in to the continuation for
-non-determinism.
+nondeterminism.
 The termination of the analysis is when we reach a @NDState@ that the expression
-is atomic, and both the normal continuation and non-determinism continuation are
+is atomic, and both the normal continuation and nondeterminism continuation are
 empty list. This corresponds to the case that @todo@ list is empty.
 
 Now, we obtain a linearized abstract abstract machine. If we image that the classical
@@ -1087,7 +1088,7 @@ we obtain three mutually recursive functions, @drive_step@,
 @continue@ and @ndcontinue@. The function @drive_step@ plays the same
 role as before; @continue@ handles the evaluation context (@Frame@) of the analyzed
 language, which the function is called from @drive_step@ when encountering an atomic
-expression; @ndcontinue@ dispatches non-deterministic continuations @NDCont@,
+expression; @ndcontinue@ dispatches nondeterministic continuations @NDCont@,
 and is invoked from @continue@ when the normal stack is empty.
 
 \begin{lstlisting}
@@ -1182,7 +1183,7 @@ In this section, several other notable changes have been made:
   The components of the states are lifted as arguments of the evaluation
   function.
 \item Since our final target is abstract definitional interpreters while still
-non-deterministic, start from this section, our abstract semantic artifact
+nondeterministic, start from this section, our abstract semantic artifact
 returns a set of final values instead of collected states.
 \item As we are getting close to the
 abstract definitional interpreters, the name of @drive_step@ is updated to
@@ -1190,10 +1191,10 @@ abstract definitional interpreters, the name of @drive_step@ is updated to
 \end{itemize}
 
 For clarity, in this section, we first show how to refunctionalize the normal continuation and
-non-deterministic continuation without collecting semantics.
+nondeterministic continuation without collecting semantics.
 Then adding an appropriate caching algorithm to make sure the analysis will
 terminate at some fixed-point is just changing the program to cache-passing style.
-Finally, we examine how computable pushdown control-flow analysis is established
+Finally, we examine how computable pushdown control flow analysis is established
 through refunctionalization and caching.
 
 \subsection{First Try}
@@ -1204,10 +1205,10 @@ contains a set of storable values, a time stamp, and a store.
 case class VS(vals: Set[Storable], time: Time, store: BStore)
 \end{lstlisting}
 An instance of @VS@ represents the computational result of one path in
-the non-deterministic evaluation.
+the nondeterministic evaluation.
 The reason that we include a store is there might be a case two pathes have the
 same values but different accumulated side effects such as memory allocations.
-Since the whole computation is non-deterministic, the type of final result
+Since the whole computation is nondeterministic, the type of final result
 values is a collection @Set[VS]@. For convenience, we define it as answer type @Ans@:
 \begin{lstlisting}
 type Ans = Set[VS]
@@ -1235,8 +1236,8 @@ makes a call to @continue@. Here, the reemerging @continue@ is a function
 with type @Ans => Ans@. The function @aeval@ does not return, instead, it calls
 @continue@ with the result values.
 
-\textbf{Non-Determinism Abstraction.}
-To handle the inevitable non-determinism, we defined a generic function @nd@ as follows:
+\textbf{NonDeterminism Abstraction.}
+To handle the inevitable nondeterminism, we defined a generic function @nd@ as follows:
 \begin{lstlisting}
 def nd[T,S](ts: Set[T], acc: S, f: (T, S, S => S) => S, g: S => S): S = {
   if (ts.isEmpty) g(acc)
@@ -1256,7 +1257,7 @@ meta-continuation \cite{Danvy:1990:AC:91556.91622}.
 \todo{correspondence to disentangled version, refunc the NDCont}
 
 \textbf{First Version of Evaluation Function.}
-Since our first version of @aeval@ just implements the non-deterministic
+Since our first version of @aeval@ just implements the nondeterministic
 evaluation, and given the defined @nd@, the evaluation function @aeval@ can be easily
 defined. For the case that @e@ is a @let@ expression,
 the overall idea is to perform a two step depth-first evaluation. \todo{refine}
@@ -1384,7 +1385,7 @@ def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
 }
 \end{lstlisting}
 
-\subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
+\subsection{Pushdown Control Flow Analysis, Revisited} \label{pdcfarevisit}
 
 In the last section, we just established a computable pushdown control-flow
 analysis through refunctionalization and caching. In this section,
@@ -1394,11 +1395,11 @@ achieve it.
 \textbf{The Problem of Return-flows.}
 Pushdown control-flow is a property in analysis that precisely models
 the runtime call-stack of the analyzed program.
-A pushdown control-flow analysis provides as exact as runtime return-flow
-when analyzing the program, but traditional control-flow analysis collapses
+A pushdown control flow analysis provides as exact as runtime return-flow
+when analyzing the program, but traditional control flow analysis collapses
 the state space into a finite space thus causes imprecise stack modeling.
 
-To see how traditional control-flow analysis suffers from spurious return-flows,
+To see how traditional control flow analysis suffers from spurious return-flows,
 we can consider the following example:
 
 \begin{lstlisting}
@@ -1536,13 +1537,13 @@ machines and interpreters.
 For deterministic languages, a reduction semantics is a structural operational
 semantics in continuation style, where the reduction context is a
 defunctionalized continuation.
-Unfortunately, the abstract abstract machines is non-deterministic, where
-the non-determinism is handled by a work list.
-We can turn this explicit non-determinism into the reduction context of
+Unfortunately, the abstract abstract machines is nondeterministic, where
+the nondeterminism is handled by a work list.
+We can turn this explicit nondeterminism into the reduction context of
 AAM.
 
 
-\textbf{Pushdown Control-flow Analysis.}
+\textbf{Pushdown Control flow Analysis.}
 In recent years, there are significant efforts \cite{vardoulakis2010cfa2, earl2012introspective,
 gilray2016pushdown, johnson2015abstracting} to achieve precise call/return
 match based on small-step abstracting abstract machines.
