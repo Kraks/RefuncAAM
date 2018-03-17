@@ -574,7 +574,9 @@ def step(s: State): State = s match {
 
 As shown and previously discussed, we examine the only two cases which the state may be.
 
-\textbf{\texttt{Let} expression.} In the first @case@ statement shown in the previous code,
+\begin{itemize}
+
+\item In the first @case@ statement shown in the previous code,
 the control of the current state matches as a @Let@ expression, with its right-hand side a
 function application.
 By calling the @atomicEval@ evaluator, we obtain the closure for which the callee @f@ stands.
@@ -587,7 +589,7 @@ Finally, a new frame @frame@ is pushed onto the stack @k@, where
 @frame@ contains the variable name @x@ at the left-hand position of the @Let@,
 the body expression of @Let@, and the lexical environment of the body expression.
 
-\textbf{Atomic expression.} If the state is not a @Let@ expression, then it must be
+\item If the state is not a @Let@ expression, then it must be
 an atomic expression, as seen in the above code. In this scenario,
 we begin by extracting the top frame of all available continuations.
 The control (i.e., an atomic expression) of the current state is the evaluated term
@@ -596,6 +598,8 @@ The environment and store are updated with @x@ mapping to the closure value of @
 Finally, the successor state is transferred to expression @e@ from the top frame,
 which is the body of a @Let@ expression, with the updated environment, store, and
 the rest of the stack @ks@.
+
+\end{itemize}
 
 \subsubsection{Valuation}
 
@@ -699,28 +703,30 @@ case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, k: KAddr, ti
 \end{lstlisting}
 
 \subsubsection{Allocating Addresses}
-Up to now, we did not describe about allocating addresses in stores and the time stamp @Time@.
-But in abstract interpretation, they are key ingredients to achieve
-analyses with different sensitivities, as well as to a finite state space analysis\cite{Gilray:2016:ACP:2951913.2951936}.
+Up to this point, we have not described allocating addresses in stores,
+nor handling the time stamp @Time@.
+In abstract interpretation, however, these are key ingredients to achieve
+analyses with different sensitivities, as well as to perform a finite
+state space analysis\cite{Gilray:2016:ACP:2951913.2951936}.
 To effectively approximate the runtime behavior, we introduce a finite
-program contour @time@ that encodes the program execution history.
-Here, we use a list of execution contexts (expressions) to represent, and
-as we will see in section \ref{kcfainst}, by applying different @tick@
-functions on time stamp we may obtain a family of analyses.
+program counter @time@ that encodes the program execution history.
+We use a list of execution contexts (expressions) to represent this, and
+as we will see in Section~\ref{kcfainst}, by applying different @tick@
+functions on the timestamp, we are able to obtain a family of analyses.
 
 \begin{lstlisting}
 type Time = List[Expr]
 \end{lstlisting}
 
-As we mentioned previously, the space of addresses has to be finite in AAM.
-Binding addresses are parameterized by variable names and the time of creating this binding,
-which are both finite.
+As previously mentioned, the space of addresses must be finite in AAM.
+Binding addresses are parameterized by variable names and the creation time of the binding,
+both of which are finite.
 Continuation addresses @KAddr@ has two variants:
 1) @Halt@ which corresponds to the empty stack, and
 2) @ContAddr@ consists of the entry expressions of callee, which are also
 finite.
 One may ask, why not also keep track of the time in continuation addresses?
-(TODO: why target expression, allocation polyvariance)
+\todo{why target expression, allocation polyvariance}
 
 \begin{lstlisting}
 case class BAddr(x: String, time: Time)
@@ -730,8 +736,8 @@ case object Halt extends KAddr
 case class ContAddr(tgt: Expr) extends KAddr
 \end{lstlisting}
 
-Two helper functions @allocBind@ and @allocKont@ that will be used later
-to allocate binding addresses and continuation addresses.
+We introduce two helper functions, @allocBind@ and @allocKont@, which will be
+used to allocate binding addresses and continuation addresses.
 
 \begin{lstlisting}
 def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
@@ -741,9 +747,9 @@ def allocKont(tgtExpr: Expr): KAddr = ContAddr(tgtExpr)
 \subsubsection{Single-Step Transition}
 
 Since dereferencing an address becomes nondeterministic, our @atomicEval@
-function also turns to be nondeterministic. Given an atomic expression @e@,
-@atomicEval@ returns a set of storable values, i.e., closures, to the caller.
-If the expression is just a @lambda@ term, then the returned set is a singleton.
+function (below) is also nondeterministic. Given an atomic expression @e@,
+@atomicEval@ returns a set of storable values (i.e., closures) to the caller.
+If the expression is simply a @lambda@ term, the returned set is a singleton.
 
 \begin{lstlisting}
 def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
@@ -753,19 +759,17 @@ def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
 \end{lstlisting}
 
 The structure of function @step@ is similar to the concrete CESK machine,
-except nondeterminism which makes @step@ return a list of reachable successor states.
-In the beginning of @step@, we call function @tick@ to update the time.
-Then we have two cases to consider:
+except the nondeterminism which makes @step@ return a list of reachable successor states.
+We have two cases to consider (code shown below):
 
 \begin{itemize}
-  \item The current control expression is @Let@,
-and then the result of @App(f, ae)@ will be bound to variable @x@.
-Firstly we retrieve the set of closures that @f@ may represent.
-For each closure in the set, we do almost the same as what we did in the concrete
-CESK machines. But note that since the continuation is allocated on store (@kstore@),
-a new continuation address @new_kaddr@ is constructed, and a new frame
-@Frame(x, e, env)@ paired with the current continuation address @kaddr@
-is joined into @new_kaddr@. Finally, a list of successors states is generated.
+  \item If the current control expression is a @Let@, then
+the result of @App(f, ae)@ will be bound to variable @x@. In this case, we retrieve the set
+of closures that @f@ may represent. For each closure in the set, we perform nearly the same
+operations as in the concrete CESK machines, with an important difference: the
+continuation is allocated on the store @kstore@, so a new continuation address @new_kaddr@
+must be constructed and a new frame @Frame(x, e, env)@ paired with the current continuation
+address @kaddr@ is merged into @new_kaddr@. Finally, a list of successor states is generated.
 
   \item An atomic expression @ae@ sits on the control position of the state.
 The value of @ae@ is being returned to its caller.
