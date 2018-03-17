@@ -509,8 +509,8 @@ An atomic expression $ae$ is either a variable or a literal @lambda@ term, eithe
 can be evaluated in a single step.
 We also assume that all the variable names in the program are unique.
 
-The abstract syntax in Scala is shown as follows. We assume the source
-program conforms ANF's convention, and not force it in the term structure
+The abstract syntax in Scala is shown as follows. We assume that the source
+program conforms to the ANF convention, and we do not enforce it in the term structure
 of Scala constructs.
 
 \begin{lstlisting}
@@ -1353,6 +1353,8 @@ evaluation, given the defined @nd@, the evaluation function @aeval@ can be easil
 defined. In the case that @e@ is a @let@ expression,
 we invoke @nd@ for twice and perform a nesting two-step, depth-first evaluation
 over possible values of @App(f, ae)@.
+The values of branches from on fork point will be accumulated, and then
+returned to the upper fork point.
 
 \begin{lstlisting}
 case Let(x, App(f, ae), e) =>
@@ -1612,76 +1614,95 @@ These coincidences should not be a surprise since existing literature is extraor
 in showing the correspondence between monads and continuation-passing style as well as
 delimited controls since their very beginning era \cite{Danvy:1990:AC:91556.91622, wadler1992essence, danvy1992representing, moggi1991notions}.
 
-In this section, we present the version that uses delimited controls.
+In this section, we present the second version that uses delimited control operators.
 
-\todo{Update the code}
 \subsection{Un-CPS by Delimited Controls} \label{uncps}
 
-As previously identified, there are two layers of continuations: one for the normal stack of the analyzed language, and the other for the nondeterministic choices of closures.
+As previously identified, there are two layers of continuations: one for the normal stack of the 
+analyzed language, and the other for the nondeterministic choices of closures.
 This corresponds to the extended continuation-passing style.
 But in our defining language (Scala), the delimited controls rely on the continuation-passing transformation which is only one layer.
 
-To address this problem, we introduce two operators @nd@ and @ndcps@ for handling non-deterministic choices.
+To address this problem, we reintroduce two operators @nd@ and @ndcps@ for handling non-deterministic choices
+in a way that mimics extended continuation-passing style.
 
-\textbf{Nondeterminism Abstractions, Again.}
-The first operator @nd@ is simplified from the previous one. 
-Now @nd@ only takes a function @f@ that applies on elements of type @T@, and does recursive call on itself over elements in set @ts@.
+\textbf{Nondeterminism Operators, Again.}
+The first operator @nd@ is simplified from the previous one, but specialized with type @Ans@ and @Cache@. 
+We may still keep the types to be generic, but the purpose of presentation clearly, exposing @Cache@ explictly
+reveals that cache should be monotonically accumulated to the rest of computation.
+Now @nd@ only takes a function @f@ that applies on type @(T, Cache)@ where value of type @T@ comes from the set,
+and @nd@ does recursive call on itself over elements in the set @ts@.
+We also move the accumulation operation (@++@) inside of @nd@.
 
 \begin{lstlisting}
-def nd[T,S](ts: Set[T], acc: Set[S], f: T => Set[S]): Set[S] = {
+def nd[T](ts: Set[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
   if (ts.isEmpty) acc
-  else nd(ts.tail, acc ++ vss, f(ts.head))
+  else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
 }
 \end{lstlisting}
 
-The second operator @ndcps@ is implemented with delimited controls but simply calls our first operator @nd@.
+The second operator @ndcps@ is implemented with delimited control operator @shift@ but simply calls our 
+first operator @nd@ in body.
 \begin{lstlisting}
-def ndcps[T,S](ts: Set[T], acc: Set[S]): T @cps[Set[S]] = shift { f: (T => Set[S]) =>
+def ndcps[T](ts: Set[T], acc: Ans): (T, Cache) @cps[Ans] = shift { f: (((T, Cache)) => Ans) =>
   nd(ts, acc, f)
 }
 \end{lstlisting}
+The function @ndcps@ takes two arguments: a set of elements with type @T@, 
+and an initial accumulated value of type @Ans@.
+The @ndcps@ iteratively returns an element from the set along with the latest cache 
+, and the return type is also annotated by \verb|@cps[Ans]|. 
+This annotation denotes the final returned value of @ndcps@ is type @Ans@.
+The @f@ introduced by the @shift@ operator is the delimited continuation from the call-site of @ndcps@.
 
-The function @ndcps@ takes two arguments: a set of elements with type @T@, and an initial accumulated value of type @Set[S]@.
-The @ndcps@ function iteratively returns a value of type @T@ with annotated by
-\verb|@cps[Set[T]]| that denotes the final returned value of @ndcps@ is type @Set[T]@.
-The @f@ introduced by the @shift@ operator is the delimited continuation at the call-site of @ndcps@.
-
+Now we can use these two operators to redefine @aeval@.
 We add an annotation \verb|@cps[Ans]| on the return type of the @aeval@ function.
-Now, for every nondeterministic choice in the abstract interpreter, we can simply call @ndcps@ on them and write the program sequentially as a concrete interpreter.
-The cache is still accumulated by the next call to @ndcps@ or @aeval@, given the fact that the abstract interpreter should always use the latest cache.
+Then, for every nondeterministic choice in the abstract interpreter, we can simply call 
+@ndcps@ on the set of possible choices and write the program sequentially as a concrete interpreter.
+@ndcps@ also returns the latest cache to its left-hand side definition.
+The cache is still accumulated to the next call to @ndcps@ or @aeval@, 
+given the fact that the abstract interpreter should always use the latest cache.
 
 \begin{lstlisting}
-def aeval(e: Expr, env: Env, store: BStore, time: Time): Ans @cps[Ans] = {
-  val new_time = (e::time).take(k)
-  e match {
-    case Let(x, App(f, ae), e) =>
-      val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-      val Clos(Lam(v, body), c_env) = ndcps[Clos, VS](closures, Set[VS]())
-      val vbaddr = allocBind(v, new_time)
-      val new_cenv = c_env + (v -> vbaddr)
-      val new_cstore = store.update(vbaddr, aeval(ae, env, store))
-      val bodyvss = aeval(body, new_cenv, new_cstore, new_time)
-      val VS(vals, time, vsstore) = ndcps[VS, VS](bodyvss, Set[VS]())
-      val xbaddr = allocBind(x, time)
-      val new_env = env + (x -> xbaddr)
-      val new_store = vsstore.update(xbaddr, vals)
-      aeval(e, new_env, new_store, time)
+def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[Ans] = {
+  val config = Config(e, env, store, time)
+  if (cache.outContains(config)) Ans(cache.outGet(config), cache)
+  else {
+    val new_time = (e::time).take(k)
+    val new_cache = cache.outUpdate(config, cache.inGet(config))
+    e match {
+      case Let(x, App(f, ae), e) =>
+        val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
+        val (Clos(Lam(v, body), c_env), clscache) = ndcps[Clos](closures, Ans(Set[VS](), new_cache))
+        val vbaddr = allocBind(v, new_time)
+        val new_cenv = c_env + (v -> vbaddr)
+        val new_cstore = store.update(vbaddr, aeval(ae, env, store))
+        /* evaluates the function application App(f, ae) */
+        val Ans(bodyvss, bodycache) = aeval(body, new_cenv, new_cstore, new_time, clscache)
+        val (VS(vals, time, vsstore), vscache) = ndcps[VS](bodyvss, Ans(Set[VS](), bodycache))
+        val baddr = allocBind(x, time)
+        val new_env = env + (x -> baddr)
+        val new_store = vsstore.update(baddr, vals)
+        /* evaluates the body expression from the let */
+        val Ans(finval, fincache) = aeval(e, new_env, new_store, time, vscache)
+        Ans(finval, fincache.outUpdate(config, finval))
 
-    case ae if isAtomic(ae) =>
-      val ds = atomicEval(ae, env, store)
-      Set(VS(ds, new_time, store))
+      case ae if isAtomic(ae) =>
+        val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
+        Ans(vs, cache.outUpdate(config, vs))
+    }
   }
 }
 \end{lstlisting}
 
-The function @analyze@ is also changed by adding a @reset@ around the function call to @aeval@.
+The function @analyze@ is also changed by adding a @reset@ operator around the function call to @aeval@.
 The afterwards updating on cache becomes sequential.
 
 \begin{lstlisting}
 def analyze(e: Expr) = {
   def iter(cache: Cache): Ans = {
     reset {
-      val Ans(vss, anscache) = aval(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List(), cache)
+      val Ans(vss, anscache) = aeval(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List(), cache)
       val initConfig = Config(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List())
       val new_cache = anscache.outUpdate(initConfig, vss)
       if (new_cache.out == cache.out) { Ans(vss, new_cache) }
@@ -1692,8 +1713,8 @@ def analyze(e: Expr) = {
 }
 \end{lstlisting}
 
-Now we have arrive the end of this series of transformations. Starting from an abstract abstract machine, 
-eventually we obtain an abstract interpreter with pushdown control-flows and written in purely direct-style.
+Now we have arrive the end of this series of transformations. Starting from an small-step abstract abstract machine, 
+eventually we obtain an big-step definitional interpreter with pushdown control-flows and written in direct-style.
 
 %\section{Perspective}
 %\subsection{Defunctionalization}
@@ -1765,6 +1786,10 @@ No other pieces of code would need to be modified.
 Notably, this change only causes constant-factor increase in time complexity of
 the analysis if the store is widened.
 
+Our work establish the pushdown control-flow analysis through refunctionalization and a
+proper caching algorithm. The call/return is naturally matched by the stack of 
+the meta language.
+
 \textbf{Abstracting Definitional Interpreters.}
 Reynold's seminal paper \emph{Definitional interpreters for higher-order
   programming languages} \cite{reynolds1972definitional} shows that in
@@ -1796,14 +1821,10 @@ are well-known \cite{Danvy:1990:AC:91556.91622, wadler1992essence, danvy1992repr
 
 \section{Conclusion}\label{sec:conclusion}
 
-In this functional pearl, we fill the gap between small-step abstract abstract machines
-and big-step abstract definitional interpreters by developing a series of syntactical transformations.
-Among these transformations, linearization turns worklist to another layer of continuations; 
-refunctionalization converts the first-order data types representing continuations to higher-order 
-functions; and finally un-CPS with delimited controls transform the abstract interpreter to a sequence of 
-expressions.
+In this functional pearl, we fill the gap between small-step abstract abstract machines and big-step abstract definitional interpreters by developing a series of syntactical transformations.
+Among these transformations, linearization turns a worklist into another layer of continuations; refunctionalization converts the first-order data types representing continuations to higher-order functions; and finally un-CPS with delimited control transforms the abstract interpreter into a sequence of expressions, which looks no different to a concrete interpreter.
 
-The broader ...\todo{conc}
+We show the correspondence not only exists between concrete semantics artifacts but also exists between abstract semantics artifacts. An interesting open question would be whether there also exists a correspondence of static analyses formalized in different denotational style and operational style.
 
 %% Acknowledgments
 \begin{acks}                            %% acks environment is optional
