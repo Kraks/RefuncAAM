@@ -508,10 +508,9 @@ An atomic expression $ae$ is either a variable or a literal @lambda@ term, eithe
 can be evaluated in a single step.
 We also assume that all the variable names in the program are unique.
 
-The abstract syntax can be straightforwardly described in Scala as follows:
-\note{TR: grammar below isn't ANF. Either make it so, or clarify that
-we assume ANF only as convention and don't need/want to enforce it in
-the term structure}
+The abstract syntax in Scala is shown as follows. We assume the source 
+program conforms ANF's convention, and not force it in the term structure 
+of Scala constructs.
 
 \begin{lstlisting}
 sealed trait Expr
@@ -534,9 +533,12 @@ As its name suggests, a machine state has four components:
 3) \textit{Store} models the heap of a program as a map from addresses to values.
 The address space consists of numbers (0-indexed).
 In our toy language, the only category of value is a closure, i.e., a function paired with an environment.
-4) \textit{Continuation} represents the program stack. \todo{explain more on stack}
+4) \textit{Continuation} represents the program stack. In this paper, 
+we instantiate the stack as a list of frames because the ANF simplifies the evaluation context.
+For direct style $\lambda$-calculus, the continuations of CEK/CESK machines can be presented by 
+variants of a data type.
 
-The Scala representations for the components of CESK machine are as follows:
+The Scala representations for the components of the CESK machine are as follows:
 
 \begin{lstlisting}
 type Addr = Int
@@ -557,8 +559,7 @@ frames, where a frame can be considered an evaluation context in reduction seman
 We represent frames using the @Frame@ class, which stores the information of a single
 call-site, i.e., the information that can be used to resume the interrupted computation.
 A @Frame@ constitutes a variable name @x@ to be bound later, a control expression
-to which the program may resume, and its environment. \note{JD: someone check this and make sure I got it right}
-\todo{mention that frame list vs KArg/KFun}
+to which the program may resume, and its environment. 
 
 \subsubsection{Single-Step Transition}
 Before describing how the machine evaluates expressions, we must first define several helper
@@ -752,10 +753,10 @@ Binding addresses are parameterized by variable names and the creation time of t
 both of which are finite.
 Continuation addresses @KAddr@ has two variants:
 1) @Halt@ which corresponds to the empty stack, and
-2) @ContAddr@ consists of the entry expressions of callee, which are also
+2) @ContAddr@ consists of the target expressions of callee, which are also
 finite.
-One may ask, why not also keep track of the time in continuation addresses?
-\todo{why target expression, allocation polyvariance}
+%One may ask, why not also keep track of the time in continuation addresses?
+%\todo{why target expression, allocation polyvariance}
 
 \begin{lstlisting}
 case class BAddr(x: String, time: Time)
@@ -987,7 +988,7 @@ space, we can recover the precise call/return match.
 In this and following sections, we begin describing the transformations step by step.
 Our base machine for now is the AAM with unbounded stack, though
 as we will later transform the stack to higher-order functions
-represent \note{``representing'' or ``represented by''?} continuations, it does not matter what kind of AAM we start from.
+representing continuations, it does not matter what kind of AAM we start from.
 This is because transforming to higher-order functions forces us to sequentialize
 the order of abstract evaluation, and neither versions of AAM requires construction of a frame of lists \note{should this be frame of lists? sounds weird}, nor to allocate continuations in the store.
 Thus, our choice to start from an AAM with unbounded stack is motivated simply because it has an equivalent stack model to abstract definitional interpreters (our final target).
@@ -1133,7 +1134,7 @@ function.
 The fused function @drive_step@ is essentially formed by merging the functionality of
 @step@ into the @drive@ function.
 @drive_step@ takes an @NDState@ and a set of explored states as an argument
-and returns a set of reachable states once it terminates. \note{Do we really need this section? It seems unlikely that this requires its own section. Could we just append to the last section: For convenience, we combine these functions into one, called \texttt{drivestep}?}
+and returns a set of reachable states once it terminates. 
 
 \begin{lstlisting}
 def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1256,7 +1257,7 @@ Otherwise, we invoke @drive_step@ with the body expression of the next closure o
 
 \section{Refunctionalization} \label{refunc}
 
-Refunctionalization transforms first-order data types represented as \note{``represented as'' or ``representing?'' It should be representing, right?}
+Refunctionalization transforms first-order data types representing
 evaluation contexts to higher-order functions.
 Besides sequentializing the order of abstract evaluation by functions,
 this transformation can be also regarded as allocating continuation functions of
@@ -1332,10 +1333,18 @@ def nd[T,S](ts: Set[T], acc: S, f: (T, S, S => S) => S, g: S => S): S = {
 Given a set of elements of type @T@, an initial accumulated value of type @S@, a function @f@
 that works on element type @T@ and accumulated type @S@, and a function @g@ that
 works on and returns a value of type @S@, @nd@ applies @f@ to each element in the
-set iteratively, accumulates the value, and finally applies @g@ to it.
-Readers familiar with functional programming may think of @fold@ at this point; indeed, it is an implementation of @fold@ in continuation style. But here we have two continuations, one for the next element in the set, and one for the final result.
-This is sometimes referred to as an extended continuation-passing style (ECPS) that has a continuation and a meta-continuation \cite{Danvy:1990:AC:91556.91622}.
-\todo{correspondence to disentangled version, refunc the NDCont}
+set iteratively, accumulates the value and finally applies @g@ on it.
+
+If we look at @continue@ and @ndcontinue@ in the disentangled AAM, we will find
+that @nd@ is an abstraction of those two functions. In function @continue@,
+there are two out calls to @ndcontinue@ and @drive_step@, this is the reason why 
+we have functions @f@ and @g@ in @nd@.
+
+Readers familiar with functional programming may think of @fold@ at this point; indeed, 
+it is an implementation of @fold@ in continuation style. But here we have two 
+continuations, one for the next element in the set, and one for the final result.
+This is sometimes referred to as an extended continuation-passing style (ECPS) 
+that has a continuation and a meta-continuation \cite{Danvy:1990:AC:91556.91622}.
 
 \textbf{Evaluation without Caching.}
 Since our first version of @aeval@ implements the nondeterministic
@@ -1692,7 +1701,7 @@ different sensitivities or features is just applying a different monad.
 Prior to that, \citeauthor{Sergey:2013:MAI:2491956.2491979} show a monadic
 abstract interpreter for small-step semantics.
 
-This paper is inspired a lot from \citeauthor{darais2017abstracting}'s work.
+This paper is inspired greatly from \citeauthor{darais2017abstracting}'s work.
 Instead of just showing the final form of abstract definitional interpreters,
 We reveal that refunctionalization plays an important role for inheriting
 stack from the meta-language.
