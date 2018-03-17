@@ -976,27 +976,25 @@ Thus, our choice to start from an AAM with unbounded stack is motivated simply b
 \todo{Unbounded Stack AAM is PD, justify this}
 
 In Danvy's paper \textit{Defunctionalized Interpreters for Programming
-  Languages}, he mentioned for deterministic languages, a reduction semantics
+  Languages}, he mentions that for deterministic languages, a reduction semantics
 is a structural operational semantics in continuation style, where the reduction
 context is a defunctionalized continuation \cite{Danvy:2008:DIP:1411204.1411206}.
-Here we are facing a problem:
-the underlying semantics of AAM is fundamentally nondeterministic.
-But the evaluation context (the @Frame@ in our program) is not
-nondeterministic, and the work list @todo@ actually implicitly handles the nondeterminism,
-if we simply refunctionalize the frames to functions, it would not helps toward
+This poses a problem, as the underlying semantics of AAM is fundamentally nondeterministic.
+But the evaluation context (i.e., the @Frame@ in our program) is \emph{not}
+nondeterministic, and the worklist @todo@ actually implicitly handles the nondeterminism.
+Thus, if we simply refunctionalize the frames to functions, it does not help us move toward
 abstract definitional interpreters.
 
 In order to address this problem, our first step of transformations
-is to linearize all the nondeterministic choices.
-This step turns the @step@ function to be deterministic.
-Likewise the @Frame@ saves the information of the caller in concrete executions,
-we introduce another layer of controls, and define a case class @NDCont@
+is to linearize all nondeterministic choices.
+This step removes all nondeterminism from the @step@ function.
+Likewise, the @Frame@ saves the information of the caller in concrete executions.
+We then introduce another layer of controls, and define a case class @NDCont@
 that saves the information at a fork point when we have multiple target closures.
-We also add a new field @ndk@ to the definition of state which is called
-@NDState@ now.
-For the rest of the paper, to differentiate the two continuations, we would call
-the first one as normal continuation, and the second one as nondeterministic
-continuations.
+We also add a new field @ndk@ to the definition of state, which we now call @NDState@.
+For clarity of presentation in differentiating between the two continuations, we elect to call
+the first a \emph{normal continuation}, and the second as a \emph{nondeterministic
+continuation}.
 
 \begin{lstlisting}
 case class NDCont(cls: List[Clos], argvs: Set[Storable], store: BStore, time: Time, frames: List[Frame])
@@ -1005,15 +1003,15 @@ case class NDState(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: 
 }
 \end{lstlisting}
 
-A @NDCont@ contains a list of closures that are possible functions to be invoked,
+Each @NDCont@ object contains a list of closures that are possible functions to be invoked,
 a set of values that will be bind to the function's formal argument,
 and the store, time, and frames at the fork point.
 In the definition of @NDState@, an auxiliary function @toState@ is added that
 converts itself to @State@.
 
-Now the type of function @step@ becomes @NDState => NDState@.
+Function @step@ now becomes of type @NDState => NDState@.
 The following code shows the first case of matching an instance of @NDState@ in
-the @step@.
+the @step@ function:
 
 \begin{lstlisting}
 case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>
@@ -1029,20 +1027,19 @@ case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>
   NDState(body, new_env, new_store, new_frames, new_time, new_ndk)
 \end{lstlisting}
 
-By atomically evaluating @f@, we obtain a set of closures.
-The transition is deterministic to the first element of the closure set.
-So we just prepare new environment, new store, and new frame list only for the
+By atomically evaluating @f@, we obtain a set of closures, with the transition being deterministic in regards to the first element of the closure set.
+As such, we prepare a new environment, a new store, and a new frame list only for the
 first closure in that set.
 A new nondeterministic continuation @new_ndk@ is also constructed,
 which contains the rest of closures, the values of argument @ae@, the store,
-the time and the new frame list.
-We use the store before updating because for different closures they may form
+the time, and the new frame list.
+We use the store before updating, because for different closures they may form
 different binding addresses @baddr@.
-We also use the new frames, because all the closures at this fork point share
+We also use the new frames, because all closures at this fork point share
 the same stack and return point.
 
-In the second case shown in below we will see how @NDCont@ deal with
-the nondeterminism.
+In the second case (shown below), we will see how @NDCont@ deals with
+nondeterminism.
 
 \begin{lstlisting}
 case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
@@ -1068,24 +1065,23 @@ case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
 \end{lstlisting}
 
 If the normal continuation @konts@ is an empty list, then it means we have reached
-the halt of computation; otherwise, we should return the values of @ae@ to its
-caller which is contained in the top frame of stack.
+the end of the computation (i.e., a halt); otherwise, we should return the values of @ae@ to its caller which is contained in the top frame of stack.
 
-But, since we have added nondeterminism into state, an empty list of frames means
+However, since we have added nondeterminism into state, an empty list of frames means
 we have the reached the halt of \textit{one computation path}, and we should
-determine the next state indicates by @NDCont@.
-So we have a pattern matching on @ndk@:
+determine the next state indicated by @NDCont@.
+Thus, we have a pattern matching on @ndk@:
 \begin{itemize}
   \item If the closure set is an empty set,
-then we had tried all the closures of this fork point and should move the the
-next fork point. Since the @NDCont@ is represented by a list and we always
-append new element from its front, we are resuming to the most recent fork point by
+then we have tried all the closures of this fork point and should move to the
+next fork point. Since the @NDCont@ is represented by a list, and we always
+append new elements to its front, we are resuming to the most recent fork point by
 popping up the front-most element.
-\item Otherwise, we pop a closure from the set, then build new
-environment and new store for the body expression of the closure;
+  \item Otherwise, we pop a closure from the set, then build a new
+environment and a new store for the body expression of the closure;
 we use the same frame list and time that are copied from the fork point rather
 than current one.
-The nondeterminism continuation @new_ndk@ is also updated by removal of that closure.
+The nondeterministic continuation @new_ndk@ is also updated by the removal of that closure.
 \end{itemize}
 
 \begin{lstlisting}
@@ -1100,15 +1096,15 @@ def drive(nds: NDState, seen: Set[State]): Set[State] = {
 }
 \end{lstlisting}
 
-The function @drive@ is also changed: there is no work list anymore, because all the
-potentially unexplored states are embedded in to the continuation for
+The @drive@ function is also changed: there is no worklist anymore, as all the
+potentially unexplored states are embedded into the continuation for
 nondeterminism.
-The termination of the analysis is when we reach a @NDState@ that the expression
-is atomic, and both the normal continuation and nondeterminism continuation are
-empty list. This corresponds to the case that @todo@ list is empty.
+The termination of the analysis occurs when we reach an @NDState@ in which the expression
+is atomic and both the normal continuation and nondeterminism continuation are
+empty lists. This corresponds to the case that @todo@ list is empty.
 
-Now, we obtain a linearized abstract abstract machine. If we image that the classical
-AAM explores a graph of reachable states, then the linearized AAM just flattens the
+At this point, we have obtain a linearized abstract abstract machine. If we imagine that the
+classical AAM explores a graph of reachable states, then the linearized AAM flattens the
 graph to a linear sequence.
 
 \section{Fusing} \label{fusing}
