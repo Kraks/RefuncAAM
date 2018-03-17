@@ -1599,31 +1599,83 @@ We have multiple choices of how to proceed:
 
 These coincidences should not be a surprise since existing literature is extraordinarily rich
 in showing the correspondence between monads and continuation-passing style as well as
-delimited controls since their very beginning era. \todo{cite}
+delimited controls since their very beginning era \cite{Danvy:1990:AC:91556.91622, wadler1992essence, danvy1992representing, moggi1991notions}.
 
 In this section, we present the version that uses delimited controls.
 
+\todo{Update the code}
 \subsection{Un-CPS by Delimited Controls} \label{uncps}
 
-As identified before, \note{JD: compelling...}
+As identified before, there are two layers of continuations, one for the normal stack of 
+the analyzed language, and the other for the nondeterministic choices of closures.
+This corresponds to the extended continuation-passing style.
+But in our defining language Scala, the delimited controls rely on the continuation-passing
+transformation which is only one layer.
+To address this problem, base on the @nd@ operator we have before, we introduce 
+another operator @ndcps@ for handling non-deterministic choices.
+
+The @ndcps@ itself is implemented with delimited controls. 
+The function takes two arguments: a set of elements with type @T@ and an initial 
+accumulated value of type @Set[S]@. 
+Function @ndcps@ iteratively returns a value of type @T@ with annotated by
+@@cps[Set[T]]@ that denotes the final returned value of @ndcps@ is type @Set[T]@.
+The @f@ introduced by the @shift@ operator is the delimited continuation at the 
+call-site of @ndcps@. 
 
 \begin{lstlisting}
+def nd[T,S](ts: Set[T], acc: Set[S], k: T => Set[S]): Set[S] = {
+  if (ts.isEmpty) acc
+  else {
+    val vss = k(ts.head)
+    nd(ts.tail, acc ++ vss, k)
+  }
+}
+
+def ndcps[T,S](ts: Set[T], acc: Set[S]): T @cps[Set[S]] = shift { f: (T => Set[S]) =>
+  nd(ts, acc, f)
+}
 \end{lstlisting}
 
-\iffalse
-\section{Refunctionalized AAM}
-Maybe insert to section refunc.
-\subsection{Store Widening}
-\subsection{Precise Call/Return Match}
-show the precision of stack
-On equivalence: since refunc interp does not have an explicit concept of $state$,
-so 1) we can compare the final states of P4F against with refunc interp,
-or 2) we can compare the summarized store of P4F against with summarized store of refunc interp.
-\subsection{Termination}
-show that number of continuation is finite.
-\subsection{Soundness}
-\subsection{Complexity}
-\fi
+We add an annotation @@cps[Ans]@ on the return type of function @aeval@.
+Now for every non-deterministic choices in the abstract interpreter 
+
+\begin{lstlisting}
+def aeval(e: Expr, env: Env, store: BStore, time: Time): Ans @cps[Ans] = {
+  val new_time = (e::time).take(k)
+  e match {
+    case Let(x, App(f, ae), e) =>
+      val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
+      val Clos(Lam(v, body), c_env) = ndcps[Clos, VS](closures, Set[VS]())
+      val vbaddr = allocBind(v, new_time)
+      val new_cenv = c_env + (v -> vbaddr)
+      val new_store = store.update(vbaddr, aeval(ae, env, store))
+      val bodyvss = aeval(body, new_cenv, new_store, new_time)
+      val VS(vals, time, store) = ndcps[VS, VS](bodyvss, Set[VS]())
+      val xbaddr = allocBind(x, time)
+      val new_env = env + (x -> xbaddr)
+      val new_vsstore = store.update(xbaddr, vals)
+      aeval(e, new_env, new_vsstore, time)
+
+    case ae if isAtomic(ae) =>
+      val ds = atomicEval(ae, env, store)
+      Set(VS(ds, new_time, store))
+  }
+}
+\end{lstlisting}
+
+\begin{lstlisting}
+def analyze(e: Expr) = {
+  def iter(cache: Cache): Ans = {
+    val Ans(vss, new_cache) = aeval(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List(), cache, {
+      val initConfig = Config(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List())
+      case Ans(vss, cache) => Ans(vss, cache.outUpdate(initConfig, vss))
+    })
+    if (new_cache.out == cache.out) { Ans(vss, new_cache) }
+    else { iter(Cache(new_cache.out, new_cache.out)) }
+  }
+  iter(mtCache)
+}
+\end{lstlisting}
 
 %\section{Perspective}
 %\subsection{Defunctionalization}
@@ -1694,16 +1746,6 @@ environment when allocating a continuation addresses.
 No other pieces of code would need to be modified.
 Notably, this change only causes constant-factor increase in time complexity of
 the analysis if the store is widened.
-
-\iffalse
-The following code shows the implementation:
-\begin{lstlisting}
-case class P4FContAddr(tgt: Expr, tgtEnv: Env) extends KAddr
-def allocKont(tgtExpr: Expr, tgtEnv: Env): KAddr = P4FContAddr(tgtExpr, tgtEnv)
-\end{lstlisting}
-The target environment is used for successor states and extended from the closure's
-environment (namely @val new_env = env_c + (v -> baddr)@).
-\fi
 
 \textbf{Abstracting Definitional Interpreters.}
 Reynold's seminal paper \emph{Definitional interpreters for higher-order
