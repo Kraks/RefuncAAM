@@ -514,26 +514,30 @@ def step(s: State): State = s match {
 }
 \end{lstlisting}
 
-In the first case, the control of current state is a @Let@ expression,
-and its right-hand side is a function application.
+As shown and previously discussed, we examine the only two cases which the state may be.
+
+\textbf{\texttt{Let} expression.} In the first @case@ statement shown in the previous code,
+the control of the current state matches as a @Let@ expression, with its right-hand side a
+function application.
 By calling the @atomicEval@ evaluator, we obtain the closure for which the callee @f@ stands.
-The successor state's control then transfers to the @body@ expression of closure,
-with an updated environment and an update store. The new environment is extended
-from closure's environment and mapped @v@ to a fresh address @addr@.
+The successor state's control then transfers to the @body@ expression of the closure
+with an updated environment and store. The new environment is extended
+from the closure's environment and mapped from @v@ to a fresh address @addr@.
 The new store is extended with @addr@ mapping to the value of @ae@,
-which is evaluated from @atomicEval@.
-In the meanwhile, a new frame @frame@ is pushed onto the stack @k@.
-This @frame@ contains the variable name @x@ at left-hand side position of @Let@,
+which in turn is evaluated from @atomicEval@.
+Finally, a new frame @frame@ is pushed onto the stack @k@, where
+@frame@ contains the variable name @x@ at the left-hand position of the @Let@,
 the body expression of @Let@, and the lexical environment of the body expression.
 
-The second case for @step@ is the control is transferred to an atomic expression.
-We extract the top frame of continuations firstly.
-The control (that is an atomic expression) of current state is the evaluated term
-that being bind to the variable @x@ from the top frame.
+\textbf{Atomic expression.} If the state is not a @Let@ expression, then it must be
+an atomic expression, as seen in the above code. In this scenario,
+we begin by extracting the top frame of all available continuations.
+The control (i.e., an atomic expression) of the current state is the evaluated term
+that is being bound to the variable @x@ from the top frame.
 The environment and store are updated with @x@ mapping to the closure value of @ae@.
-Then the successor state is transferred to expression @e@ from the top frame,
+Finally, the successor state is transferred to expression @e@ from the top frame,
 which is the body of a @Let@ expression, with the updated environment, store, and
-the rest of stack @ks@.
+the rest of the stack @ks@.
 
 \subsubsection{Valuation}
 
