@@ -1405,6 +1405,8 @@ The caching algorithm we adopted here replay the same assumption but in a big-st
 manner: if we have seen the configuration @c@, then it means we also have seen
 the values that are evaluated by the configuration @c@.
 
+The case class @Cache@ is defined as follow:
+
 \begin{lstlisting}
 case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
   def inGet(config: Config): Set[VS] = in.getOrElse(config, Set())
@@ -1414,7 +1416,13 @@ case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
 }
 \end{lstlisting}
 
+The @Cache@ contains two maps @in@ and @out@ which are both mapping from 
+configurations to sets of @VS@. 
+
+When we enter to function @aeval@
+
 \textbf{Cache-Passing Style.}
+
 The definition of Ans is changed to a case class that contains a set of @VS@ and
 a cache.
 \begin{lstlisting}
@@ -1476,7 +1484,7 @@ def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
 
 In the last section, we just established a computable pushdown control-flow
 analysis through refunctionalization and caching. In this section,
-we examine how pushdown control-flow is obtained and what we have done to
+we revisit the pushdown control-flow problem and examine what we have done to
 achieve it.
 
 \textbf{The Problem of Return-flows.}
