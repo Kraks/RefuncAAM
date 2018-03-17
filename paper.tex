@@ -236,7 +236,7 @@ through interpreters.
 But building a sound abstract interpreter remains as an esoteric and difficult task until recent years.
 
 \citeauthor{van2012systematic} proposed Abstracting Abstract Machines (AAM) methodology which can used
-for constructing abstract interpreters of higher-order functional languages from concrete abstract machines
+for constructing sound abstract interpreters of higher-order functional languages from concrete abstract machines
 ~\cite{van2012systematic, van2010abstracting}.
 Given a concrete small-step abstract machine, (e.g, the CESK machine, Krivine's machine, etc.),
 by allocating continuations in the store and bounding both the value addresses and continuation
@@ -1401,7 +1401,9 @@ def analyze(e: Expr) =
 \subsection{Caching Fixed-Points}
 
 Based on the refunctionalized AAM from the last section, we use the same @nd@ nondeterministic operator
-but further extend it to a fixed-point cached evaluation in this section. \todo{extend this}
+but further extend it to a fixed-point cached evaluation in this section. 
+The fixed-point caching algorithm performs a sound over-approximation of all possible 
+concrete reachable pathes and values, and also prevents non-termination when analyzing diverged programs.
 
 \textbf{Configuration.}
 Now we do not have the concept of explicit stack and state,
@@ -1413,14 +1415,14 @@ case class Config(e: Expr, env: Env, store: BStore, time: Time)
 \end{lstlisting}
 
 \textbf{Cache.}
-We will apply the fixed-point caching algorithm as described from
-\citeauthor{darais2017abstracting}'s ADI paper.
-Note that the latent assumption of the worklist algorithm in classical AAM
+Recall that the latent assumption of the worklist algorithm in classical AAM
 is if we have seen a state @s@, then it means we also have seen the successors
 of state @s@. 
 The caching algorithm we adopted here replay the same assumption but in a big-step
 manner: if we have seen the configuration @c@, then it means we also have seen
 the values that are evaluated by the configuration @c@.
+Here we will apply the fixed-point caching algorithm as described from
+\citeauthor{darais2017abstracting}'s ADI paper \cite{darais2017abstracting}.
 
 The case class @Cache@ and its operations are defined as follow:
 
@@ -1465,7 +1467,7 @@ with values from @in@ cache.  The retrieving from @in@ cache may return an empty
 there is no such mapping for the configuration from the previous iteration.
 It actually first conservatively assumes that all computation can be diverged,
 if not, we will update its values in the mapping after evaluation.
-In terms of partial orders and lattices, it is also the case we start 
+In terms of partial orders and lattices, it is the case that starts
 the Kleene iteration from the bottom of the lattice.
 
 \begin{lstlisting}
@@ -1507,10 +1509,10 @@ outer @nd@.
 For the second case, we update the @out@ cache before calling the continuation @continue@.
 
 \begin{lstlisting}
-def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
+def analyze(e: Expr) = {
   def iter(cache: Cache): Ans = {
-    val Ans(vss, new_cache) = aeval(e, env, store, mtTime, cache, {
-      val initConfig = Config(e, env, store, mtTime)
+    val Ans(vss, new_cache) = aeval(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List(), cache, {
+      val initConfig = Config(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List())
       case Ans(vss, cache) => Ans(vss, cache.outUpdate(initConfig, vss))
     })
     if (new_cache.out == cache.out) { Ans(vss, new_cache) }
@@ -1519,6 +1521,15 @@ def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
   iter(mtCache)
 }
 \end{lstlisting}
+
+Finally, the @analyze@ function as the entrance of the analysis does a looping iteration
+to find the fixed-point on caches starting from an empty cache. 
+If the @out@ cache of this iteration is equivalent to the @out@ cache from the last iteration,
+then we have reached a fixed-point that over-approximates the concrete evaluations,
+and thus can be returned.
+Otherwise, a next iteration with the new @out@ cache will be activated.
+Note that the continuation of the initial call to @aeval@ sets up the values for the 
+initial configuration in the final cache.
 
 \subsection{Pushdown Control Flow Analysis, Revisited} \label{pdcfarevisit}
 
