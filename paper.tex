@@ -739,7 +739,7 @@ In abstract interpretation, however, these are key ingredients to achieve
 analyses with different sensitivities, as well as to perform a finite
 state space analysis\cite{Gilray:2016:ACP:2951913.2951936}.
 To effectively approximate the runtime behavior, we introduce a finite
-program counter @time@ that encodes the program execution history.
+program contour @time@ that encodes the program execution history.
 We use a list of execution contexts (expressions) to represent this, and
 as we will see in Section~\ref{kcfainst}, by applying different @tick@
 functions on the timestamp, we are able to obtain a family of analyses.
@@ -840,7 +840,7 @@ def step(s: State): List[State] = {
 \subsubsection{$k$-Call-Sensitive Instantiation} \label{kcfainst}
 
 In $k$-call-sensitive analysis, a history of the last $k$ call sites is
-used as a finite program counter.
+used as a finite program contour.
 The history is represented as a list of expressions and embedded
 in the allocated addresses.
 
@@ -867,7 +867,7 @@ Similar to the CESK machines, to run (analyze) a program
 we first use the @inject@ function to construct the initial state given to the program.
 Note that the initial continuation store has a built-in mapping that maps the continuation
 address for @Halt@ to an empty set of continuations.
-We also provide an empty program counter as our initial time.
+We also provide an empty program contour as our initial time.
 \begin{lstlisting}
 def inject(e: Expr): State =
   State(e, Map(),
