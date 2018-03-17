@@ -1673,7 +1673,9 @@ but CFA2 has several drawbacks: it works only on continuation-passing style prog
 and does not supports polyvariant analysis, in addition to an exponential time
 complexity.
 
-As mentioned in Section~\ref{unabs}, maintaining the perfect precision provided by an unbounded-stack machine is essential when performing the proposed transformations. Pushdown control flow analysis (PDCFA) is a mechanism which maintains this precision through the use of a specialized state graph representing all possible stacks contained within the unbounded-stack machine. These state graphs are known as \emph{Dyke state graphs}~\cite{gilray2016pushdown}.
+Pushdown control flow analysis (PDCFA) is another mechanism which maintains this precision 
+through the use of a specialized state graph representing all possible stacks contained 
+within the unbounded-stack machine. These state graphs are known as Dyke state graphs.
 
 Similar to PDCFA, abstracting abstract control (AAC) is another strategy for maintaining stack precision without any loss. As shown by~\citeauthor{gilray2016pushdown}, AAC functions similar to PDFCA, including the fact that neither method requires any context sensitivity. AAC functions by utilizing continuations which are specific to both the source and target states of a call-site transition, which guarantees that no merging will occur during returns~\cite{gilray2016pushdown}.
 
