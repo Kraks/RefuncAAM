@@ -904,7 +904,7 @@ program.
 %\subsection{Monadic Abstract Interpreter}
 %Maybe not here?
 
-\subsection{One Step Back: Unabstracted Stack}
+\subsection{One Step Back: Unabstracted Stack} \label{unabs}
 
 In this section, we describe a variant of AAM that allows the stack to be
 unbounded which uses a precise call stack as we did in the concrete CESK machine.
@@ -1656,18 +1656,20 @@ AAM.
 
 
 \textbf{Pushdown Control Flow Analysis.}
-In recent years, there are significant efforts \cite{vardoulakis2010cfa2, earl2012introspective,
+In recent years, there are significant efforts~\cite{vardoulakis2010cfa2, earl2012introspective,
 gilray2016pushdown, johnson2015abstracting} to achieve precise call/return
 match based on small-step abstracting abstract machines.
 
-CFA2 is the first solution that solves the return-flows problem\cite{vardoulakis2010cfa2},
+CFA2 is the first solution that solves the return-flows problem~\cite{vardoulakis2010cfa2},
 but CFA2 has several drawbacks: it works only on continuation-passing style programs,
 and does not supports polyvariant analysis, in addition to an exponential time
 complexity.
 
-\todo{PDCFA, AAC}
+As mentioned in Section~\ref{unabs}, maintaining the perfect precision provided by an unbounded-stack machine is essential when performing the proposed transformations. Pushdown control flow analysis (PDCFA) is a mechanism which maintains this precision through the use of a specialized state graph representing all possible stacks contained within the unbounded-stack machine. These state graphs are known as \emph{Dyke state graphs}~\cite{gilray2016pushdown}.
 
-\citeauthor{gilray2016pushdown} proposed a polyvariant continuation-addresses allocator
+Similar to PDCFA, abstracting abstract control (AAC) is another strategy for maintaining stack precision without any loss. As shown by~\citeauthor{gilray2016pushdown}, AAC functions similar to PDFCA, including the fact that neither method requires any context sensitivity. AAC functions by utilizing continuations which are specific to both the source and target states of a call-site transition, which guarantees that no merging will occur during returns~\cite{gilray2016pushdown}.
+
+\citeauthor{gilray2016pushdown} further proposed a polyvariant continuation-addresses allocator
 for small-step AAM to achieve pushdown analysis \cite{gilray2016pushdown}.
 This method is both simple to implement and computationally inexpensive.
 Based on the AAM we presented in Section \ref{aam}, the only changes in the code required is
