@@ -238,27 +238,37 @@ can be used for performing sound static analysis.
 One can further instantiate different polyvariant control-flow analysis by using different address allocators \cite{Gilray:2016:ACP:2951913.2951936}.
 
 Applying the same idea on big-step definitional interpreters, \citeauthor{darais2017abstracting} 
-build abstract definitional interpreters (ADI) that are written in monadic style \cite{darais2017abstracting}
-By changing the underlying
-monads, the definition of interpreter has no change, but we can recover different semantics 
-including the concrete semantics and various abstract semantics.
+build abstract definitional interpreters (ADI) that are written in monadic style \cite{darais2017abstracting}.
+One of the advantages of monadic interpreter is modular and composable.
+By changing the underlying monads, the definition of interpreter has no change, 
+but we can recover different semantics including the concrete semantics and various 
+abstract semantics such as context-sensitivity and abstract garbage collection.
 
 Broadly speaking, abstract abstract machines and abstract definitional interpreters are both
 abstract interpreters. They are obtained by applying a combination of abstractions to their
 concrete counterparts, abstract machines and definitional interperters, perspectively.
-The relations between abstract machines, definitional interpreters, and monadic interpreters 
-is intensively studied by Danvy and his collaborator in the past years 
-\cite{Ager:2003:FCE:888251.888254, Danvy:2001:DW:773184.773202, danvy2004refocusing, Danvy:2008:DIP:1411204.1411206, AGER2004223, ager2005functional, Danvy:2006:RW:2171265.2171268}.
+In concrete world, the relations among reduction semantics, abstract machines, definitional interpreters,
+and monadic interpreters is intensively studied by Danvy and his collaborator in the past years 
+\cite{Ager:2003:FCE:888251.888254, Danvy:2001:DW:773184.773202, danvy2004refocusing, Danvy:2008:DIP:1411204.1411206, AGER2004223, ager2005functional, Danvy:2006:RW:2171265.2171268, danvy2009towards, biernacka2009towards}.
+The abstract machines implement structural operational semantics in continuation style, 
+where the reduction contexts are defunctionalized continuations. One can derive definitional
+interpreters by refunctionalizing the evaluation contexts of abstract machines; 
+and by defunctionalizing the higher-order functions one may obtain abstract machines in the 
+reversed direction.
 
 But in terms of their abstract semantic artifacts, 
 the relations between small-step abstract abstract machines and big-step abstract 
 definitional interpreters, and the question that how can we interdrive each other is not
 well studied.
-In this functional peral, we practical answer this question by presenting a series of 
-syntactical transformations on the program from small-step abstract abstract machines 
-to big-step abstract definitional interpreters.
+The fundamental difference between concrete semantics artifacts and abstract semantics 
+artifacts is non-determinism. In addition to insure termination, abstract semantics 
+artifacts usually equipped with a cache of explored state that is guaranteed to reach 
+the least fixed-point eventually.
+In this functional peral, we practically answer the question and relate AAM and ADI 
+by presenting a series of syntactical transformations on the program from
+small-step abstract abstract machines to big-step abstract definitional interpreters.
 
-\subsection{outline}
+\subsection{Outline}
 
 \note{rest of intro goes here}
 
