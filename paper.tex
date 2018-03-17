@@ -667,8 +667,10 @@ We then define a generic class @Store[K,V]@ that performs joining when updating 
 in a store (below). By parameterizing @Store[K,V]@ with @[BAddr, Storable]@ and
 @[KAddr, Cont]@, we obtain @BStore@ and @KStore@, respectively.
 
-We note that the \note{store? update function? can a store be monotonic?} is monotonic; it continuously grows and never shrinks. This property
-guarantees that in analyzing the \note{update function? store? pick the right word}, a fixed point can always be reached.
+We note that both the value store and continuation store are monotonic; 
+it continuously grows and never shrinks. This property guarantees that 
+a fixed point of store can always be reached through Kleene's 
+iteration when analyzing the program
 
 \begin{lstlisting}
 case class Store[K,V](map: Map[K, Set[V]]) {
@@ -683,13 +685,13 @@ type BStore = Store[BAddr, Storable]
 type KStore = Store[KAddr, Cont]
 \end{lstlisting}
 
-The codomain of all binding stores @Storable@ is the same
-as previously defined for CESK machines.
+The codomain of binding stores @Storable@ is the same as previously defined for CESK machines.
 The codomain of continuation stores @Cont@, on the other hand, is comprised of
 a @Frame@ object and a continuation address @KAddr@.
 To mimic the runtime call stack, @KAddr@ plays the role of
-representing the remaining stack frames.
-\todo{talk about nondet of cont deref?}
+representing the remaining stack frames. 
+But since the continuation store may contain multiple continuations,
+the dereferencing of continuation addresses is also nondeterministic.
 
 \begin{lstlisting}
 abstract class Storable
@@ -837,7 +839,7 @@ and we obtain a monovariant analysis (i.e., it does
 not differentiate values at different call sites). In this case, the address
 space collapses to the space of variable names.
 Note that regarding the ambiguity in $k$-CFA\cite{Gilray:2016:ACP:2951913.2951936},
-the code here actually implements call+return \note{call+return, call/return, etc.? Check this} sensitivity.
+the code here actually implements call+return sensitivity.
 
 \subsubsection{Collecting Semantics}
 
@@ -859,7 +861,7 @@ However, in contrast to the concrete CESK machine, the
 semantics. That is, for the purpose of analyzing programs, the function @drive@
 collects all the intermediate machine states as the program is abstractly executing.
 The following code shows a variant of the worklist algorithm to find the fixed-point
-of the set of states.\note{JD: I changed all of this to worklist instead of work list in favor of the worklist algorithm. Change this back if it's wrong.}
+of the set of states.
 Function @drive@ always applies function @step@ to the head element @hd@ of
 the worklist @todo@ if @hd@ is unseen. It then inserts the result of @step@ to
 the rest of worklist, and in the meantime adds @hd@ to the explored states set.
