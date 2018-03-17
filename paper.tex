@@ -1639,10 +1639,19 @@ show that number of continuation is finite.
 
 \section{Related Work}\label{sec:related}
 
-\textbf{Abstracting Abstract Machines.}
+\textbf{Abstract Interpretation and Control-flow Analysis.}
+\citeauthor{cousot1977abstract} invented abstract interpretation as a sound approach 
+to approximate the program's runtime behaviors\cite{cousot1977abstract}.
+Control-flow analysis is one of the instances of abstract interpretation on functional programs 
+that can be traced to Jones \cite{jones1981flow}. 
+\citeauthor{Shivers:1988:CFA:53990.54007} introduces $k$-CFA which uses $k$ recent calling contexts as program 
+contour that differentiates values from different context \cite{Shivers:1988:CFA:53990.54007, Shivers:1991:SSC:115865.115884}.
+The modern formulation of control-flow analysis is the abstracting abstract machines 
+methodology \cite{van2012systematic, van2010abstracting} which forms the starting point of this paper.
+Modern programming languages such as Java\cite{might2010resolving} and Racket \cite{Tobin-Hochstadt:2012:HSE:2384616.2384655}
+also can be modeled by abstracting abstract machine approach.
 
 \textbf{Defunctionalization and Refunctionalization.}
-
 Defunctionalization and refunctionalization build connections between abstract
 machines and interpreters.
 
@@ -1653,7 +1662,6 @@ Unfortunately, abstract abstract machines are nondeterministic, where
 the nondeterminism is handled by a worklist.
 We can turn this explicit nondeterminism into the reduction context of
 AAM.
-
 
 \textbf{Pushdown Control Flow Analysis.}
 In recent years, there are significant efforts~\cite{vardoulakis2010cfa2, earl2012introspective,
