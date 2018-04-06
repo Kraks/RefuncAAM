@@ -5,6 +5,8 @@ import gnw.refunc.ast._
 
 import ANFAAM._
 
+// TODO: reorganize the tests
+
 object RefuncTest {
   def test_smallstep_time() {
     val initenv = Map("f" -> BAddr("f", List()))
@@ -217,7 +219,6 @@ object RefuncTest {
   }
 
   def test_non_term() {
-    //TODO: Test RefuncCPS
     """(letrec ([f1 (lambda (x)
                       (let ([x1 (f2 x)]) x1))]
                 [f2 (lambda (y)
