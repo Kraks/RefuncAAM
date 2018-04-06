@@ -50,7 +50,6 @@ object ANFAAM {
   var k: Int = 0
 
   def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
-  //def allocKont(tgtExpr: Expr, tgtEnv: Env, tgtStore: BStore, time: Time): KAddr = ContAddr(tgtExpr, time)
   def allocKont(tgtExpr: Expr, tgtEnv: Env, tgtStore: BStore, time: Time): KAddr = ContAddr(tgtExpr)
 
   case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, k: KAddr, time: Time)
