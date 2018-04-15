@@ -8,41 +8,28 @@ import ANFAAM._
 // TODO: reorganize the tests
 
 object RefuncTest {
-  def test_smallstep_time() {
-    val initenv = Map("f" -> BAddr("f", List()))
-    val initstore = Store[BAddr, Storable](Map(BAddr("f", List()) -> Set(Clos(Lam("x", Var("x")), Map()),
-                                                                         Clos(Lam("y", Var("y")), Map()))))
-    val ndprog = Let("a", App(Var("f"), Num(3)), Var("a"))
-    ANFAAM.k = 1
-    println(SmallStep.analyze(ndprog, initenv, initstore).mkString("\n"))
-    //println(RefuncNoCache.analyze(ndprog, initenv, initstore))
-    //println(RefuncNoCache3.analyze(ndprog, initenv, initstore))
-  }
-
+  val mtTime = List()
+  val mtEnv = Map[String, BAddr]()
+  val mtStore = Store[BAddr, Storable](Map())
+  
   def test_refunc_nd() {
     ANFAAM.k = 0
-    val ndprog = Let("a", App(Var("f"), Num(3)),
-                    Var("a"))
-                    //Num(10))
+    val ndprog = Let("a", App(Var("f"), Num(3)), Var("a"))
     val initenv = Map("f" -> BAddr("f", List()))
     val initstore = Store[BAddr, Storable](Map(BAddr("f", List()) -> Set(Clos(Lam("x", Var("x")), Map()),
                                                                          Clos(Lam("y", Num(2)), Map()),
                                                                          Clos(Lam("z", Num(1)), Map()))))
-    //println(SmallStepUBStack.analyze(ndprog,initenv, initstore))
-    //println(LinearSmallStepUBStack.analyze(ndprog,initenv, initstore))
 
     assert(SmallStepUBStack.analyze(ndprog,initenv, initstore) == 
-      LinearSmallStepUBStack.analyze(ndprog,initenv, initstore))
-
-    assert(FusedLinearSmallStepUBStack.analyze(ndprog,initenv, initstore) == 
-      LinearSmallStepUBStack.analyze(ndprog,initenv, initstore))
-
-    //assert(RefuncNoCache2.analyze(ndprog, initenv, initstore) ==
-    //         RefuncNoCache3.analyze(ndprog, initenv, initstore))
-    //assert(RefuncCPSNoCacheBF.analyze(ndprog, initenv, initstore) ==
-    //         RefuncNoCache3.analyze(ndprog, initenv, initstore))
+           LinearSmallStepUBStack.analyze(ndprog, initenv, initstore))
+    assert(LinearSmallStepUBStack.analyze(ndprog, initenv, initstore) ==
+           FusedLinearSmallStepUBStack.analyze(ndprog,initenv, initstore))
+    assert(FusedLinearSmallStepUBStack.analyze(ndprog, initenv, initstore) ==
+           DisLinearSmallStepUBStack.analyze(ndprog, initenv, initstore))
+  
+    return
     assert(RefuncCPSNoCacheBF.analyze(ndprog, initenv, initstore) ==
-             RefuncCPSNoCache.analyze(ndprog, initenv, initstore))
+           RefuncCPSNoCache.analyze(ndprog, initenv, initstore))
 
     assert(DirectStyleDCNoCache.analyze(ndprog, initenv, initstore) ==
              RefuncCPSNoCache.analyze(ndprog, initenv, initstore))
@@ -228,16 +215,19 @@ object RefuncTest {
     val mutrec = Letrec(List(B("f1", Lam("x", Let("x1", App(Var("f2"), Var("x")), Var("x1")))),
                              B("f2", Lam("y", Let("y1", App(Var("f1"), Var("y")), Var("y1"))))),
                         Let("res", App(Var("f1"), Num(1)),
-                            Num(5)))
-                            //Var("res")))
+                            Var("res")))
 
     var p4fstates = SmallStepP4F.analyze(mutrec)
-    var finalstore = p4fstates.map(_.bstore).foldLeft(Store[BAddr, Storable](Map()))(_.join(_))
-    println(finalstore)
-    //println(Refunc.analyze(mutrec).vss)
+    var p4fstore = p4fstates.map(_.bstore).foldLeft(Store[BAddr, Storable](Map()))(_.join(_))
 
-    val ntprog = Let("a", App(Var("f"), Num(3)),
-                     Var("a"))
+    //println(p4fstore) //TODO: how to get the store
+    /* The final value should be empty */
+    assert(DirectStyleDC.analyze(mutrec).vss == Set())
+    assert(RefuncCPS.analyze(mutrec) == DirectStyleDC.analyze(mutrec))
+
+    /************************************************************************/
+    
+    val ntprog = Let("a", App(Var("f"), Num(3)), Var("a"))
     val initenv = Map("f" -> BAddr("f", List()))
     val initstore = Store[BAddr, Storable](Map(BAddr("f", List()) ->
                                                  Set(Clos(Lam("x", Var("x")), Map()),
@@ -246,19 +236,11 @@ object RefuncTest {
                                                      Clos(Lam("y", Num(2)), Map()),
                                                      Clos(Lam("z", Num(1)), Map()))))
     p4fstates = SmallStepP4F.analyze(ntprog, initenv, initstore)
-    finalstore = p4fstates.map(_.bstore).foldLeft(Store[BAddr, Storable](Map()))(_.join(_))
-    println(s"p4f store: $finalstore")
-  
-    /*
-    val ans = Refunc.analyze(ntprog, initenv, initstore)
-    println(s"refunc vss: ${ans.vss}")
-    val refuncstore = ans.vss.map(_.store).foldLeft(Store[BAddr, Storable](Map()))(_.join(_))
-    println(s"refunc store: $refuncstore")
-    */
-
-    val ans1 = DirectStyleDC.analyze(ntprog, initenv, initstore)
-    println("refunc store: " + ans1.vss.map(_.store).foldLeft(Store[BAddr, Storable](Map()))(_.join(_)))
-    //RefuncNoCache3.analyze(ntprog, initenv, initstore) Not termiating
+    p4fstore = p4fstates.map(_.bstore).foldLeft(Store[BAddr, Storable](Map()))(_.join(_))
+    /* The stores should be equal */
+    assert(DirectStyleDC.analyze(ntprog, initenv, initstore).vss.map(_.store).foldLeft(mtStore)(_.join(_)) == p4fstore)
+    assert(DirectStyleDC.analyze(ntprog, initenv, initstore).cache.outVS.map(_.store).foldLeft(mtStore)(_.join(_)) == p4fstore)
+    assert(RefuncCPS.analyze(ntprog, initenv, initstore) == DirectStyleDC.analyze(ntprog, initenv, initstore))
   }
 
   def test_cache() {
@@ -322,10 +304,9 @@ object RefuncTest {
   }
 
   def main(args: Array[String]) {
-    //test_smallstep_time()
     test_non_term()
     //test_pushdown()
-    test_cache()
+    //test_cache()
     test_refunc_nd()
   }
 }
