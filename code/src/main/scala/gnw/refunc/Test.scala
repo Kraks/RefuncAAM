@@ -5,51 +5,56 @@ import gnw.refunc.ast._
 
 import ANFAAM._
 
-// TODO: reorganize the tests
-
 object RefuncTest {
   val mtTime = List()
   val mtEnv = Map[String, BAddr]()
   val mtStore = Store[BAddr, Storable](Map())
+  import SmallStepUBStack._
+
+  def summarizeSS(ss: Set[State]): BStore = {
+    ss.map(_.bstore).foldLeft(mtStore)(_.join(_))
+  }
+
+  def summarizeVSS(vss: Set[VS]): BStore = {
+    vss.map(_.store).foldLeft(mtStore)(_.join(_))
+  }
   
+  def basic_test(k: Int, prog: Expr, initenv: Env, initstore: BStore) {
+    ANFAAM.k = k
+    
+    assert(SmallStepUBStack.analyze(prog,initenv, initstore) == 
+           LinearSmallStepUBStack.analyze(prog, initenv, initstore))
+
+    assert(LinearSmallStepUBStack.analyze(prog, initenv, initstore) ==
+           FusedLinearSmallStepUBStack.analyze(prog,initenv, initstore))
+
+    assert(FusedLinearSmallStepUBStack.analyze(prog, initenv, initstore) ==
+           DisLinearSmallStepUBStack.analyze(prog, initenv, initstore))
+
+    assert(SmallStepP4F.analyze(prog, initenv, initstore).map(_.bstore).foldLeft(mtStore)(_.join(_)) ==
+           summarizeVSS(RefuncCPS.analyze(prog, initenv, initstore).vss))
+
+    assert(summarizeSS(DisLinearSmallStepUBStack.analyze(prog, initenv, initstore)) ==
+           summarizeVSS(RefuncCPS.analyze(prog, initenv, initstore).vss))
+
+    assert(RefuncCPS.analyze(prog, initenv, initstore) ==
+           DirectStyleDC.analyze(prog, initenv, initstore))
+
+    assert(DirectStyleDC.analyze(prog, initenv, initstore) ==
+           DirectStyleSideEff.analyze(prog, initenv, initstore))
+  }
+
   def test_refunc_nd() {
-    ANFAAM.k = 0
     val ndprog = Let("a", App(Var("f"), Num(3)), Var("a"))
     val initenv = Map("f" -> BAddr("f", List()))
     val initstore = Store[BAddr, Storable](Map(BAddr("f", List()) -> Set(Clos(Lam("x", Var("x")), Map()),
                                                                          Clos(Lam("y", Num(2)), Map()),
                                                                          Clos(Lam("z", Num(1)), Map()))))
-
-    assert(SmallStepUBStack.analyze(ndprog,initenv, initstore) == 
-           LinearSmallStepUBStack.analyze(ndprog, initenv, initstore))
-    assert(LinearSmallStepUBStack.analyze(ndprog, initenv, initstore) ==
-           FusedLinearSmallStepUBStack.analyze(ndprog,initenv, initstore))
-    assert(FusedLinearSmallStepUBStack.analyze(ndprog, initenv, initstore) ==
-           DisLinearSmallStepUBStack.analyze(ndprog, initenv, initstore))
-  
-    return
-    assert(RefuncCPSNoCacheBF.analyze(ndprog, initenv, initstore) ==
-           RefuncCPSNoCache.analyze(ndprog, initenv, initstore))
-
-    assert(DirectStyleDCNoCache.analyze(ndprog, initenv, initstore) ==
-             RefuncCPSNoCache.analyze(ndprog, initenv, initstore))
-    assert(DirectStyleDCNoCache.analyze(ndprog, initenv, initstore) ==
-             DirectStyleDCNoCache2.analyze(ndprog, initenv, initstore))
-
-    //assert(RefuncNoCache3.analyze(ndprog, initenv, initstore) ==
-    //       Refunc.analyze(ndprog, initenv, initstore).vss)
-
-    //assert(RefuncCPS.analyze(ndprog, initenv, initstore) ==
-    //       Refunc.analyze(ndprog, initenv, initstore))
-
-    assert(RefuncCPS.analyze(ndprog, initenv, initstore) ==
-           DirectStyleSideEff.analyze(ndprog, initenv, initstore))
     
-    println(RefuncCPS.analyze(ndprog, initenv, initstore).cache)
-    println(DirectStyleDC.analyze(ndprog, initenv, initstore).cache)
-  
-    assert(RefuncCPS.analyze(ndprog, initenv, initstore) ==
-           DirectStyleDC.analyze(ndprog, initenv, initstore))
+    basic_test(0, ndprog, initenv, initstore)
+    basic_test(1, ndprog, initenv, initstore)
+
+    /************************************************************************/
 
     val initstore_nd = Store[BAddr, Storable](Map(BAddr("f", List()) -> Set(Clos(Lam("x", Let("t", App(Var("g"), Var("x")), 
                                                                                             Var("t"))),
@@ -58,37 +63,10 @@ object RefuncTest {
                                                                             Clos(Lam("z", Num(1)), Map())),
                                                   BAddr("g", List()) -> Set(Clos(Lam("a", Num(3)), Map()),
                                                                             Clos(Lam("b", Num(4)), Map()))))
+    basic_test(0, ndprog, initenv, initstore_nd)
+    basic_test(1, ndprog, initenv, initstore_nd)
 
-    assert(SmallStepUBStack.analyze(ndprog,initenv, initstore_nd) == 
-      LinearSmallStepUBStack.analyze(ndprog,initenv, initstore_nd))
-
-    assert(FusedLinearSmallStepUBStack.analyze(ndprog,initenv, initstore_nd) == 
-      LinearSmallStepUBStack.analyze(ndprog,initenv, initstore_nd))
-
-    //assert(RefuncNoCache2.analyze(ndprog, initenv, initstore_nd) ==
-    //         RefuncNoCache3.analyze(ndprog, initenv, initstore_nd))
-    //assert(RefuncNoCache3.analyze(ndprog, initenv, initstore_nd) ==
-    //         Refunc.analyze(ndprog, initenv, initstore_nd).vss)
-
-    //assert(RefuncCPSNoCacheBF.analyze(ndprog, initenv, initstore_nd) ==
-    //         RefuncNoCache3.analyze(ndprog, initenv, initstore_nd))
-    assert(RefuncCPSNoCacheBF.analyze(ndprog, initenv, initstore_nd) ==
-             RefuncCPSNoCache.analyze(ndprog, initenv, initstore_nd))
-    assert(DirectStyleDCNoCache.analyze(ndprog, initenv, initstore_nd) ==
-             RefuncCPSNoCache.analyze(ndprog, initenv, initstore_nd))
-    assert(DirectStyleDCNoCache.analyze(ndprog, initenv, initstore_nd) ==
-             DirectStyleDCNoCache2.analyze(ndprog, initenv, initstore_nd))
-
-    //println(RefuncNoCacheNoTime2.analyze(ndprog, initenv, initstore_nd))
-
-    //assert(RefuncCPS.analyze(ndprog, initenv, initstore_nd) ==
-    //         Refunc.analyze(ndprog, initenv, initstore_nd))
-
-    assert(RefuncCPS.analyze(ndprog, initenv, initstore_nd) ==
-             DirectStyleSideEff.analyze(ndprog, initenv, initstore_nd))
-
-    assert(RefuncCPS.analyze(ndprog, initenv, initstore_nd) ==
-             DirectStyleDC.analyze(ndprog, initenv, initstore_nd))
+    /************************************************************************/
 
     val initstore_nd2 = Store[BAddr, Storable](Map(BAddr("f", List()) -> Set(Clos(Lam("x", Let("t", App(Var("g"), Var("x")), 
                                                                                             Num(5))), 
@@ -99,110 +77,44 @@ object RefuncTest {
                                                   BAddr("g", List()) -> Set(Clos(Lam("a", Num(3)), Map()),
                                                                             Clos(Lam("b", Num(4)), Map()))))
 
-    assert(SmallStepUBStack.analyze(ndprog,initenv, initstore_nd2) == 
-      LinearSmallStepUBStack.analyze(ndprog,initenv, initstore_nd2))
+    basic_test(0, ndprog, initenv, initstore_nd2)
+    basic_test(1, ndprog, initenv, initstore_nd2)
 
-    assert(FusedLinearSmallStepUBStack.analyze(ndprog, initenv, initstore_nd2) == 
-      LinearSmallStepUBStack.analyze(ndprog, initenv, initstore_nd2)) 
-
-    //assert(RefuncNoCache2.analyze(ndprog, initenv, initstore_nd2) ==
-    //         RefuncNoCache3.analyze(ndprog, initenv, initstore_nd2))
-    //println(RefuncNoCache3.analyze(ndprog, initenv, initstore_nd2))
-    //assert(Refunc.analyze(ndprog, initenv, initstore_nd2).vss ==
-    //         RefuncNoCache3.analyze(ndprog, initenv, initstore_nd2))
-    //assert(RefuncCPSNoCacheBF.analyze(ndprog, initenv, initstore_nd2) ==
-    //         RefuncNoCache3.analyze(ndprog, initenv, initstore_nd2))
-    assert(RefuncCPSNoCacheBF.analyze(ndprog, initenv, initstore_nd2) ==
-             RefuncCPSNoCache.analyze(ndprog, initenv, initstore_nd2))
-
-    assert(DirectStyleDCNoCache.analyze(ndprog, initenv, initstore_nd2) ==
-             RefuncCPSNoCache.analyze(ndprog, initenv, initstore_nd2))
-    assert(DirectStyleDCNoCache.analyze(ndprog, initenv, initstore_nd2) ==
-             DirectStyleDCNoCache2.analyze(ndprog, initenv, initstore_nd2))
-
-
-    //assert(Refunc.analyze(ndprog, initenv, initstore_nd2) ==
-    //       RefuncCPS.analyze(ndprog, initenv, initstore_nd2))
-    assert(DirectStyleSideEff.analyze(ndprog, initenv, initstore_nd2) ==
-           RefuncCPS.analyze(ndprog, initenv, initstore_nd2))
-
-    assert(DirectStyleDC.analyze(ndprog, initenv, initstore_nd2) ==
-           RefuncCPS.analyze(ndprog, initenv, initstore_nd2))
-    /*
-    ANFAAM.k = 1
-    println(RefuncNoCache.analyze(ndprog, initenv, initstore))
-    println(RefuncNoCache.analyze(ndprog, initenv, initstore))
-     */
-
-    /************************************/
+    /************************************************************************/
 
     val id = Lam("t", Var("t"))
     val ndprog1 = Let("a", App(Var("f"), Num(3)),
                       Let("b", App(id, Var("a")),
                           Var("b")))
-    //println(RefuncNoCacheNoTime1.analyze(ndprog1, initenv, initstore))
-
-    /************************************/
-
     val initenv2 = Map("f" -> BAddr("f", List()),
                        "g" -> BAddr("g", List()))
-    val initstore2 = Store[BAddr, Storable](Map(BAddr("f", List()) -> Set(Clos(Lam("x", Let("t", App(Var("g"), Var("x")), Var("t"))),
+    val initstore2 = Store[BAddr, Storable](Map(BAddr("f", List()) -> Set(Clos(Lam("x", Let("t", App(Var("g"), Var("x")), Var("t"))), //4, 5
                                                                                Map("g" -> BAddr("g", List()))),
                                                                           Clos(Lam("y", Num(2)), Map()),
                                                                           Clos(Lam("z", Num(1)), Map()),
-                                                                          Clos(Lam("x1", Let("t1", App(Var("h"), Var("x1")), Var("t1"))),
+                                                                          Clos(Lam("x1", Let("t1", App(Var("h"), Var("x1")), Var("t1"))), //6, 7
                                                                                Map("h" -> BAddr("h", List()))),
                                                                           Clos(Lam("p", Var("p")), Map())),
                                                 BAddr("g", List()) -> Set(Clos(Lam("m", Num(4)), Map()),
                                                                           Clos(Lam("n", Num(5)), Map())),
-                                                BAddr("h", List()) -> Set(Clos(Lam("d", Num(6)), Map()))))
+                                                BAddr("h", List()) -> Set(Clos(Lam("d", Num(6)), Map()),
+                                                                          Clos(Lam("d", Num(7)), Map()))))
 
-    assert(SmallStepUBStack.analyze(ndprog1, initenv2, initstore2) == 
-      LinearSmallStepUBStack.analyze(ndprog1, initenv2, initstore2))
+    basic_test(0, ndprog1, initenv2, initstore2)
+    basic_test(1, ndprog1, initenv2, initstore2)
 
-    assert(FusedLinearSmallStepUBStack.analyze(ndprog1, initenv2, initstore2) == 
-      LinearSmallStepUBStack.analyze(ndprog1, initenv2, initstore2))
+    /************************************************************************/
 
-    //assert(RefuncNoCache2.analyze(ndprog1, initenv2, initstore2) ==
-    //         RefuncNoCache3.analyze(ndprog1, initenv2, initstore2))
-    //assert(Refunc.analyze(ndprog1, initenv2, initstore2).vss ==
-    //         RefuncNoCache3.analyze(ndprog1, initenv2, initstore2))
-    //assert(RefuncCPSNoCacheBF.analyze(ndprog1, initenv2, initstore2) ==
-    //         RefuncNoCache3.analyze(ndprog1, initenv2, initstore2))
-    assert(RefuncCPSNoCacheBF.analyze(ndprog1, initenv2, initstore2) ==
-             RefuncCPSNoCache.analyze(ndprog1, initenv2, initstore2))
-    assert(DirectStyleDCNoCache.analyze(ndprog1, initenv2, initstore2) ==
-             RefuncCPSNoCache.analyze(ndprog1, initenv2, initstore2))
-    assert(DirectStyleDCNoCache.analyze(ndprog1, initenv2, initstore2) ==
-             DirectStyleDCNoCache2.analyze(ndprog1, initenv2, initstore2))
-    //assert(Refunc.analyze(ndprog1, initenv2, initstore2) ==
-    //         RefuncCPS.analyze(ndprog1, initenv2, initstore2))
-    assert(DirectStyleSideEff.analyze(ndprog1, initenv2, initstore2) ==
-             RefuncCPS.analyze(ndprog1, initenv2, initstore2))
-    assert(DirectStyleDC.analyze(ndprog1, initenv2, initstore2) ==
-             RefuncCPS.analyze(ndprog1, initenv2, initstore2))
-    /*
-    println("------------------------")
-    println(RefuncNoCacheNoTime2.analyze(ndprog1, initenv2, initstore2))
-    */
-    //ANFAAM.k = 0
-    //println(RefuncNoCache.analyze(ndprog1, initenv2, initstore2))
-    //println(Refunc.analyze(ndprog, initenv, initstore))
-  }
-
-  def test_pushdown() {
-    val id = Lam("a", Var("a"))
     val pd1 = Let("id", id,
                   Let("x", App(id, Num(1)),
                       Let("m", App(id, Num(4)),
                           Let("y", App(id, Num(2)),
                               Let("z", App(id, Num(3)),
                                   Var("x"))))))
-    ANFAAM.k = 0
-    println(SmallStepP4F.analyze(pd1).filter(_.e == Var("x")))
-    //assert(SmallStepUBStack.analyze(pd1).filter(_.e == Var("x")).head.bstore ==
-    //         RefuncNoCache.analyze(pd1).head.store)
-    //println(RefuncNoCache3.analyze(pd1))
+    basic_test(0, pd1, mtEnv, mtStore)
+    basic_test(1, pd1, mtEnv, mtStore)
+
+    /************************************************************************/
   }
 
   def test_non_term() {
@@ -243,70 +155,8 @@ object RefuncTest {
     assert(RefuncCPS.analyze(ntprog, initenv, initstore) == DirectStyleDC.analyze(ntprog, initenv, initstore))
   }
 
-  def test_cache() {
-    val initenv = Map("f" -> BAddr("f", List()))
-    val initstore = Store[BAddr, Storable](Map(BAddr("f", List()) -> Set(Clos(Lam("x", Var("x")), Map()),
-                                                                         Clos(Lam("y", Var("y")), Map()))))
-    val ndprog = Let("a", App(Var("f"), Num(3)), Var("a"))
-    ANFAAM.k = 1
-
-    //assert(RefuncNoCache.analyze(ndprog, initenv, initstore) ==
-    //         RefuncNoCache2.analyze(ndprog, initenv, initstore))
-
-    //assert(RefuncNoCache.analyze(ndprog, initenv, initstore) ==
-    //        Refunc.analyze(ndprog, initenv, initstore).vss)
-
-    //assert(RefuncCPS.analyze(ndprog, initenv, initstore) ==
-    //         Refunc.analyze(ndprog, initenv, initstore))
-
-    assert(RefuncCPS.analyze(ndprog, initenv, initstore) ==
-             DirectStyleSideEff.analyze(ndprog, initenv, initstore))
-
-    val id = Lam("t", Var("t"))
-    val ndprog1 = Let("a", App(Var("f"), Num(3)),
-                      Let("b", App(id, Var("a")),
-                          Var("b")))
-    val initenv1 = Map("f" -> BAddr("f", List()),
-                       "g" -> BAddr("g", List()))
-    val initstore1 = Store[BAddr, Storable](Map(BAddr("f", List()) -> Set(Clos(Lam("x", Let("t", App(Var("g"), Var("x")), Var("t"))), //4, 5
-                                                                               Map("g" -> BAddr("g", List()))),
-                                                                          Clos(Lam("y", Num(2)), Map()),
-                                                                          Clos(Lam("z", Num(1)), Map()),
-                                                                          Clos(Lam("x1", Let("t1", App(Var("h"), Var("x1")), Var("t1"))), //6, 7
-                                                                               Map("h" -> BAddr("h", List()))),
-                                                                          Clos(Lam("p", Var("p")), Map())),
-                                                BAddr("g", List()) -> Set(Clos(Lam("m", Num(4)), Map()),
-                                                                          Clos(Lam("n", Num(5)), Map())),
-                                                BAddr("h", List()) -> Set(Clos(Lam("d", Num(6)), Map()),
-                                                                          Clos(Lam("d", Num(7)), Map()))))
-
-    //assert(RefuncNoCache.analyze(ndprog1, initenv1, initstore1) ==
-    //         RefuncNoCache2.analyze(ndprog1, initenv1, initstore1))
-
-    //assert(RefuncNoCache.analyze(ndprog1, initenv1, initstore1) ==
-    //       Refunc.analyze(ndprog1, initenv1, initstore1).vss)
-
-    //assert(RefuncCPS.analyze(ndprog1, initenv1, initstore1) ==
-    //       Refunc.analyze(ndprog1, initenv1, initstore1))
-    assert(RefuncCPS.analyze(ndprog1, initenv1, initstore1).vss ==
-           RefuncCPSBF.analyze(ndprog1, initenv1, initstore1)._1)
-    assert(RefuncCPS.analyze(ndprog1, initenv1, initstore1).cache ==
-           RefuncCPSBF.analyze(ndprog1, initenv1, initstore1)._2)
-
-    assert(RefuncCPS.analyze(ndprog1, initenv1, initstore1) ==
-          DirectStyleSideEff.analyze(ndprog1, initenv1, initstore1))
-    
-    val p4fstates = SmallStepP4F.analyze(ndprog1, initenv1, initstore1)
-    val finalstore = p4fstates.map(_.bstore).foldLeft(Store[BAddr, Storable](Map()))(_.join(_))
-
-    val refuncstore = RefuncCPSBF.analyze(ndprog1, initenv1, initstore1)._1.map(_.store).foldLeft(Store[BAddr, Storable](Map()))(_.join(_))
-    assert(finalstore == refuncstore)
-  }
-
   def main(args: Array[String]) {
     test_non_term()
-    //test_pushdown()
-    //test_cache()
     test_refunc_nd()
   }
 }
