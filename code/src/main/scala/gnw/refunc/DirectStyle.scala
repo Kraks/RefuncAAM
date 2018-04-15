@@ -28,6 +28,19 @@ object DirectStyleDC {
       val new_time = (e::time).take(k)
       val new_cache = cache.outUpdate(config, cache.inGet(config))
       e match {
+        case Let(x, ae, e) if isAtomic(ae) =>
+          val baddr = allocBind(x, new_time)
+          val new_env = env + (x -> baddr)
+          val new_store = store.update(baddr, aeval(ae, env, store))
+          val Ans(eval, ecache) = aval(e, new_env, new_store, new_time, new_cache)
+          Ans(eval, ecache.outUpdate(config, eval))
+
+        case Letrec(bds, body) => 
+          val new_env = bds.foldLeft(env)((accenv: Env, bd: B) => { accenv + (bd.x -> allocBind(bd.x, new_time)) })
+          val new_store = bds.foldLeft(store)((accbst: BStore, bd: B) => { accbst.update(allocBind(bd.x, new_time), aeval(bd.e, new_env, accbst)) })
+          val Ans(finval, fincache) = aval(body, new_env, new_store, new_time, new_cache)
+          Ans(finval, fincache.outUpdate(config, finval))
+
         case Let(x, App(f, ae), e) =>
           val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
           val (Clos(Lam(v, body), c_env), clscache) = ndcps[Clos](closures, Ans(Set[VS](), new_cache))
@@ -55,13 +68,11 @@ object DirectStyleDC {
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
-      reset {
-        val Ans(vss, anscache) = aval(e, env, store, mtTime, cache)
-        val initConfig = Config(e, env, store, mtTime)
-        val new_cache = anscache.outUpdate(initConfig, vss)
-        if (new_cache.out == cache.out) { Ans(vss, new_cache) }
-        else { iter(Cache(new_cache.out, new_cache.out)) }
-      }
+      val Ans(vss, anscache) = reset { aval(e, env, store, mtTime, cache) }
+      val initConfig = Config(e, env, store, mtTime)
+      val new_cache = anscache.outUpdate(initConfig, vss)
+      if (new_cache.out == cache.out) { Ans(vss, new_cache) }
+      else { iter(Cache(new_cache.out, new_cache.out)) }
     }
     iter(Cache.mtCache)
   }

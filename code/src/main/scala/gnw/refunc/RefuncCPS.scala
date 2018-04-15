@@ -13,6 +13,8 @@ case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
   def outUpdate(config: Config, vss: Set[VS]): Cache = { Cache(in, out.update(config, vss)) }
   def outUpdate(config: Config, vs: VS): Cache = { Cache(in, out.update(config, vs)) }
   def outJoin(c: Cache): Cache = { Cache(in, out.join(c.out)) }
+
+  def outVS: Set[VS] = { out.map.values.foldLeft(Set[VS]())(_ ++ _) }
 }
 
 object Cache {
@@ -46,6 +48,21 @@ object RefuncCPS {
     val new_cache = cache.outUpdate(config, cache.inGet(config))
 
     e match {
+      case Let(x, ae, e) if isAtomic(ae) =>
+        val baddr = allocBind(x, new_time)
+        val new_env = env + (x -> baddr)
+        val new_store = store.update(baddr, aeval(ae, env, store))
+        aval(e, new_env, new_store, new_time, new_cache, { case Ans(evss, ecache) => 
+          cont(Ans(evss, ecache.outUpdate(config, evss)))
+        })
+
+      case Letrec(bds, body) => 
+        val new_env = bds.foldLeft(env)((accenv: Env, bd: B) => { accenv + (bd.x -> allocBind(bd.x, new_time)) })
+        val new_store = bds.foldLeft(store)((accbst: BStore, bd: B) => { accbst.update(allocBind(bd.x, new_time), aeval(bd.e, new_env, accbst)) })
+        aval(body, new_env, new_store, new_time, new_cache, { case Ans(evss, ecache) => 
+          cont(Ans(evss, ecache.outUpdate(config, evss)))
+        })
+
       case Let(x, App(f, ae), e) =>
         val closures = aeval(f, env, store).asInstanceOf[Set[Clos]]
         nd[Clos, Ans](closures, Ans(Set[VS](), new_cache), { case (clos, Ans(acc, cache), closnd) =>
