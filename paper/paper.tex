@@ -1699,15 +1699,17 @@ The function @analyze@ is also changed by adding a @reset@ operator around the f
 The afterwards updating on cache becomes sequential.
 
 \begin{lstlisting}
+val mtEnv = Map[String, BAddr]()
+val mtStore = Store[BAddr, Storable](Map())
+val mtTime = List()
+
 def analyze(e: Expr) = {
   def iter(cache: Cache): Ans = {
-    reset {
-      val Ans(vss, anscache) = aeval(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List(), cache)
-      val initConfig = Config(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List())
-      val new_cache = anscache.outUpdate(initConfig, vss)
-      if (new_cache.out == cache.out) { Ans(vss, new_cache) }
-      else { iter(Cache(new_cache.out, new_cache.out)) }
-    }
+    val Ans(vss, anscache) = reset { aeval(e, mtEnv, mtStore, mtTime, cache) }
+    val initConfig = Config(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List())
+    val new_cache = anscache.outUpdate(initConfig, vss)
+    if (new_cache.out == cache.out) { Ans(vss, new_cache) }
+    else { iter(Cache(new_cache.out, new_cache.out)) }
   }
   iter(mtCache)
 }
