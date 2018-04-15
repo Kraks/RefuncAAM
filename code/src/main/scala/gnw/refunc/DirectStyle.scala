@@ -93,6 +93,13 @@ object DirectStyleSideEff {
     val new_time = (e::time).take(k)
 
     e match {
+      case Let(x, ae, e) if isAtomic(ae) =>
+        val baddr = allocBind(x, new_time)
+        val new_env = env + (x -> baddr)
+        val new_store = store.update(baddr, aeval(ae, env, store))
+        val Ans(eval, ecache) = aval(e, new_env, new_store, new_time, new_cache)
+        Ans(eval, ecache.outUpdate(config, eval))
+
       case Letrec(bds, body) =>
         val new_env = bds.foldLeft(env)((accenv: Env, bd: B) => {
                                           accenv + (bd.x -> allocBind(bd.x, new_time))

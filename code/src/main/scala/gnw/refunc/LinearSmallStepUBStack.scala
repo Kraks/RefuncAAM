@@ -21,6 +21,17 @@ object LinearSmallStepUBStack {
   def step(nds: NDState): NDState = {
     val new_time = tick(nds)
     nds match {
+      case NDState(Let(x, ae, e), env, bstore, konts, time, ndk) if isAtomic(ae) =>
+        val baddr = allocBind(x, new_time)
+        val new_env = env + (x -> baddr)
+        val new_store = bstore.update(baddr, aeval(ae, env, bstore))
+        NDState(e, new_env, new_store, konts, new_time, ndk)
+
+      case NDState(Letrec(bds, body), env, bstore, konts, time, ndk) =>
+        val new_env = bds.foldLeft(env)((accenv: Env, bd: B) => { accenv + (bd.x -> allocBind(bd.x, new_time)) })
+        val new_store = bds.foldLeft(bstore)((accbst: BStore, bd: B) => { accbst.update(allocBind(bd.x, new_time), aeval(bd.e, new_env, accbst)) })
+        NDState(body, new_env, new_store, konts, new_time, ndk)
+
       case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>
         val closures = atomicEval(f, env, bstore).toList.asInstanceOf[List[Clos]]
         val Clos(Lam(v, body), c_env) = closures.head
