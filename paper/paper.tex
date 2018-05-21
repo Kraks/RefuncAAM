@@ -668,7 +668,7 @@ the rest of the stack @ks@.
 \subsubsection{Valuation}
 
 To run the program, we first use the @inject@ function (below) to construct an initial machine
-state given an expression @e@. The initial state contains an empty environment,
+state given a closed expression @e@. The initial state contains an empty environment,
 store, and stack.
 \begin{lstlisting}
 def inject(e: Expr): State = State(e, Map(), Map(), Nil)
@@ -676,7 +676,7 @@ def inject(e: Expr): State = State(e, Map(), Map(), Nil)
 
 The @drive@ function is then used to evaluate
 to a final state by iteratively applying @step@ on the current state until a state is reached
-ion which the control is an atomic expression and the continuation stack is empty.
+which the control is an atomic expression and the continuation stack is empty.
 Naturally, we can then extract the value from the final state at last.
 
 \begin{lstlisting}
@@ -956,7 +956,8 @@ The reason we show it here is to establish an artifact with precise call/return 
 used for the next step of transformation.
 
 In the definition of @State@, the continuation store disappears, and
-component @konts@ becomes a list of frames. The other components remain unchanged.
+component @konts@ becomes a list of frames. 
+The other components remain unchanged as in the Section \ref{aam}.
 
 \begin{lstlisting}
 case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
@@ -1038,8 +1039,8 @@ context is a defunctionalized continuation \cite{Danvy:2008:DIP:1411204.1411206}
 This poses a problem, as the underlying semantics of AAM is fundamentally nondeterministic.
 But the evaluation context (i.e., the @Frame@ in our program) is \emph{not}
 nondeterministic, and the worklist @todo@ actually implicitly handles the nondeterminism.
-Thus, if we simply refunctionalize the frames to functions, it does not help us move toward
-abstract definitional interpreters.
+Thus, if we simply refunctionalize the frames to higher-order functions, 
+it does not help us to move toward abstract definitional interpreters.
 
 In order to address this problem, our first step of transformations
 is to linearize all nondeterministic choices.
@@ -1049,8 +1050,7 @@ We then introduce another layer of controls, and define a case class @NDCont@
 that saves the information at a fork point when we have multiple target closures.
 We also add a new field @ndk@ to the definition of state, which we now call @NDState@.
 For clarity of presentation in differentiating between the two continuations, we elect to call
-the first a \emph{normal continuation}, and the second as a \emph{nondeterministic
-continuation}.
+the first a \emph{normal continuation}, and the second a \emph{nondeterministic continuation}.
 
 \begin{lstlisting}
 case class NDCont(cls: List[Clos], argvs: Set[Storable], store: BStore, time: Time, frames: List[Frame])
@@ -1060,7 +1060,7 @@ case class NDState(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: 
 \end{lstlisting}
 
 Each @NDCont@ object contains a list of closures that are possible functions to be invoked,
-a set of values that will be bind to the function's formal argument,
+a set of values that will be bound to the function's formal argument,
 and the store, time, and frames at the fork point.
 In the definition of @NDState@, an auxiliary function @toState@ is added that
 converts itself to @State@.
@@ -1124,7 +1124,7 @@ If the normal continuation @konts@ is an empty list, then it means we have reach
 the end of the computation (i.e., a halt); otherwise, we should return the values of @ae@ to its caller which is contained in the top frame of stack.
 
 However, since we have added nondeterminism into state, an empty list of frames means
-we have the reached the halt of \textit{one computation path}, and we should
+we have reached the halt of \textit{one computation path}, and we should
 determine the next state indicated by @NDCont@.
 Thus, we have a pattern matching on @ndk@:
 \begin{itemize}
@@ -1191,7 +1191,7 @@ def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
 }
 \end{lstlisting}
 
-With this, have a single function to perform both abstract evaluation and the collection of
+With this, we have a single function to perform both abstract evaluation and the collection of
 intermediate states. Given @inject(e)@ as an initial state and an empty set as the
 initial set of states reached, we can easily define the entrance function @analyze@ as
 follows:
@@ -1255,7 +1255,7 @@ def continue(nds: NDState, seen: Set[State]): Set[State] = {
 }
 \end{lstlisting}
 
-@continue@ is mainly what we have seen for the second case in
+Function @continue@ is mainly what we have seen for the second case in
 @drive_step@, except that @ndcontinue@ is called when
 the normal continuation is empty.
 Since we are analyzing a language in ANF, the first-order data representation of
@@ -1386,9 +1386,9 @@ that has a continuation and a meta-continuation \cite{Danvy:1990:AC:91556.91622}
 Since our first version of @aeval@ implements the nondeterministic
 evaluation, given the defined @nd@, the evaluation function @aeval@ can be easily
 defined. In the case that @e@ is a @let@ expression,
-we invoke @nd@ for twice and perform a nesting two-step, depth-first evaluation
+we invoke @nd@ twice and perform a nesting two-step, depth-first evaluation
 over possible values of @App(f, ae)@.
-The values of branches from on fork point will be accumulated, and then
+The values of branches from a fork point will be accumulated, and then
 returned to the upper fork point.
 
 \begin{lstlisting}
@@ -1449,7 +1449,8 @@ def analyze(e: Expr) =
 Based on the refunctionalized AAM from the last section, we use the same nondeterministic
 operator @nd@, but further extend it to a fixed-point cached evaluation in this section.
 The fixed-point caching algorithm performs a sound over-approximation of all possible
-concrete reachable paths and values, and also prevents non-termination when analyzing diverged programs.
+concrete reachable paths and values, and also prevents non-termination when analyzing 
+programs that may diverge.
 
 \textbf{Configuration.}
 We do not have the concept of an explicit stack or state,
@@ -1618,7 +1619,7 @@ The refunctionalized AAM we obtained has the perfect match on return-flows even 
 In fact, what we started is an AAM with an unbounded stack which already precisely matches the calls and returns.
 Refunctionalization makes the interpreter be a ``big-step'' semantics artifact, then the consequence is we have no places to save the context information. 
 But refunctionalization not only forces us to sequentialize the order non-deterministic evaluation through higher-order functions representing continuations, 
-but also drive us to use a new caching algorithm.  
+but also drives us to use a new caching algorithm.  
 
 Indeed, the caching algorithm plays an important role to make the analysis computable. 
 
@@ -1663,10 +1664,10 @@ in a way that mimics extended continuation-passing style.
 
 \textbf{Nondeterminism Operators, Again.}
 The first operator @nd@ is simplified from the previous one, but specialized with type @Ans@ and @Cache@. 
-We may still keep the types to be generic, but the purpose of presentation clearly, exposing @Cache@ explictly
+We may still keep the types generic, but the presentation clearly, exposing @Cache@ explictly
 reveals that cache should be monotonically accumulated to the rest of computation.
-Now @nd@ only takes a function @f@ that applies on type @(T, Cache)@ where value of type @T@ comes from the set,
-and @nd@ does recursive call on itself over elements in the set @ts@.
+Now @nd@ only takes a function @f@ that applies on type @(T, Cache)@ where the value of type @T@ comes from the set,
+and @nd@ performs recursive call on itself over elements in the set @ts@.
 We also move the accumulation operation (@++@) inside of @nd@.
 
 \begin{lstlisting}
@@ -1687,8 +1688,8 @@ def ndcps[T](ts: Set[T], acc: Ans): (T, Cache) @cps[Ans] = shift { f: (((T, Cach
 
 The function @ndcps@ takes two arguments: a set of elements with type @T@, 
 and an initial accumulated value of type @Ans@.
-The @ndcps@ iteratively returns an element from the set along with the latest cache 
-, and the return type is also annotated by \verb|@cps[Ans]|. 
+The @ndcps@ iteratively returns an element from the set along with the latest cache, 
+and the return type is also annotated by \verb|@cps[Ans]|. 
 This annotation denotes the final returned value of @ndcps@ is type @Ans@.
 The @f@ introduced by the @shift@ operator is the delimited continuation from the call-site of @ndcps@.
 
@@ -1752,7 +1753,7 @@ def analyze(e: Expr) = {
 }
 \end{lstlisting}
 
-Now we have arrive the end of this series of transformations. Starting from an small-step abstract abstract machine, 
+Now we have arrived the end of this series of transformations. Starting from an small-step abstract abstract machine, 
 eventually we obtain an big-step definitional interpreter with pushdown control-flows and written in direct-style.
 
 %\section{Perspective}
