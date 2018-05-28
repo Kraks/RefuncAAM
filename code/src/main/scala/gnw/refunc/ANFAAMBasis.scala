@@ -68,5 +68,33 @@ object ANFAAM {
   val atomicEval = aeval _
 
   case class VS(vals: Set[Storable], time: Time, store: BStore)
+
+  case class Config(e: Expr, env: Env, store: BStore, time: Time)
+
+  case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
+    def inGet(config: Config): Set[VS] = in.getOrElse(config, Set())
+    def inContains(config: Config): Boolean = in.contains(config)
+    def outGet(config: Config): Set[VS] = out.getOrElse(config, Set())
+    def outContains(config: Config): Boolean = out.contains(config)
+    def outUpdate(config: Config, vss: Set[VS]): Cache = { Cache(in, out.update(config, vss)) }
+    def outUpdate(config: Config, vs: VS): Cache = { Cache(in, out.update(config, vs)) }
+    def outJoin(c: Cache): Cache = { Cache(in, out.join(c.out)) }
+
+    def outVS: Set[VS] = { out.map.values.foldLeft(Set[VS]())(_ ++ _) }
+  }
+
+  object Cache {
+    def mtCache = Cache(Store[Config, VS](Map()), Store[Config, VS](Map()))
+  }
+
+  case class Ans(vss: Set[VS], cache: Cache) {
+    def ++(ans: Ans): Ans = {
+      Ans(vss ++ ans.vss, ans.cache.outJoin(cache))
+    }
+  }
+
+  def mtTime = List()
+  def mtEnv = Map[String, BAddr]()
+  def mtStore = Store[BAddr, Storable](Map())
 }
 

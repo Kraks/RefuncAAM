@@ -46,10 +46,6 @@ object DirectStyleDCNoCache2 {
     }
   }
 
-  def mtTime = List()
-  def mtEnv = Map[String, BAddr]()
-  def mtStore = Store[BAddr, Storable](Map())
-
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) =
     reset { aval(e, env, store, mtTime) }
 }
@@ -102,10 +98,6 @@ object DirectStyleDCNoCache {
         cont(Set(VS(ds, new_time, store)))
     }
   }
-
-  def mtTime = List()
-  def mtEnv = Map[String, BAddr]()
-  def mtStore = Store[BAddr, Storable](Map())
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) =
     reset { aval(e, env, store, mtTime) }

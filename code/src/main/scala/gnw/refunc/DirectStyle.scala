@@ -12,9 +12,7 @@ object DirectStyleDC {
 
   def nd[T](ts: Set[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
     if (ts.isEmpty) acc
-    else {
-      nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
-    }
+    else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
   }
   
   def ndcps[T](ts: Set[T], acc: Ans): (T, Cache) @cps[Ans] = shift { f: (((T, Cache)) => Ans) => 
@@ -27,6 +25,7 @@ object DirectStyleDC {
     else {
       val new_time = (e::time).take(k)
       val new_cache = cache.outUpdate(config, cache.inGet(config))
+
       e match {
         case Let(x, ae, e) if isAtomic(ae) =>
           val baddr = allocBind(x, new_time)
@@ -61,10 +60,6 @@ object DirectStyleDC {
       }
     }
   }
-
-  def mtTime = List()
-  def mtEnv = Map[String, BAddr]()
-  def mtStore = Store[BAddr, Storable](Map())
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
@@ -136,10 +131,6 @@ object DirectStyleSideEff {
         Ans(vs, new_cache.outUpdate(config, vs))
     }
   }
-
-  def mtTime = List()
-  def mtEnv = Map[String, BAddr]()
-  def mtStore = Store[BAddr, Storable](Map())
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
