@@ -5,17 +5,15 @@ import refunc.ast._
 import ANFAAM._
 
 object RefuncTest {
-  import SmallStepUBStack._
   val bot = Set()
 
-  def summarizeSS(ss: Set[State]): BStore = {
-    ss.map(_.bstore).foldLeft(mtStore)(_.join(_))
+  def summarize(ss: Set[BStore]): BStore = { ss.foldLeft(mtStore)(_.join(_)) }
+  def summarizeState(ss: Set[ANFAAM.State]): BStore = { summarize(ss.map(_.bstore)) }
+  def summarizeVSS(vss: Set[VS]): BStore = { summarize(vss.map(_.store)) }
+  def summarizeUBState(ss: Set[SmallStepUBStack.State]): BStore = { 
+    summarize(ss.map(_.bstore)) 
   }
 
-  def summarizeVSS(vss: Set[VS]): BStore = {
-    vss.map(_.store).foldLeft(mtStore)(_.join(_))
-  }
-  
   def basic_test(k: Int, prog: Expr, initenv: Env, initstore: BStore) {
     ANFAAM.k = k
     
@@ -28,10 +26,10 @@ object RefuncTest {
     assert(FusedLinearSmallStepUBStack.analyze(prog, initenv, initstore) ==
            DisLinearSmallStepUBStack.analyze(prog, initenv, initstore))
 
-    assert(SmallStepP4F.analyze(prog, initenv, initstore).map(_.bstore).foldLeft(mtStore)(_.join(_)) ==
+    assert(summarizeState(SmallStepP4F.analyze(prog, initenv, initstore)) ==
            summarizeVSS(RefuncCPS.analyze(prog, initenv, initstore).vss))
 
-    assert(summarizeSS(DisLinearSmallStepUBStack.analyze(prog, initenv, initstore)) ==
+    assert(summarizeUBState(DisLinearSmallStepUBStack.analyze(prog, initenv, initstore)) ==
            summarizeVSS(RefuncCPS.analyze(prog, initenv, initstore).vss))
 
     assert(RefuncCPS.analyze(prog, initenv, initstore) ==
@@ -47,9 +45,7 @@ object RefuncTest {
     val initstore = Store[BAddr, Storable](Map(BAddr("f", List()) -> Set(Clos(Lam("x", Var("x")), Map()),
                                                                          Clos(Lam("y", Num(2)), Map()),
                                                                          Clos(Lam("z", Num(1)), Map()))))
-    
-    basic_test(0, ndprog, initenv, initstore)
-    basic_test(1, ndprog, initenv, initstore)
+    for (k <- 0 to 3) { basic_test(k, ndprog, initenv, initstore) }
 
     /************************************************************************/
 
@@ -60,8 +56,7 @@ object RefuncTest {
                                                                             Clos(Lam("z", Num(1)), Map())),
                                                   BAddr("g", List()) -> Set(Clos(Lam("a", Num(3)), Map()),
                                                                             Clos(Lam("b", Num(4)), Map()))))
-    basic_test(0, ndprog, initenv, initstore_nd)
-    basic_test(1, ndprog, initenv, initstore_nd)
+    for (k <- 0 to 3) { basic_test(k, ndprog, initenv, initstore_nd) }
 
     /************************************************************************/
 
@@ -73,9 +68,7 @@ object RefuncTest {
                                                                             ),
                                                   BAddr("g", List()) -> Set(Clos(Lam("a", Num(3)), Map()),
                                                                             Clos(Lam("b", Num(4)), Map()))))
-
-    basic_test(0, ndprog, initenv, initstore_nd2)
-    basic_test(1, ndprog, initenv, initstore_nd2)
+    for (k <- 0 to 3) { basic_test(k, ndprog, initenv, initstore_nd2) }
 
     /************************************************************************/
 
@@ -96,9 +89,7 @@ object RefuncTest {
                                                                           Clos(Lam("n", Num(5)), Map())),
                                                 BAddr("h", List()) -> Set(Clos(Lam("d", Num(6)), Map()),
                                                                           Clos(Lam("d", Num(7)), Map()))))
-
-    basic_test(0, ndprog1, initenv2, initstore2)
-    basic_test(1, ndprog1, initenv2, initstore2)
+    for (k <- 0 to 3) { basic_test(k, ndprog1, initenv2, initstore2) }
 
     /************************************************************************/
 
@@ -108,8 +99,7 @@ object RefuncTest {
                           Let("y", App(id, Num(2)),
                               Let("z", App(id, Num(3)),
                                   Var("x"))))))
-    basic_test(0, pd1, mtEnv, mtStore)
-    basic_test(1, pd1, mtEnv, mtStore)
+    for (k <- 0 to 3) { basic_test(k, pd1, mtEnv, mtStore) }
 
     /************************************************************************/
   }
@@ -153,7 +143,6 @@ object RefuncTest {
   }
 
   def main(args: Array[String]) {
-    //TODO: README file, extended syntax 
     //TODO: Terminating programs
     //TODO: Non-terminating programs, expected bot
     //TODO: Mixing terminating and non-terminating part
