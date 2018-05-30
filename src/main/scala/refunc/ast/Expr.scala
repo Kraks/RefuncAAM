@@ -1,4 +1,4 @@
-package gnw.refunc.ast
+package refunc.ast
 
 sealed trait Expr
 sealed trait Value extends Expr

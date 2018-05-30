@@ -9,6 +9,7 @@ clean:
 	rm -rf *.bbl
 	rm -rf *.blg
 	rm -rf *.log
-	rm -rf *.pdf
+	rm -rf paper.pdf
 	rm -rf *.dvi
-
+	rm -rf *.cut
+	rm -rf *.out

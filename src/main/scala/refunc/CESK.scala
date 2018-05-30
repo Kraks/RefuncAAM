@@ -1,6 +1,6 @@
-package gnw.refunc
+package refunc
 
-import gnw.refunc.ast._
+import refunc.ast._
 
 object CESK {
   type Addr = Int

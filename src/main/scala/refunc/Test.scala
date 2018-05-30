@@ -1,8 +1,7 @@
-package gnw.refunc
+package refunc
 
 import scala.util.continuations._
-import gnw.refunc.ast._
-
+import refunc.ast._
 import ANFAAM._
 
 object RefuncTest {
