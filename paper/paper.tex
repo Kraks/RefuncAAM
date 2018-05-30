@@ -1764,7 +1764,7 @@ eventually we obtain an big-step definitional interpreter with pushdown control-
 
 \section{Related Work}\label{sec:related}
 
-\textbf{Abstract Interpretation and Control-flow Analysis.}
+\textit{Abstract Interpretation and Control-flow Analysis.}
 \citeauthor{cousot1977abstract} invented abstract interpretation as a sound approach
 to approximate a program's runtime behavior\cite{cousot1977abstract}.
 Control flow analysis is one instance of abstract interpretation on functional programs
@@ -1773,9 +1773,9 @@ that can be traced to Jones \cite{jones1981flow}.
 The modern formulation of control flow analysis is the abstracting abstract machines
 methodology \cite{van2012systematic, van2010abstracting} which forms the starting point of this paper.
 Modern programming languages such as Java\cite{might2010resolving} and Racket \cite{Tobin-Hochstadt:2012:HSE:2384616.2384655}
-can also be modeled by the abstracting abstract machine approach.
+can also be modeled by the abstracting abstract machine approach. \\
 
-\textbf{Defunctionalization and Refunctionalization.}
+\textit{Defunctionalization and Refunctionalization.}
 Defunctionalization and refunctionalization build connections between abstract
 machines and interpreters.
 \citeauthor{reynolds1972definitional} first shows defunctionalization as a program transformation technique that
@@ -1796,9 +1796,10 @@ Our work further shows that for nondeterministic languages, there is another lay
 that controls the nondeterministic choices. After identifying and explicitly exposing (Section~\ref{linear}) that layer
 of nondeterministic continuations, the whole program can then be refunctionalized to extended continuation-passing style.
 
-Fusion as one of the transformation in our paper is also studied by \citeauthor{Ohori:2007:LFF:1190216.1190241} \cite{Ohori:2007:LFF:1190216.1190241}.
+Fusion as one of the transformation in our paper is also studied by 
+\citeauthor{Ohori:2007:LFF:1190216.1190241} \cite{Ohori:2007:LFF:1190216.1190241}. \\
 
-\textbf{Pushdown Control Flow Analysis.}
+\textit{Pushdown Control Flow Analysis.}
 In recent years, there are significant efforts~\cite{vardoulakis2010cfa2, earl2012introspective,
 gilray2016pushdown, johnson2015abstracting} to achieve precise call/return
 match based on small-step abstracting abstract machines.
@@ -1828,9 +1829,9 @@ the analysis if the store is widened.
 
 Our work establish the pushdown control-flow analysis through refunctionalization and a
 proper caching algorithm. The call/return is naturally matched by the stack of 
-the meta language.
+the meta language. \\
 
-\textbf{Abstracting Definitional Interpreters.}
+\textit{Abstracting Definitional Interpreters.}
 Reynold's seminal paper \emph{Definitional interpreters for higher-order
   programming languages} \cite{reynolds1972definitional} shows that in
 definitional interpreters, the defined language can inherit properties from the defining language.
