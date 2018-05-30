@@ -24,6 +24,8 @@ Following the idea that in deterministic languages, evaluation contexts of reduc
 
 ## Contents
 
+![Transformation diagram](images/transformations.png)
+
 ### Relations to the Paper
 
 ### Tests
