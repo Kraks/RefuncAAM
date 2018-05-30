@@ -6,10 +6,8 @@ import gnw.refunc.ast._
 import ANFAAM._
 
 object RefuncTest {
-  val mtTime = List()
-  val mtEnv = Map[String, BAddr]()
-  val mtStore = Store[BAddr, Storable](Map())
   import SmallStepUBStack._
+  val bot = Set()
 
   def summarizeSS(ss: Set[State]): BStore = {
     ss.map(_.bstore).foldLeft(mtStore)(_.join(_))
@@ -134,7 +132,7 @@ object RefuncTest {
 
     //println(p4fstore) //TODO: how to get the store
     /* The final value should be empty */
-    assert(DirectStyleDC.analyze(mutrec).vss == Set())
+    assert(DirectStyleDC.analyze(mutrec).vss == bot)
     assert(RefuncCPS.analyze(mutrec) == DirectStyleDC.analyze(mutrec))
 
     /************************************************************************/
@@ -156,6 +154,11 @@ object RefuncTest {
   }
 
   def main(args: Array[String]) {
+    //TODO: README file, extended syntax 
+    //TODO: Terminating programs
+    //TODO: Non-terminating programs, expected bot
+    //TODO: Mixing terminating and non-terminating part
+    //TODO: Use scala-test
     test_non_term()
     test_refunc_nd()
   }
