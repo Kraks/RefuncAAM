@@ -265,7 +265,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 \section{Introduction}
 
 Defining a language by building an interpreter for it can be traced to the very
-early days of programming languages research \cite{landin1966next, reynolds1972definitional}.
+early days of programming languages research \cite{landin1966next, Reynolds:72}.
 Nowadays, even an undergraduate student in computer science is able to build toy languages
 through interpreters.
 But building a sound abstract interpreter remained an esoteric and difficult task until very recently.
@@ -277,7 +277,7 @@ Given a concrete small-step abstract machine (e.g. the CESK machine, Krivine's m
 by allocating continuations in the store and bounding both the value addresses and continuation
 addresses to be finite, we obtain an abstract interpreter with a finite state space which
 can be used for performing sound static analysis.
-One can further instantiate different polyvariant control flow analyses by using different address allocators \cite{Gilray:2016:ACP:2951913.2951936}.
+One can further instantiate different polyvariant control-flow analyses by using different address allocators \cite{Gilray:2016:ACP:2951913.2951936}.
 
 Applying the same idea to big-step definitional interpreters, \citeauthor{darais2017abstracting}
 built abstract definitional interpreters (ADI) that are written in monadic style \cite{darais2017abstracting}.
@@ -701,7 +701,7 @@ the abstracted machine-state space is also finite, and therefore computable.
 
 In this section, we derive the abstracting abstract machine from concrete
 CESK machines, and also show how to instantiate
-useful $k$-call-sensitive control flow analysis.
+useful $k$-call-sensitive control-flow analysis.
 
 \subsubsection{Machine Components}
 
@@ -948,7 +948,7 @@ Instead of allocating continuations in the store and embedding
 addresses of continuations in states, we intend to use a list of frames
 to explicitly model the stack.
 By doing so, we recover the call stack as precise as runtimes
-(so called pushdown control flow analysis), but since
+(so called pushdown control-flow analysis), but since
 the stack is unbounded, the analysis is potentially not computable.
 For readers who are not familiar with pushdown analysis, we have a detailed
 discussion in Section~\ref{pdcfarevisit}.
@@ -1316,7 +1316,7 @@ For clarity, we first show how to refunctionalize normal continuations and
 nondeterministic continuation without collecting semantics.
 Then, adding an appropriate caching algorithm to make sure the analysis will
 terminate at some fixed-point is a simple transformation of the program to cache-passing
-style. Finally, we examine how computable pushdown control flow analysis is established
+style. Finally, we examine how computable pushdown control-flow analysis is established
 through refunctionalization and caching.
 
 \subsection{First Try}
@@ -1554,11 +1554,15 @@ outer @nd@ call.
 For the second case, we update the @out@ cache before calling the @continue@ continuation.
 
 \begin{lstlisting}
+val mtEnv = Map[String, BAddr](); val mtStore = Store[BAddr, Storable](Map()); val mtTime = List()
+val mtCache = Cache(Store[Config, VS](Map()), Store[Config, VS](Map()))
+
 def analyze(e: Expr) = {
   def iter(cache: Cache): Ans = {
-    val Ans(vss, new_cache) = aeval(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List(), cache, {
-      val initConfig = Config(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List())
-      case Ans(vss, cache) => Ans(vss, cache.outUpdate(initConfig, vss))
+    val Ans(vss, new_cache) = aeval(e, mtEnv, mtStore, mtTime, cache, {
+      case Ans(vss, cache) => 
+        val initConfig = Config(e, mtEnv, mtStore, mtTime) 
+        Ans(vss, cache.outUpdate(initConfig, vss))
     })
     if (new_cache.out == cache.out) { Ans(vss, new_cache) }
     else { iter(Cache(new_cache.out, new_cache.out)) }
@@ -1576,21 +1580,21 @@ Otherwise, the next iteration with the new @out@ cache will be activated.
 Note that the continuation of the initial call to @aeval@ sets up the values for the
 initial configuration in the final cache.
 
-\subsection{Pushdown Control Flow Analysis, Revisited} \label{pdcfarevisit}
+\subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
 
 In the previous section, we have established a computable pushdown control-flow
 analysis through refunctionalization and caching. In this section,
-we revisit the pushdown control flow problem and examine what we have done to
+we revisit the pushdown control-flow problem and examine what we have done to
 overcome it.
 
 \textbf{The Problem with Return-flows.}
-Pushdown control flow is a property in analysis that precisely models
+Pushdown control-flow is a property in analysis that precisely models
 the runtime call stack of the analyzed program.
-A pushdown control flow analysis provides an as-exact-as-runtime return-flow
-when analyzing a program, but traditional control flow analysis collapses
+A pushdown control-flow analysis provides an as-exact-as-runtime return-flow
+when analyzing a program, but traditional control-flow analysis collapses
 the state space into a finite space and thus causes imprecise stack modeling.
 
-To see how traditional control flow analysis suffers from spurious return-flows,
+To see how traditional control-flow analysis suffers from spurious return-flows,
 we can consider the following example:
 
 \begin{lstlisting}
@@ -1606,25 +1610,36 @@ so the invocation of @(id 2)@ returns to both call-sites @[x (id 1)]@ and @[y (i
 Therefore, the returned value @2@ for variable @y@ is also propagated to
 variable @x@, causing imprecise analysis results to arise.
 This return-flow merging is inevitable, even when increasing the context-sensitivity.
-If we use the monovariant analysis (i.e., $0$-CFA), the analysis result would be such that @x@ and @y@ point to value set @{1, 2}@, because the algorithm does not distinguish that
-@z@ comes from a different call site.
+If we use the monovariant analysis (i.e., $0$-CFA), the analysis result would be such 
+that @x@ and @y@ point to value set @{1, 2}@, because the algorithm does not distinguish 
+that @z@ comes from a different call site.
 Under $1$-CFA, the algorithm is able to distinguish that variable @z@ of function
 @id@ has two different values at two call sites, so variable @y@
 would not be polluted by @1@.
-However, variable @x@ still points to value set @{1, 2}@, because two call-sites still share the same continuation $1$-CFA is still unable to separate the return-flows.
+However, variable @x@ still points to value set @{1, 2}@, because two call-sites still 
+share the same continuation and $1$-CFA is still unable to separate the return-flows.
 
 \textbf{Call/Return Matching through Refunctionalization and Caching.}
-The refunctionalized AAM we obtained has the perfect match on return-flows even though we do not have a stack model. The higher-order functions representing continuations already connect all the execution in order. In fact, the continuations (call stack) of the analyzed language is blended into the call stack of our defining language (Scala) through refunctionalization, then the call/return of the analyzed language is naturally matched.
+The refunctionalized AAM we obtained has the perfect match on return-flows even though 
+we do not have a stack model. The higher-order functions representing continuations 
+already connect all the execution in order. In fact, the continuations (call stack) 
+of the analyzed language is blended into the call stack of our defining language 
+(Scala) through refunctionalization, then the call/return of the analyzed language 
+is naturally matched.
 
-In fact, what we started is an AAM with an unbounded stack which already precisely matches the calls and returns.
-Refunctionalization makes the interpreter be a ``big-step'' semantics artifact, then the consequence is we have no places to save the context information. 
-But refunctionalization not only forces us to sequentialize the order non-deterministic evaluation through higher-order functions representing continuations, 
+In fact, what we started is an AAM with an unbounded stack which already precisely 
+matches the calls and returns.
+Refunctionalization makes the interpreter be a ``big-step'' semantics artifact, 
+then the consequence is we have no places to save the context information. 
+But refunctionalization not only forces us to sequentialize the order non-deterministic 
+evaluation through higher-order functions representing continuations, 
 but also drives us to use a new caching algorithm.  
 
 Indeed, the caching algorithm plays an important role to make the analysis computable. 
 
-An interesting implication of this is if we apply the caching algorithm with some necessary changes to small-step abstract machines with an unbounded stack, we are also able to establish a computable and precise call/return match.
-
+An interesting implication of this is if we apply the caching algorithm with some 
+necessary changes to small-step abstract machines with an unbounded stack, 
+we are also able to establish a computable and precise call/return match.
 
 %probably Store Widening \& Abstract Garbage Collection
 \section{To Direct-Style} \label{directstyle}
@@ -1642,7 +1657,7 @@ We have multiple choices of how to proceed:
     we derive a new form of abstract interpreters in direct-style.
   \item In fact, we may also just use the same caching algorithm but with side effects such as
     assignments and mutations to update the cache, and then achieve the same
-    definitional interpreter with pushdown control flows. In this case, nondeterminism can be
+    definitional interpreter with pushdown control-flows. In this case, nondeterminism can be
     easily handled via @for@ comprehension.
 \end{itemize}
 
@@ -1737,14 +1752,10 @@ The function @analyze@ is also changed by adding a @reset@ operator around the f
 The afterwards updating on cache becomes sequential.
 
 \begin{lstlisting}
-val mtEnv = Map[String, BAddr]()
-val mtStore = Store[BAddr, Storable](Map())
-val mtTime = List()
-
 def analyze(e: Expr) = {
   def iter(cache: Cache): Ans = {
     val Ans(vss, anscache) = reset { aeval(e, mtEnv, mtStore, mtTime, cache) }
-    val initConfig = Config(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List())
+    val initConfig = Config(e, mtEnv, mtStore, mtTime) 
     val new_cache = anscache.outUpdate(initConfig, vss)
     if (new_cache.out == cache.out) { Ans(vss, new_cache) }
     else { iter(Cache(new_cache.out, new_cache.out)) }
@@ -1764,13 +1775,13 @@ eventually we obtain an big-step definitional interpreter with pushdown control-
 
 \section{Related Work}\label{sec:related}
 
-\textit{Abstract Interpretation and Control-flow Analysis.}
+\textit{Abstract Interpretation and Control-Flow Analysis.}
 \citeauthor{cousot1977abstract} invented abstract interpretation as a sound approach
 to approximate a program's runtime behavior\cite{cousot1977abstract}.
-Control flow analysis is one instance of abstract interpretation on functional programs
+Control-flow analysis is one instance of abstract interpretation on functional programs
 that can be traced to Jones \cite{jones1981flow}.
 \citeauthor{Shivers:1988:CFA:53990.54007} introduces $k$-CFA which uses $k$ recent calling contexts as program contour that differentiates values from different contexts \cite{Shivers:1988:CFA:53990.54007, Shivers:1991:SSC:115865.115884}.
-The modern formulation of control flow analysis is the abstracting abstract machines
+The modern formulation of control-flow analysis is the abstracting abstract machines
 methodology \cite{van2012systematic, van2010abstracting} which forms the starting point of this paper.
 Modern programming languages such as Java\cite{might2010resolving} and Racket \cite{Tobin-Hochstadt:2012:HSE:2384616.2384655}
 can also be modeled by the abstracting abstract machine approach. \\
@@ -1778,9 +1789,9 @@ can also be modeled by the abstracting abstract machine approach. \\
 \textit{Defunctionalization and Refunctionalization.}
 Defunctionalization and refunctionalization build connections between abstract
 machines and interpreters.
-\citeauthor{reynolds1972definitional} first shows defunctionalization as a program transformation technique that
+\citeauthor{Reynolds:72} first shows defunctionalization as a program transformation technique that
 can be used to transform higher-order functions to first-order functions
-when specifying a programming language by an interpreter \cite{reynolds1972definitional}.
+when specifying a programming language by an interpreter \cite{Reynolds:72, Reynolds:HOSC98-revisited}.
 Refunctionalization is the reverse of this transformation.
 
 Over the years, Danvy and his collaborators applied refunctionalization and defunctionalization to
@@ -1799,7 +1810,7 @@ of nondeterministic continuations, the whole program can then be refunctionalize
 Fusion as one of the transformation in our paper is also studied by 
 \citeauthor{Ohori:2007:LFF:1190216.1190241} \cite{Ohori:2007:LFF:1190216.1190241}. \\
 
-\textit{Pushdown Control Flow Analysis.}
+\textit{Pushdown Control-Flow Analysis.}
 In recent years, there are significant efforts~\cite{vardoulakis2010cfa2, earl2012introspective,
 gilray2016pushdown, johnson2015abstracting} to achieve precise call/return
 match based on small-step abstracting abstract machines.
@@ -1808,7 +1819,7 @@ CFA2 is the first solution that solves the return-flows problem~\cite{vardoulaki
 but CFA2 has several drawbacks: it works only on continuation-passing style programs,
 and does not supports polyvariant analysis, in addition to an exponential time
 complexity.
-Pushdown control flow analysis (PDCFA) is a mechanism which maintains this precision
+Pushdown control-flow analysis (PDCFA) is a mechanism which maintains this precision
 through the use of a Dyke state graph representing all possible stacks contained
 within the unbounded-stack machine\cite{earl2012introspective, earl2010pushdown}.
 Similar to PDCFA, abstracting abstract control (AAC) is another strategy for
@@ -1832,8 +1843,8 @@ proper caching algorithm. The call/return is naturally matched by the stack of
 the meta language. \\
 
 \textit{Abstracting Definitional Interpreters.}
-Reynold's seminal paper \emph{Definitional interpreters for higher-order
-  programming languages} \cite{reynolds1972definitional} shows that in
+Reynold's seminal paper \emph{Definitional interpreters for higher-order programming languages} 
+\cite{Reynolds:72, Reynolds:HOSC98-revisited} shows that in
 definitional interpreters, the defined language can inherit properties from the defining language.
 With this insight, \citeauthor{darais2017abstracting} construct abstracting
 definitional interpreters which automatically inherit the pushdown control-flow

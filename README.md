@@ -28,4 +28,6 @@ Following the idea that in deterministic languages, evaluation contexts of reduc
 
 ### Relations to the Paper
 
+TODO: extended syntax with let and letrec
+
 ### Tests
