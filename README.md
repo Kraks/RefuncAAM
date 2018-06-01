@@ -56,15 +56,15 @@ We implement a variant of abstract abstract machines -- AAM with unbounded stack
 
 #### Section 3
 
-The linearized AAM with unbounded stack (UB) is implemented in `src/main/scala/refunc/LinearSmallStepUBStack.scala`.
+The linearized AAM with unbounded stack (UB) is implemented in `src/main/scala/refunc/LinearSmallStepUB.scala`.
 
 #### Section 4
 
-By applying fusing transformation on the linearized AAM with UB, we show the fused AAM in `src/main/scala/refunc/FusedLinearSmallStepUBStack.scala`.
+By applying fusing transformation on the linearized AAM with UB, we show the fused AAM in `src/main/scala/refunc/FusedLinearSmallStepUB.scala`.
 
 #### Section 5
 
-The disentangled AAM is implemented in `src/main/scala/refunc/DisentangledLinearSmallStepUBStack.scala`, which identifies the first-order data type representing continuations in the abstract abstract machines. 
+The disentangled AAM is implemented in `src/main/scala/refunc/DisentangledLinearSmallStepUB.scala`, which identifies the first-order data type representing continuations in the abstract abstract machines. 
 
 #### Section 6
 
