@@ -86,7 +86,7 @@ object RefuncCPS {
 
 
 
-/* Experimental implementation with breath first evaluation */
+/* Experimental implementation with breadth first evaluation */
 object RefuncCPSBF {
   import SmallStepUBStack._
   

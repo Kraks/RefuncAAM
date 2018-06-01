@@ -52,7 +52,7 @@ object RefuncCPSNoCache {
 
 
 
-/* Experimental implementation with breath first evaluation */
+/* Experimental implementation with breadth first evaluation */
 object RefuncCPSNoCacheBF {
   import SmallStepUBStack._
   
