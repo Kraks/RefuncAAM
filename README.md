@@ -70,7 +70,7 @@ The disentangled AAM is implemented in `src/main/scala/refunc/DisentangledLinear
 
 #### Section 6
 
-The implementation of refunctionalized AAM is object `RefuncCPS` in `src/main/scala/refunc/RefuncCPS.scala`. In the paper, we also show a simplified version withou caching, which is implemented in `src/main/scala/refunc/RefuncCPSNoCache.scala`.
+The implementation of refunctionalized AAM is object `RefuncCPS` in `src/main/scala/refunc/RefuncCPS.scala`. In the paper, we also show a simplified version without caching, which is implemented in `src/main/scala/refunc/RefuncCPSNoCache.scala`.
 
 Additionally, as a reference of sound pushdown control-flow analysis, AAM with P4F allocator is implemented in `src/main/scala/refunc/SmallStepP4F.scala`. We use this to further test the pushdown control-flow property of our refunctionalized AAM.
 
