@@ -2,6 +2,8 @@
 
 This directory contains the artifact for the ICFP '18 submission "Refunctionalization of Abstract Abstract Machines (Functional Pearl)".
 
+Link: https://github.com/Kraks/refunc
+
 ## Abstract
 
 Abstracting abstract machines (AAM) is a systematic methodology for constructing abstract interpreters that are derived from concrete small-step abstract machines. Recent progress applies the same idea on definitional interpreters, and obtains big-step abstract definitional interpreters (ADI) written in monadic style. Yet, the relations between small-step abstracting abstract machines and big-step abstracting definitional interpreters are not well studied.
