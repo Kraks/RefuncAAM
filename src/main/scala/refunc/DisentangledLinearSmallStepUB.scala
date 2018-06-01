@@ -33,8 +33,10 @@ object DisLinearSmallStepUBStack {
             drive_step(NDState(e, new_env, new_store, konts, new_time, ndk), new_seen)
 
           case NDState(Letrec(bds, body), env, bstore, konts, time, ndk) =>
-            val new_env = bds.foldLeft(env)((accenv: Env, bd: B) => { accenv + (bd.x -> allocBind(bd.x, new_time)) })
-            val new_store = bds.foldLeft(bstore)((accbst: BStore, bd: B) => { accbst.update(allocBind(bd.x, new_time), aeval(bd.e, new_env, accbst)) })
+            val new_env = bds.foldLeft(env)((accenv: Env, bd: B) =>
+              accenv + (bd.x -> allocBind(bd.x, new_time)))
+            val new_store = bds.foldLeft(bstore)((accbst: BStore, bd: B) =>
+              accbst.update(allocBind(bd.x, new_time), aeval(bd.e, new_env, accbst)))
             drive_step(NDState(body, new_env, new_store, konts, new_time, ndk), new_seen)
             
           case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>

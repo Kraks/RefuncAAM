@@ -25,17 +25,17 @@ object RefuncCPSNoCache {
         nd[Clos, Ans](closures, Set[VS](), { case (clos, acc, closnd) =>
           val Clos(Lam(v, body), c_env) = clos
           val baddr = allocBind(v, new_time)
-          val new_env = c_env + (v -> baddr)
+          val new_cenv = c_env + (v -> baddr)
           val new_store = store.update(baddr, aeval(ae, env, store))
-          aval(body, new_env, new_store, new_time, (bodyvss: Set[VS]) => {
+          aval(body, new_cenv, new_store, new_time, (bodyvss: Set[VS]) => {
             nd[VS, Ans](bodyvss, Set[VS](), { case (vs, acc_vss, bdnd) =>
               val VS(vals, time, store) = vs
               val baddr = allocBind(x, time)
               val new_env = env + (x -> baddr)
               val new_store = store.update(baddr, vals)
-              aval(e, new_env, new_store, time, (evss: Ans) => bdnd(acc_vss ++ evss))
+              aval(e, new_env, new_store, time, { case evss => bdnd(acc_vss ++ evss) })
             },
-            (evss: Ans) => closnd(evss ++ acc))
+            { case evss => closnd(evss ++ acc) })
           })
         },
         cont)

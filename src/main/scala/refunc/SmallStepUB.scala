@@ -20,10 +20,14 @@ object SmallStepUBStack {
         val new_env = env + (x -> baddr)
         val new_store = bstore.update(baddr, aeval(ae, env, bstore))
         List(State(e, new_env, new_store, konts, new_time))
+
       case State(Letrec(bds, body), env, bstore, konts, time) =>
-        val new_env = bds.foldLeft(env)((accenv: Env, bd: B) => { accenv + (bd.x -> allocBind(bd.x, new_time)) })
-        val newBStore = bds.foldLeft(bstore)((accbst: BStore, bd: B) => { accbst.update(allocBind(bd.x, new_time), aeval(bd.e, new_env, accbst)) })
+        val new_env = bds.foldLeft(env)((accenv: Env, bd: B) => 
+          accenv + (bd.x -> allocBind(bd.x, new_time)))
+        val newBStore = bds.foldLeft(bstore)((accbst: BStore, bd: B) => 
+          accbst.update(allocBind(bd.x, new_time), aeval(bd.e, new_env, accbst)))
         List(State(body, new_env, newBStore, konts, time))
+
       case State(Let(x, App(f, ae), e), env, bstore, konts, time) =>
         for (Clos(Lam(v, body), c_env) <- aeval(f, env, bstore).toList) yield {
           val frame = Frame(x, e, env)
@@ -32,6 +36,7 @@ object SmallStepUBStack {
           val new_store = bstore.update(baddr, aeval(ae, env, bstore))
           State(body, new_env, new_store, frame::konts, new_time)
         }
+
       case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
         konts match {
           case Nil => List()

@@ -34,13 +34,13 @@ object DirectStyleDCNoCache2 {
         val Clos(Lam(v, body), c_env) = ndcps[Clos, VS](closures, Set[VS]())
         val vbaddr = allocBind(v, new_time)
         val new_cenv = c_env + (v -> vbaddr)
-        val new_cstore = store.update(vbaddr, aeval(ae, env, store))
-        val bodyvss = aval(body, new_cenv, new_cstore, new_time)
-        val VS(vals, time, vsstore) = ndcps[VS, VS](bodyvss, Set[VS]())
+        val new_store = store.update(vbaddr, aeval(ae, env, store))
+        val bdvss = aval(body, new_cenv, new_store, new_time)
+        val VS(vals, time, vsstore) = ndcps[VS, VS](bdvss, Set[VS]())
         val baddr = allocBind(x, time)
         val new_env = env + (x -> baddr)
-        val new_store = vsstore.update(baddr, vals)
-        aval(e, new_env, new_store, time)
+        val new_vsstore = vsstore.update(baddr, vals)
+        aval(e, new_env, new_vsstore, time)
   
       case ae if isAtomic(ae) =>
         val ds = atomicEval(ae, env, store)
@@ -51,6 +51,8 @@ object DirectStyleDCNoCache2 {
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) =
     reset { aval(e, env, store, mtTime) }
 }
+
+/* Exprimental implementations */
 
 object DirectStyleDCNoCache {
   /* Depth first evaluation */
@@ -80,9 +82,9 @@ object DirectStyleDCNoCache {
           val new_env = c_env + (v -> baddr)
           val new_store = store.update(baddr, aeval(ae, env, store))
           reset { 
-            val bodyvss = aval(body, new_env, new_store, new_time)
+            val bdvss = aval(body, new_env, new_store, new_time)
             reset {
-              val (vs, acc_vss, bdnd) = ndcps[VS, Ans](bodyvss, Set[VS](), (evss: Ans) => closnd(evss ++ acc))
+              val (vs, acc_vss, bdnd) = ndcps[VS, Ans](bdvss, Set[VS](), (evss: Ans) => closnd(evss ++ acc))
               val VS(vals, time, store) = vs
               val baddr = allocBind(x, time)
               val new_env = env + (x -> baddr)

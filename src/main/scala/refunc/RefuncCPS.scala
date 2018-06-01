@@ -31,9 +31,10 @@ object RefuncCPS {
           })
 
         case Letrec(bds, body) => 
-          val new_env = bds.foldLeft(env)((accenv: Env, bd: B) => { accenv + (bd.x -> allocBind(bd.x, new_time)) })
-          val new_store = bds.foldLeft(store)((accbst: BStore, bd: B) => { accbst.update(allocBind(bd.x, new_time), 
-                                                                                         atomicEval(bd.e, new_env, accbst)) })
+          val new_env = bds.foldLeft(env)((accenv: Env, bd: B) =>
+            accenv + (bd.x -> allocBind(bd.x, new_time)))
+          val new_store = bds.foldLeft(store)((accbst: BStore, bd: B) => 
+            accbst.update(allocBind(bd.x, new_time), atomicEval(bd.e, new_env, accbst)))
           aval(body, new_env, new_store, new_time, new_cache, { 
             case Ans(bdss, bdcache) => cont(Ans(bdss, bdcache.outUpdate(config, bdss)))
           })
@@ -44,8 +45,8 @@ object RefuncCPS {
             case (Clos(Lam(v, body), c_env), clsans, clsnd) =>
               val vbaddr = allocBind(v, new_time)
               val new_cenv = c_env + (v -> vbaddr)
-              val new_cstore = store.update(vbaddr, atomicEval(ae, env, store))
-              aval(body, new_cenv, new_cstore, new_time, clsans.cache, { 
+              val new_store = store.update(vbaddr, atomicEval(ae, env, store))
+              aval(body, new_cenv, new_store, new_time, clsans.cache, { 
                 case Ans(bdvss, bdcache) =>
                   nd[VS, Ans](bdvss, Ans(Set[VS](), bdcache), { 
                     case (VS(vals, time, vssstore), bdans, bdnd) =>
@@ -59,7 +60,8 @@ object RefuncCPS {
                     case eans => clsnd(eans ++ clsans)
                   })
               })
-          }, { case ans => cont(ans) })
+          }, 
+          cont)
     
         case ae if isAtomic(ae) =>
           val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
@@ -112,14 +114,18 @@ object RefuncCPSBF {
           val baddr = allocBind(v, new_time)
           val new_env = c_env + (v -> baddr)
           val new_store = store.update(baddr, atomicEval(ae, env, store))
-          aval(body, new_env, new_store, new_time, cache, (bodyvss: Set[VS], cache: Cache) => { ndk(bodyvss++acc, cache) })
+          aval(body, new_env, new_store, new_time, cache, (bodyvss: Set[VS], cache: Cache) => { 
+            ndk(bodyvss++acc, cache) 
+          })
         }, (result_vss: Set[VS], cache: Cache) => {
           nd(result_vss, Set[VS](), cache, (vs: VS, acc: Set[VS], cache: Cache, ndk: Cont) => {
             val VS(vals, time, store) = vs
             val baddr = allocBind(x, time)
             val new_env = env + (x -> baddr)
             val new_store = store.update(baddr, vals)
-            aval(e, new_env, new_store, time, cache, (evss: Set[VS], cache: Cache) => { ndk(evss++acc, cache) })
+            aval(e, new_env, new_store, time, cache, (evss: Set[VS], cache: Cache) => { 
+              ndk(evss++acc, cache) 
+            })
           },
           (ans: Set[VS], cache: Cache) => cont(ans, cache.outUpdate(config, ans)))
         })
