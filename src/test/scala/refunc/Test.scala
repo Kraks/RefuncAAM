@@ -325,10 +325,18 @@ class NTTNDProgTest extends RefuncTest {
         assert(summarizeVSS(DirectStyleDC.analyze(prog, initenv, initstore).vss) == p4fstore)
         assert(summarizeVSS(DirectStyleSideEff.analyze(prog, initenv, initstore).vss) == p4fstore)
         
+        /* The transformation from RefuncCPS to DirectStyleDC/SideEff preserves the result
+         * of both Cache and ValueStore. */
+        assert(RefuncCPS.analyze(prog, initenv, initstore) ==
+               DirectStyleDC.analyze(prog, initenv, initstore))
+        assert(RefuncCPS.analyze(prog, initenv, initstore) ==
+               DirectStyleSideEff.analyze(prog, initenv, initstore))
+        
         /* The summarized stores extracted from the ValueStore of the cache also preserve the
          * equivalence comparing with P4F. */
         assert(RefuncCPS.analyze(prog, initenv, initstore).cache.outVS.map(_.store).foldLeft(mtStore)(_.join(_)) == p4fstore)
         assert(DirectStyleDC.analyze(prog, initenv, initstore).cache.outVS.map(_.store).foldLeft(mtStore)(_.join(_)) == p4fstore)
+        assert(DirectStyleSideEff.analyze(prog, initenv, initstore).cache.outVS.map(_.store).foldLeft(mtStore)(_.join(_)) == p4fstore)
       }
     }
   }

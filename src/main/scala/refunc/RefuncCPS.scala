@@ -41,27 +41,25 @@ object RefuncCPS {
         case Let(x, App(f, ae), e) =>
           val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
           nd[Clos, Ans](closures, Ans(Set[VS](), new_cache), { 
-            case (Clos(Lam(v, body), c_env), Ans(acc, clscache), closnd) =>
+            case (Clos(Lam(v, body), c_env), clsans, clsnd) =>
               val vbaddr = allocBind(v, new_time)
               val new_cenv = c_env + (v -> vbaddr)
               val new_cstore = store.update(vbaddr, atomicEval(ae, env, store))
-              aval(body, new_cenv, new_cstore, new_time, clscache, { 
+              aval(body, new_cenv, new_cstore, new_time, clsans.cache, { 
                 case Ans(bdvss, bdcache) =>
                   nd[VS, Ans](bdvss, Ans(Set[VS](), bdcache), { 
-                    case (VS(vals, time, vssstore), Ans(acc_vss, vscache), bdnd) =>
+                    case (VS(vals, time, vssstore), bdans, bdnd) =>
                       val baddr = allocBind(x, time)
                       val new_env = env + (x -> baddr)
                       val new_store = vssstore.update(baddr, vals)
-                      aval(e, new_env, new_store, time, vscache, { 
-                        case Ans(evss, ecache) => bdnd(Ans(acc_vss ++ evss, ecache.join(vscache))) 
+                      aval(e, new_env, new_store, time, bdans.cache, { 
+                        case Ans(evss, ecache) => bdnd(bdans ++ Ans(evss, ecache.outUpdate(config, evss)))
                       })
                   }, { 
-                    case Ans(evss, cache) => closnd(Ans(evss ++ acc, cache.join(bdcache))) 
+                    case eans => clsnd(eans ++ clsans)
                   })
               })
-          }, { 
-            case Ans(vss, cache) => cont(Ans(vss, cache.outUpdate(config, vss))) 
-          })
+          }, { case ans => cont(ans) })
     
         case ae if isAtomic(ae) =>
           val vs = Set(VS(atomicEval(ae, env, store), new_time, store))

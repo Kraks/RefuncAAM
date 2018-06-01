@@ -83,7 +83,8 @@ object DirectStyleSideEff {
     if (cache.outContains(config)) {
       return Ans(cache.outGet(config), cache)
     }
-
+    
+    /* Use mutation to update the cache every time. */
     var new_cache = cache.outUpdate(config, cache.inGet(config))
     val new_time = (e::time).take(k)
 
@@ -114,13 +115,12 @@ object DirectStyleSideEff {
             val new_env = env + (x -> baddr)
             val new_store = store.update(baddr, vals)
             val Ans(ev, ecache) = aval(e, new_env, new_store, time, new_cache)
-            new_cache = ecache
+            new_cache = ecache.outUpdate(config, ev)
             ev
           }
           evs.foldLeft(Set[VS]())(_ ++ _)
         }
-        val letv = letvs.foldLeft(Set[VS]())(_ ++ _)
-        Ans(letv, new_cache.outUpdate(config, letv))
+        Ans(letvs.foldLeft(Set[VS]())(_ ++ _), new_cache)
 
       case ae if isAtomic(ae) =>
         val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
