@@ -57,7 +57,9 @@ object FusedLinearSmallStepUBStack {
                   val baddr = allocBind(v, time)
                   val new_env = c_env + (v -> baddr)
                   val new_store = bstore.update(baddr, argvs)
-                  NDState(body, new_env, new_store, frames, time, NDCont(cls.tail, argvs, bstore, time, frames)::ndk)
+                  NDState(body, new_env, new_store, frames, time, 
+                          NDCont(cls.tail, argvs, bstore, time, frames)::ndk)
+                case _ => throw new RuntimeException("Invalid NDCont")
               }
               case Frame(x, e, f_env)::konts =>
                 val baddr = allocBind(x, new_time)

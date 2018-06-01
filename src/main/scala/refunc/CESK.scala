@@ -2,7 +2,7 @@ package refunc
 
 import refunc.ast._
 
-object CESK {
+object Concrete {
   type Addr = Int
   type Env = Map[String, Addr]
   type Store = Map[Addr, Storable]
@@ -11,17 +11,22 @@ object CESK {
   case class Clos(v: Lam, env: Env) extends Storable
   case class Num(i: Int) extends Storable
 
-  case class Frame(x: String, e: Expr, env: Env)
-  type Kont = List[Frame]
-
-  case class State(e: Expr, env: Env, store: Store, k: Kont)
-
   def atomicEval(e: Expr, env: Env, store: Store): Storable = e match {
     case Var(x) => store(env(x))
     case lam@Lam(x, body) => Clos(lam, env)
+    case _ => throw new NotImplementedError(e.toString)
   }
+
   def alloc(store: Store): Addr = store.keys.size + 1
+
   def isAtomic(e: Expr): Boolean = e.isInstanceOf[Var] || e.isInstanceOf[Lam]
+}
+
+object CESK {
+  import Concrete._
+  case class Frame(x: String, e: Expr, env: Env)
+  type Kont = List[Frame]
+  case class State(e: Expr, env: Env, store: Store, k: Kont)
 
   def step(s: State): State = s match {
     case State(Let(x, ae, e), env, store, k) if isAtomic(ae) =>
@@ -50,16 +55,11 @@ object CESK {
 }
 
 object RefuncCESK {
-  import CESK._
+  import Concrete._
 
   case class VS(v: Storable, store: Store)
   type Ans = VS
   type Cont = Ans => Ans
-
-  def atomicEval(e: Expr, env: Env, store: Store): Storable = e match {
-    case Var(x) => store(env(x))
-    case lam@Lam(x, body) => Clos(lam, env)
-  }
 
   def eval(e: Expr, env: Env, store: Store, k: Cont): VS = e match {
     case Let(x, ae, e) if isAtomic(ae) =>

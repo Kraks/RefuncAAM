@@ -81,6 +81,7 @@ object DisLinearSmallStepUBStack {
         drive_step(NDState(body, new_env, new_store, frames, time, 
                            NDCont(cls.tail, argvs, bstore, time, frames)::ndk),
                    seen)
+      case _ => throw new RuntimeException("Invalid NDCont")
     }
   }
 

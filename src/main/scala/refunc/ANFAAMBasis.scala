@@ -63,6 +63,7 @@ object ANFAAM {
     case Num(i) => Set(NumV(i))
     case Var(x) => bstore(env(x)).toSet
     case lam@Lam(x, body) => Set(Clos(lam, env))
+    case _ => throw new NotImplementedError(e.toString)
   }
 
   val atomicEval = aeval _
