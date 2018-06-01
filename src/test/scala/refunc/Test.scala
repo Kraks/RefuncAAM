@@ -112,22 +112,8 @@ trait RefuncTest extends FunSuite {
 class TDProgTest extends RefuncTest {
   override val description = "terminated deterministic"
 
-  /** 
-   * test case 1
-   * exp: 
-   * init env: ∅
-   * init store: ∅ 
-   */
-
-  /** 
-   * test case 2
-   * exp:
-   * init env: ∅
-   * init store: ∅ 
-   */
-
   /**
-   * test case 3
+   * test case 1
    * exp: (let ([id (lambda (t) t)])
    *        (let ([x (id 1)])
    *          (let ([m (id 4)])
@@ -137,13 +123,13 @@ class TDProgTest extends RefuncTest {
    * init env: ∅
    * init store: ∅ 
    */
-  val exp3 = Let("id", id, 
+  val exp1 = Let("id", id, 
              Let("x", App(id, Num(1)), 
              Let("m", App(id, Num(4)), 
              Let("y", App(id, Num(2)), 
              Let("z", App(id, Num(3)), 
                Var("x"))))))
-  runTest(3, exp3, mtEnv, mtStore)
+  runTest(1, exp1, mtEnv, mtStore)
 }
 
 /** 
@@ -234,7 +220,7 @@ class NDProgTest extends RefuncTest {
          *
          * Other intermediate forms of abstract interpreters in our transformations (LinearSmallStepUBStack, 
          * FusedLinearSmallStepUBStack and DisLinearSmallStepUBStack) lack proper caching mechanisms, 
-         * running them on non-terminated programs would cause the abstract interpreter to diverge.
+         * running them with non-terminated programs would cause the abstract interpreter to diverge.
          * So we don't test them here. */
         assert(RefuncCPS.analyze(prog, initenv, initstore).vss == bot)
         assert(DirectStyleDC.analyze(prog, initenv, initstore).vss == bot)
@@ -277,6 +263,42 @@ class NDProgTest extends RefuncTest {
                     Let("res", App(Var("f2"), Num(1)),
                         Var("res")))
   runTest(2, exp2, mtEnv, mtStore)
+
+  /**
+   * test case 3
+   * exp: (let ([a (f 3)])
+   *        (let ([b (g 4)])
+   *          b))
+   * init env: exp3_env1
+   * init store: exp3_store1
+   */
+  val exp3 = Let("a", App(Var("f"), Num(3)), 
+                Let("b", App(Var("g"), Num(4)),
+                  Var("b")))
+  val exp3_env1 = Map("f" -> BAddr("f", List()), "g" -> BAddr("g", List()))
+  val exp3_store1 = Store[BAddr, Storable](Map(BAddr("f", List()) ->
+                                               Set(Clos(Lam("x", Var("x")), Map()),
+                                                   Clos(Lam("y", Num(2)), Map()),
+                                                   Clos(Lam("z", Num(1)), Map())),
+                                               BAddr("g", List()) ->
+                                               Set(Clos(Lam("x1", Let("t1", App(Var("g"), Var("x1")), Var("t1"))),
+                                                        Map("g" -> BAddr("g", List()))))))
+  runTest(3, exp3, exp3_env1, exp3_store1) 
+
+  /**
+   * test case 4
+   * exp: (let ([a (f 3)])
+   *        (let ([b (g 4)])
+   *          a))
+   * init env: exp4_env1
+   * init store: exp4_store1
+   */
+  val exp4 = Let("a", App(Var("f"), Num(3)), 
+                Let("b", App(Var("g"), Num(4)),
+                  Var("a")))
+  val exp4_env1 = exp3_env1
+  val exp4_store1 = exp3_store1
+  runTest(4, exp4, exp4_env1, exp4_store1) 
 }
 
 /**
@@ -285,7 +307,7 @@ class NDProgTest extends RefuncTest {
 class NTTNDProgTest extends RefuncTest {
   override val description = "mixing terminated/non-terminated and non-deterministic"
 
-  def runTest1(id: Int, prog: Expr, initenv: Env, initstore: BStore) {
+  override def runTest(id: Int, prog: Expr, initenv: Env, initstore: BStore) {
     for (k <- 0 to K) {
       ANFAAM.k = k
       test(s"Testing $description case $id under k=$k") {
@@ -297,7 +319,7 @@ class NTTNDProgTest extends RefuncTest {
          *
          * Other intermediate forms of abstract interpreters in our transformations (LinearSmallStepUBStack, 
          * FusedLinearSmallStepUBStack and DisLinearSmallStepUBStack) lack proper caching mechanisms, 
-         * running them on non-terminated programs would cause the abstract interpreter to diverge.
+         * running them with non-terminated programs would cause the abstract interpreter to diverge.
          * So we don't test them here. */
         assert(summarizeVSS(RefuncCPS.analyze(prog, initenv, initstore).vss) == p4fstore)
         assert(summarizeVSS(DirectStyleDC.analyze(prog, initenv, initstore).vss) == p4fstore)
@@ -307,13 +329,6 @@ class NTTNDProgTest extends RefuncTest {
          * equivalence comparing with P4F. */
         assert(RefuncCPS.analyze(prog, initenv, initstore).cache.outVS.map(_.store).foldLeft(mtStore)(_.join(_)) == p4fstore)
         assert(DirectStyleDC.analyze(prog, initenv, initstore).cache.outVS.map(_.store).foldLeft(mtStore)(_.join(_)) == p4fstore)
-
-        /*
-        assert(RefuncCPS.analyze(prog, initenv, initstore).cache.in.map.size == DirectStyleDC.analyze(prog, initenv, initstore).cache.in.map.size)
-        assert(RefuncCPS.analyze(prog, initenv, initstore).cache.out.map.size == DirectStyleDC.analyze(prog, initenv, initstore).cache.out.map.size)
-        assert(RefuncCPS.analyze(prog, initenv, initstore).cache.inVS == DirectStyleDC.analyze(prog, initenv, initstore).cache.inVS)
-        assert(RefuncCPS.analyze(prog, initenv, initstore).cache.outVS == DirectStyleDC.analyze(prog, initenv, initstore).cache.outVS)
-        */
       }
     }
   }
@@ -332,5 +347,42 @@ class NTTNDProgTest extends RefuncTest {
                                                         Map("f" -> BAddr("f", List()))),
                                                    Clos(Lam("y", Num(2)), Map()),
                                                    Clos(Lam("z", Num(1)), Map()))))
-  runTest1(1, exp1, exp1_env1, exp1_store1)
+  runTest(1, exp1, exp1_env1, exp1_store1)
+
+  /**
+   * test case 2
+   * exp: (let ([a (f 3)])
+   *        (let ([b (g 4)])
+   *          a))
+   * init env: exp2_env1
+   * init store: exp2_store1
+   */
+  val exp2 = Let("a", App(Var("f"), Num(3)), 
+                Let("b", App(Var("g"), Num(4)),
+                  Var("a")))
+  val exp2_env1 = Map("f" -> BAddr("f", List()), "g" -> BAddr("g", List()))
+  val exp2_store1 = Store[BAddr, Storable](Map(BAddr("f", List()) ->
+                                               Set(Clos(Lam("x", Var("x")), Map()),
+                                                   Clos(Lam("y", Num(2)), Map()),
+                                                   Clos(Lam("z", Num(1)), Map())),
+                                               BAddr("g", List()) ->
+                                               Set(Clos(Lam("w", Num(5)), Map()),
+                                                   Clos(Lam("x1", Let("t1", App(Var("g"), Var("x1")), Var("t1"))),
+                                                        Map("f" -> BAddr("f", List()), "g" -> BAddr("g", List()))))))
+  runTest(2, exp2, exp2_env1, exp2_store1) 
+
+  /**
+   * test case 3
+   * exp: (let ([a (f 3)])
+   *        (let ([b (g 4)])
+   *          b))
+   * init env: exp3_env1
+   * init store: exp3_store1
+   */
+  val exp3 = Let("a", App(Var("f"), Num(3)), 
+                Let("b", App(Var("g"), Num(4)),
+                  Var("b")))
+  val exp3_env1 = exp2_env1
+  val exp3_store1 = exp2_store1
+  runTest(3, exp3, exp3_env1, exp3_store1) 
 }
