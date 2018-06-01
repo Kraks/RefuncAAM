@@ -133,10 +133,10 @@ object DirectStyleSideEff {
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
-      val Ans(vss, new_cache_) = aval(e, env, store, mtTime, cache)
-      val new_cache = new_cache_.outUpdate(Config(e, env, store, mtTime), vss)
-      if (new_cache.out == cache.out) { Ans(vss, new_cache) }
-      else { iter(Cache(new_cache.out, new_cache.out)) }
+      val Ans(vss, new_cache) = aval(e, env, store, mtTime, cache)
+      val updated_cache = new_cache.outUpdate(Config(e, env, store, mtTime), vss)
+      if (updated_cache.out == cache.out) { Ans(vss, updated_cache) }
+      else { iter(Cache(updated_cache.out, updated_cache.out)) }
     }
     iter(Cache.mtCache)
   }
