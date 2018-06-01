@@ -1747,7 +1747,7 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[
 
       case ae if isAtomic(ae) =>
         val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
-        Ans(vs, cache.outUpdate(config, vs))
+        Ans(vs, new_cache.outUpdate(config, vs))
     }
   }
 }

@@ -6,7 +6,6 @@ import refunc.ast._
 import ANFAAM._
 
 object RefuncCPSNoCache {
-  /* Depth first evaluation */
   import SmallStepUBStack._
   
   type Ans = Set[VS]
@@ -51,13 +50,10 @@ object RefuncCPSNoCache {
     aval(e, env, store, mtTime, (vss => vss))
 }
 
+
+
+/* Experimental implementation with breath first evaluation */
 object RefuncCPSNoCacheBF {
-  /* Implements non-determinism by fold-with-continuations.
-   * The strategy it uses is to first try all closures, collect
-   * values of App(f, ae) - result_vss, and for each of them,
-   * go into let's body `e` seperately.
-   * Breath first evaluation.
-   */
   import SmallStepUBStack._
   
   type Cont = Set[VS] => Set[VS]

@@ -12,6 +12,8 @@ Following the idea that in deterministic languages, evaluation contexts of reduc
 
 ## Getting Started
 
+You should have Oracle JDK (>= 8) and `sbt` (>= 0.13) installed. Other dependencies of Scala and libraries are specified in `build.sbt`.
+
 ### To compile
 ```
   sbt compile
@@ -22,12 +24,60 @@ Following the idea that in deterministic languages, evaluation contexts of reduc
   sbt test
 ```
 
-## Contents
+### To generate the paper
+```
+  cd paper
+  make
+```
 
-![Transformation diagram](images/transformations.png)
+## Step-by-Step Instructions
 
 ### Relations to the Paper
 
-TODO: extended syntax with let and letrec
+![Transformation diagram](images/transformations.png)
+
+This artifact contains Scala implementations that correspond to semantic artifacts in the above transformation diagram.
+
+#### Section 2.1
+
+The abstract syntax are specified in file `src/main/scala/refunc/ast/Expr.scala`. For convenience of testing, we implement an extended abstract syntax in ANF comparing with the one described in the paper: 1) Integers as atomic expressions are supported. 2) To create recursive bindings, the users may use `letrec`.
+
+#### Section 2.2
+
+In the transformation diagram, the starting point at the bottom left corner is concrete _abstract machines_. `src/main/scala/refunc/CESK.scala` contains a concrete CESK machine implementation (object `CESK`), and also a refunctionalized interpreter in continuation-passing style (object `RefuncCESK`).
+
+#### Section 2.3
+
+A standard _abstract abstract machine (AAM)_ is implemented object `SmallStep` in `src/main/scala/refunc/SmallStep.scala`. The basic code structures shared by the rest abstract machines and abstract interpreters are contained in `src/main/scala/refunc/ANFAAMBasis.scala`.
+
+#### Section 2.4
+
+We implement a variant of abstract abstract machines -- AAM with unbounded stack in `src/main/scala/refunc/SmallStepUB.scala`. This artifact forms the beginning of transformations shown in the paper.
+
+#### Section 3
+
+The linearized AAM with unbounded stack (UB) is implemented in `src/main/scala/refunc/LinearSmallStepUBStack.scala`.
+
+#### Section 4
+
+By applying fusing transformation on linearized AAM with UB, we show the fused AAM in `src/main/scala/refunc/FusedLinearSmallStepUBStack.scala`.
+
+#### Section 5
+
+The disentangled AAM is implemented in `src/main/scala/refunc/DisentangledLinearSmallStepUBStack.scala`, which identifies the first-order data type representing continuations in the abstract abstract machines. 
+
+#### Section 6
+
+The implementation of refunctionalized AAM is object `RefuncCPS` in `src/main/scala/refunc/RefuncCPS.scala`. In the paper, we also show a simplified version withou caching, which is implemented in `src/main/scala/refunc/RefuncCPSNoCache.scala`.
+
+Additionally, as a reference sound pushdown control-flow analysis, AAM with P4F allocator is implemented in `src/main/scala/refunc/SmallStepP4F.scala`. We use this to further test the pushdown control-flow property of our refunctionalized AAM.
+
+#### Section 7
+
+By representing the extended continuation-passing style with delimited control operators, we implement a direct-style abstract interpreter in object `DirectStyleDC` of file `src/main/scala/refunc/DirectStyle.scala`.
+
+As we mentioned in Section 7, direct-style abstract interpreter using side effects and `for` comprehension is also feasible. We show this experimental implementation in object `DirectStyleSideEff` (also in file `DirectStyle.scala`).
 
 ### Tests
+
+To concretely establish the correspondences, we provide a set of programs and test the equivalence of analyzed results from every abstract interpreters in our transformations. For details see `src/test/scala/refunc/Test.scala`.

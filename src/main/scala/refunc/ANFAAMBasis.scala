@@ -78,8 +78,9 @@ object ANFAAM {
     def outContains(config: Config): Boolean = out.contains(config)
     def outUpdate(config: Config, vss: Set[VS]): Cache = { Cache(in, out.update(config, vss)) }
     def outUpdate(config: Config, vs: VS): Cache = { Cache(in, out.update(config, vs)) }
-    def outJoin(c: Cache): Cache = { Cache(in, out.join(c.out)) }
-
+    def join(c: Cache): Cache = { Cache(in.join(c.in), out.join(c.out)) }
+    
+    def inVS: Set[VS] = { in.map.values.foldLeft(Set[VS]())(_ ++ _) }
     def outVS: Set[VS] = { out.map.values.foldLeft(Set[VS]())(_ ++ _) }
   }
 
@@ -89,7 +90,7 @@ object ANFAAM {
 
   case class Ans(vss: Set[VS], cache: Cache) {
     def ++(ans: Ans): Ans = {
-      Ans(vss ++ ans.vss, ans.cache.outJoin(cache))
+      Ans(vss ++ ans.vss, cache.join(ans.cache))
     }
   }
 
