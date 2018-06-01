@@ -44,7 +44,7 @@ The abstract syntax are specified in file `src/main/scala/refunc/ast/Expr.scala`
 
 #### Section 2.2
 
-In the transformation diagram, the starting point at the bottom left corner is concrete _abstract machines_. `src/main/scala/refunc/CESK.scala` contains a concrete CESK machine implementation (object `CESK`), and also a refunctionalized interpreter in continuation-passing style (object `RefuncCESK`).
+In the transformation diagram, the starting point at the bottom left corner is concrete _abstract machines_. `src/main/scala/refunc/CESK.scala` contains a concrete CESK machine implementation (object `CESK`), and also a refunctionalized definitional interpreter in continuation-passing style (object `RefuncCESK`).
 
 #### Section 2.3
 
@@ -60,7 +60,7 @@ The linearized AAM with unbounded stack (UB) is implemented in `src/main/scala/r
 
 #### Section 4
 
-By applying fusing transformation on linearized AAM with UB, we show the fused AAM in `src/main/scala/refunc/FusedLinearSmallStepUBStack.scala`.
+By applying fusing transformation on the linearized AAM with UB, we show the fused AAM in `src/main/scala/refunc/FusedLinearSmallStepUBStack.scala`.
 
 #### Section 5
 
@@ -70,7 +70,7 @@ The disentangled AAM is implemented in `src/main/scala/refunc/DisentangledLinear
 
 The implementation of refunctionalized AAM is object `RefuncCPS` in `src/main/scala/refunc/RefuncCPS.scala`. In the paper, we also show a simplified version withou caching, which is implemented in `src/main/scala/refunc/RefuncCPSNoCache.scala`.
 
-Additionally, as a reference sound pushdown control-flow analysis, AAM with P4F allocator is implemented in `src/main/scala/refunc/SmallStepP4F.scala`. We use this to further test the pushdown control-flow property of our refunctionalized AAM.
+Additionally, as a reference of sound pushdown control-flow analysis, AAM with P4F allocator is implemented in `src/main/scala/refunc/SmallStepP4F.scala`. We use this to further test the pushdown control-flow property of our refunctionalized AAM.
 
 #### Section 7
 
@@ -80,4 +80,4 @@ As we mentioned in Section 7, direct-style abstract interpreter using side effec
 
 ### Tests
 
-To concretely establish the correspondences, we provide a set of programs and test the equivalence of analyzed results from every abstract interpreters in our transformations. For details see `src/test/scala/refunc/Test.scala`.
+To concretely establish the correspondences, we provide a set of programs and test the equivalence of analyzed results from every abstract interpreters in our transformations. For details of testing criteria, see `src/test/scala/refunc/Test.scala`.
