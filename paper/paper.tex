@@ -1405,11 +1405,11 @@ case Let(x, App(f, ae), e) =>
         val new_env = env + (x -> baddr)
         val new_store = store.update(baddr, vals)
         aeval(e, new_env, new_store, time, { 
-          /* accumulate the values of one path, and call next body value */
+          /* accumulate the values of one path, and call next body expression of f */
           case evss => bdnd(bdacc ++ evss) 
         })
       }, { 
-        /* accumulate the values of paths, and call next closure */
+        /* accumulate the values of paths, and call next target closure */
         case evss => clsnd(evss ++ clsacc) 
       })
     })
@@ -1534,14 +1534,14 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: 
           case (Clos(Lam(v, body), c_env), clsans, clsnd) =>
             ...... /* sets vairables, e.g., new_cenv and new_store */
             aeval(body, new_cenv, new_store, new_time, clsans.cache, { case Ans(bdvss, bdcache) =>
-                nd[VS, Ans](bdvss, Ans(Set[VS](), bdcache), { 
-                  case (VS(vals, time, vssstore), bdans, bdnd) =>
-                    ...... /* sets variables, e.g., new_env and new_store */
-                    aeval(e, new_env, new_store, time, bdans.cache, { 
-                      /* updates the out cache after evaluated to the end of one path  */
-                      case Ans(evss, ecache) => bdnd(bdans ++ Ans(evss, ecache.outUpdate(config, evss)))
-                    })
-                }, { case eans => clsnd(eans ++ clsans) })
+              nd[VS, Ans](bdvss, Ans(Set[VS](), bdcache), { 
+                case (VS(vals, time, vssstore), bdans, bdnd) =>
+                  ...... /* sets variables, e.g., new_env and new_store */
+                  aeval(e, new_env, new_store, time, bdans.cache, { 
+                    /* updates the out cache after evaluated to the end of one path  */
+                    case Ans(evss, ecache) => bdnd(bdans ++ Ans(evss, ecache.outUpdate(config, evss)))
+                  })
+              }, { case eans => clsnd(eans ++ clsans) })
             })
         }, 
         cont)
