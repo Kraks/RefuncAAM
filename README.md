@@ -42,7 +42,7 @@ This artifact contains Scala implementations that correspond to semantic artifac
 
 #### Section 2.1
 
-The abstract syntax are specified in file `src/main/scala/refunc/ast/Expr.scala`. For convenience of testing, we implement an extended abstract syntax in ANF comparing with the one described in the paper: 1) Integers as atomic expressions are supported. 2) To create recursive bindings, the users may use `letrec`.
+The abstract syntax are specified in file `src/main/scala/refunc/ast/Expr.scala`. For the convenience of testing, we implement an extended abstract syntax in ANF comparing with the one described in the paper: 1) Integers as atomic expressions are supported. 2) To create recursive bindings, the users may use `letrec`.
 
 #### Section 2.2
 
@@ -82,4 +82,4 @@ As we mentioned in Section 7, direct-style abstract interpreter using side effec
 
 ### Tests
 
-To concretely establish the correspondences, we provide a set of programs and test the equivalence of analyzed results from every abstract interpreters in our transformations. For details of testing criteria, see `src/test/scala/refunc/Test.scala`.
+To concretely establish the correspondences, we provide a set of programs and test the equivalence of analyzed results from every abstract interpreter in our transformations. For details of testing criteria, see `src/test/scala/refunc/Test.scala`.
