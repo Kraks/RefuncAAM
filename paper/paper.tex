@@ -1432,8 +1432,7 @@ evaluation to the next body value.
 
 \begin{lstlisting}
 case ae if isAtomic(ae) =>
-  val ds = atomicEval(ae, env, store)
-  continue(Set(VS(ds, new_time, store)))
+  val ds = atomicEval(ae, env, store); continue(Set(VS(ds, new_time, store)))
 \end{lstlisting}
 
 If the expression is atomic, then we simply construct a new instance of
