@@ -21,20 +21,20 @@ object RefuncCPSNoCache {
     e match {
       case Let(x, App(f, ae), e) =>
         val closures = aeval(f, env, store).asInstanceOf[Set[Clos]]
-        nd[Clos, Ans](closures, Set[VS](), { case (clos, acc, closnd) =>
+        nd[Clos, Ans](closures, Set[VS](), { case (clos, clsacc, clsnd) =>
           val Clos(Lam(v, body), c_env) = clos
           val baddr = allocBind(v, new_time)
           val new_cenv = c_env + (v -> baddr)
           val new_store = store.update(baddr, aeval(ae, env, store))
-          aval(body, new_cenv, new_store, new_time, (bodyvss: Set[VS]) => {
-            nd[VS, Ans](bodyvss, Set[VS](), { case (vs, acc_vss, bdnd) =>
+          aval(body, new_cenv, new_store, new_time, (bdvss: Set[VS]) => {
+            nd[VS, Ans](bdvss, Set[VS](), { case (vs, bdacc, bdnd) =>
               val VS(vals, time, store) = vs
               val baddr = allocBind(x, time)
               val new_env = env + (x -> baddr)
               val new_store = store.update(baddr, vals)
-              aval(e, new_env, new_store, time, { case evss => bdnd(acc_vss ++ evss) })
+              aval(e, new_env, new_store, time, { case evss => bdnd(bdacc ++ evss) })
             }, { 
-              case evss => closnd(evss ++ acc) 
+              case evss => clsnd(evss ++ clsacc) 
             })
           })
         },

@@ -1392,23 +1392,26 @@ returned to the upper fork point.
 
 \begin{lstlisting}
 case Let(x, App(f, ae), e) =>
-  val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-  nd[Clos, Ans](closures, Set[VS](), { case (clos, accouter, closnd) =>
+  val closures = aeval(f, env, store).asInstanceOf[Set[Clos]]
+  nd[Clos, Ans](closures, Set[VS](), { case (clos, clsacc, clsnd) =>
     val Clos(Lam(v, body), c_env) = clos
     val baddr = allocBind(v, new_time)
-    val new_env = c_env + (v -> baddr)
-    val new_store = store.update(baddr, atomicEval(ae, env, store))
-    aeval(body, new_env, new_store, new_time, (bodyvss: Set[VS]) => {
-      nd[VS, Ans](bodyvss, Set[VS](), { case (vs, accinner, bdnd) =>
+    val new_cenv = c_env + (v -> baddr)
+    val new_store = store.update(baddr, aeval(ae, env, store))
+    aeval(body, new_cenv, new_store, new_time, (bdvss: Set[VS]) => {
+      nd[VS, Ans](bdvss, Set[VS](), { case (vs, bdacc, bdnd) =>
         val VS(vals, time, store) = vs
+        val baddr = allocBind(x, time)
         val new_env = env + (x -> baddr)
         val new_store = store.update(baddr, vals)
-        aeval(e, new_env, new_store, time,
-              /* accumulate the values of one path, and call next body value*/
-              (evss: Ans) => bdnd(accinner ++ evss))
-      },
-      /* accumulate the values of paths to accouter, and call next closure */
-      (evss: Ans) => closnd(evss ++ accouter))
+        aeval(e, new_env, new_store, time, { 
+          /* accumulate the values of one path, and call next body value */
+          case evss => bdnd(bdacc ++ evss) 
+        })
+      }, { 
+        /* accumulate the values of paths, and call next closure */
+        case evss => clsnd(evss ++ clsacc) 
+      })
     })
   },
   continue)
@@ -1417,10 +1420,10 @@ case Let(x, App(f, ae), e) =>
 The outer call to @nd@ evaluates over the set of possible closures of
 @f@. For each such closure, we go into its body with a new environment and a new store.
 Remember that the function @aeval@ returns a set of @VS@ objects to its continuation,
-so the continuation argument @bodyvss@ is a set of @VS@ objects which represent values
+so the continuation argument @bdvss@ is a set of @VS@ objects which represent values
 from multiple computation paths when evaluating this single @body@ expression.
 
-We next consider the inner call to @nd@, which evaluates over the set of body values @bodyvss@.
+We next consider the inner call to @nd@, which evaluates over the set of body values @bdvss@.
 For each @VS@, the timestamp and store in @VS@ will be instantiated to
 @aeval@.
 The inner application of @aeval@ returns a set of values of one computation path to its
@@ -1520,38 +1523,40 @@ the Kleene iteration from the bottom of the lattice.
 def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
   val config = Config(e, env, store, time)
   /* lookups the out cache, uses the values if contains this config */
-  if (cache.outContains(config)) return continue(Ans(cache.outGet(config), cache))
-  /* uses the values from in cache */
-  val new_cache = cache.outUpdate(config, cache.inGet(config))
-  val new_time = (e::time).take(k)
-  e match {
-    case Let(x, App(f, ae), e) =>
-      val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-      nd[Clos, Ans](closures, Ans(Set[VS](), new_cache), { case (clos, Ans(accouter, cache), closnd) =>
-        ......
-        aeval(body, new_env, new_store, new_time, cache, { case Ans(bodyvss, bodycache) =>
-          nd[VS, Ans](bodyvss, Ans(Set[VS](), bodycache), { case (vs, Ans(acc_vss, cache), bdnd) =>
-            ......
-            aeval(e, new_env, new_store, time, cache, { case Ans(evss, ecache) =>
-              bdnd(Ans(accinner ++ evss, ecache))
+  if (cache.outContains(config)) cont(Ans(cache.outGet(config), cache))
+  else {
+    val new_cache = cache.outUpdate(config, cache.inGet(config))
+    val new_time = (e::time).take(k)
+    e match {
+      case Let(x, App(f, ae), e) =>
+        val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
+        nd[Clos, Ans](closures, Ans(Set[VS](), new_cache), { 
+          case (Clos(Lam(v, body), c_env), clsans, clsnd) =>
+            ...... /* sets vairables, e.g., new_cenv and new_store */
+            aeval(body, new_cenv, new_store, new_time, clsans.cache, { case Ans(bdvss, bdcache) =>
+                nd[VS, Ans](bdvss, Ans(Set[VS](), bdcache), { 
+                  case (VS(vals, time, vssstore), bdans, bdnd) =>
+                    ...... /* sets variables, e.g., new_env and new_store */
+                    aeval(e, new_env, new_store, time, bdans.cache, { 
+                      /* updates the out cache after evaluated to the end of one path  */
+                      case Ans(evss, ecache) => bdnd(bdans ++ Ans(evss, ecache.outUpdate(config, evss)))
+                    })
+                }, { case eans => clsnd(eans ++ clsans) })
             })
-          },
-          { case Ans(evss, cache) => closnd(Ans(evss ++ accouter, cache)) })
-        })
-      },
-      /* updates the out cache after evaluation */
-      { case Ans(vss, cache) => continue(Ans(vss, cache.outUpdate(config, vss))) })
+        }, 
+        cont)
 
-    case ae if isAtomic(ae) =>
-      val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
-      continue(Ans(vs, new_cache.outUpdate(config, vs))) /* updates the out cache after evaluation */
+      case ae if isAtomic(ae) =>
+        val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
+        cont(Ans(vs, new_cache.outUpdate(config, vs)))
+    }
   }
 }
 \end{lstlisting}
 
 After completing the evaluation, we obtain a set of @VS@ objects and must update the @out@ cache.
-In the first case of pattern matching, this happens inside the last continuation of the
-outer @nd@ call.
+In the first case of pattern matching, this happens at the innermost continuation of @aeval@,
+since it is where we reach the end of one computation path.
 For the second case, we update the @out@ cache before calling the @continue@ continuation.
 
 \begin{lstlisting}
@@ -1734,16 +1739,16 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[
         val (Clos(Lam(v, body), c_env), clscache) = ndcps[Clos](closures, Ans(Set[VS](), new_cache))
         val vbaddr = allocBind(v, new_time)
         val new_cenv = c_env + (v -> vbaddr)
-        val new_cstore = store.update(vbaddr, aeval(ae, env, store))
+        val new_store = store.update(vbaddr, atomicEval(ae, env, store))
         /* evaluates the function application App(f, ae) */
-        val Ans(bodyvss, bodycache) = aeval(body, new_cenv, new_cstore, new_time, clscache)
-        val (VS(vals, time, vsstore), vscache) = ndcps[VS](bodyvss, Ans(Set[VS](), bodycache))
+        val Ans(bdvss, bdcache) = aeval(body, new_cenv, new_store, new_time, clscache)
+        val (VS(vals, time, vsstore), vscache) = ndcps[VS](bdvss, Ans(Set[VS](), bdcache))
         val baddr = allocBind(x, time)
         val new_env = env + (x -> baddr)
-        val new_store = vsstore.update(baddr, vals)
+        val new_vsstore = vsstore.update(baddr, vals)
         /* evaluates the body expression from the let */
-        val Ans(finval, fincache) = aeval(e, new_env, new_store, time, vscache)
-        Ans(finval, fincache.outUpdate(config, finval))
+        val Ans(evss, ecache) = aeval(e, new_env, new_vsstore, time, vscache)
+        Ans(evss, ecache.outUpdate(config, evss))
 
       case ae if isAtomic(ae) =>
         val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
@@ -1773,10 +1778,7 @@ Now we have arrived the end of this series of transformations. Starting from an
 small-step abstract abstract machine,  eventually we obtain an big-step definitional
 interpreter with pushdown control-flows and written in direct-style.
 
-%\section{Perspective}
-%\subsection{Defunctionalization}
 %specify higher-order definitional interpreters using first-order means (cite)
-%\subsection{Refunctionalization}
 %\section{Detour: Shiver's \textit{k}-CFA?}
 
 \section{Related Work}\label{sec:related}
