@@ -24,6 +24,7 @@ object Concrete {
 
 import Concrete._
 
+/* Concrete interpreter in CESK abstract machine style. */
 object CESK {
   case class Frame(x: String, e: Expr, env: Env)
   type Kont = List[Frame]
@@ -55,6 +56,7 @@ object CESK {
   def eval(e: Expr): State = drive(inject(e))
 }
 
+/* Refunctionalized concrete interpreter in CPS style. */
 object RefuncCESK {
   case class VS(v: Storable, store: Store)
   type Ans = VS
@@ -69,9 +71,9 @@ object RefuncCESK {
       val Clos(Lam(v, body), env_c) = atomicEval(f, env, store)
       val addr = alloc(store)
       eval(body, env_c+(v->addr), store+(addr->atomicEval(ae, env, store)), (vs: VS) => {
-              val addr = alloc(vs.store)
-              eval(e, env+(x->addr), vs.store+(addr->vs.v), k)
-            })
+        val addr = alloc(vs.store)
+        eval(e, env+(x->addr), vs.store+(addr->vs.v), k)
+      })
 
     case ae if isAtomic(ae) =>
       k(VS(atomicEval(ae, env, store), store))
@@ -80,6 +82,7 @@ object RefuncCESK {
   def run(e: Expr) = eval(e, Map(), Map(), (vs: VS) => vs)
 }
 
+/* Cocnrete interpreter in direct-style. */
 object DirectStyleCES {
   import RefuncCESK._
   def eval(e: Expr, env: Env, store: Store): VS = e match {
