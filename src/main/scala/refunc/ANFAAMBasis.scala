@@ -59,14 +59,12 @@ object ANFAAM {
   def inject(e: Expr, env: Env = Map(), bstore: Store[BAddr, Storable] = Store[BAddr, Storable](Map())): State =
     State(e, env, bstore, Store[KAddr, Cont](Map(Halt -> Set())), Halt, List())
 
-  def aeval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
+  def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
     case Num(i) => Set(NumV(i))
     case Var(x) => bstore(env(x)).toSet
     case lam@Lam(x, body) => Set(Clos(lam, env))
     case _ => throw new NotImplementedError(e.toString)
   }
-
-  val atomicEval = aeval _
 
   case class VS(vals: Set[Storable], time: Time, store: BStore)
 

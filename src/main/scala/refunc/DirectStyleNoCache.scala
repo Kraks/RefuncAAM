@@ -34,7 +34,7 @@ object DirectStyleDCNoCache2 {
         val Clos(Lam(v, body), c_env) = ndcps[Clos, VS](closures, Set[VS]())
         val vbaddr = allocBind(v, new_time)
         val new_cenv = c_env + (v -> vbaddr)
-        val new_store = store.update(vbaddr, aeval(ae, env, store))
+        val new_store = store.update(vbaddr, atomicEval(ae, env, store))
         val bdvss = aval(body, new_cenv, new_store, new_time)
         val VS(vals, time, vsstore) = ndcps[VS, VS](bdvss, Set[VS]())
         val baddr = allocBind(x, time)
@@ -74,13 +74,13 @@ object DirectStyleDCNoCache {
     val new_time = (e::time).take(k)
     e match {
       case Let(x, App(f, ae), e) =>
-        val closures = aeval(f, env, store).asInstanceOf[Set[Clos]]
+        val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
         reset {
           val (clos, acc, closnd) = ndcps[Clos, Ans](closures, Set[VS](), cont)
           val Clos(Lam(v, body), c_env) = clos
           val baddr = allocBind(v, new_time)
           val new_env = c_env + (v -> baddr)
-          val new_store = store.update(baddr, aeval(ae, env, store))
+          val new_store = store.update(baddr, atomicEval(ae, env, store))
           reset { 
             val bdvss = aval(body, new_env, new_store, new_time)
             reset {
@@ -98,7 +98,7 @@ object DirectStyleDCNoCache {
         }
   
       case ae if isAtomic(ae) =>
-        val ds = aeval(ae, env, store)
+        val ds = atomicEval(ae, env, store)
         cont(Set(VS(ds, new_time, store)))
     }
   }

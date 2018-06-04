@@ -20,12 +20,12 @@ object RefuncCPSNoCache {
     val new_time = (e::time).take(k)
     e match {
       case Let(x, App(f, ae), e) =>
-        val closures = aeval(f, env, store).asInstanceOf[Set[Clos]]
+        val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
         nd[Clos, Ans](closures, Set[VS](), { case (clos, clsacc, clsnd) =>
           val Clos(Lam(v, body), c_env) = clos
           val baddr = allocBind(v, new_time)
           val new_cenv = c_env + (v -> baddr)
-          val new_store = store.update(baddr, aeval(ae, env, store))
+          val new_store = store.update(baddr, atomicEval(ae, env, store))
           aval(body, new_cenv, new_store, new_time, (bdvss: Set[VS]) => {
             nd[VS, Ans](bdvss, Set[VS](), { case (vs, bdacc, bdnd) =>
               val VS(vals, time, store) = vs
@@ -41,7 +41,7 @@ object RefuncCPSNoCache {
         cont)
   
       case ae if isAtomic(ae) =>
-        val ds = aeval(ae, env, store)
+        val ds = atomicEval(ae, env, store)
         cont(Set(VS(ds, new_time, store)))
     }
   }
@@ -69,12 +69,12 @@ object RefuncCPSNoCacheBF {
     val new_time = (e::time).take(k)
     e match {
       case Let(x, App(f, ae), e) =>
-        val closures = aeval(f, env, store).toList.asInstanceOf[List[Clos]]
+        val closures = atomicEval(f, env, store).toList.asInstanceOf[List[Clos]]
         nd(closures, Set[VS](), (clos: Clos, acc: Set[VS], ndk: Cont) => {
           val Clos(Lam(v, body), c_env) = clos
           val baddr = allocBind(v, new_time)
           val new_env = c_env + (v -> baddr)
-          val new_store = store.update(baddr, aeval(ae, env, store))
+          val new_store = store.update(baddr, atomicEval(ae, env, store))
           aval(body, new_env, new_store, new_time, (bodyvss: Set[VS]) => { ndk(bodyvss++acc) })
         }, (result_vss: Set[VS]) => {
           nd(result_vss.toList, Set[VS](), (vs: VS, acc: Set[VS], ndk: Cont) => {
@@ -87,7 +87,7 @@ object RefuncCPSNoCacheBF {
           cont)
         })
       case ae if isAtomic(ae) =>
-        val ds = aeval(ae, env, store)
+        val ds = atomicEval(ae, env, store)
         cont(Set(VS(ds, new_time, store)))
     }
   }
