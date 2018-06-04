@@ -14,24 +14,24 @@ object SmallStepP4F {
       case State(Let(x, ae, e), env, bstore, kstore, kaddr, time) if isAtomic(ae) =>
         val baddr = allocBind(x, new_time)
         val new_env = env + (x -> baddr)
-        val newBStore = bstore.update(baddr, atomicEval(ae, env, bstore))
-        List(State(e, new_env, newBStore, kstore, kaddr, new_time))
+        val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+        List(State(e, new_env, new_store, kstore, kaddr, new_time))
 
       case State(Letrec(bds, body), env, bstore, kstore, kaddr, time) =>
         val new_env = bds.foldLeft(env)((accenv: Env, bd: B) => 
           accenv + (bd.x -> allocBind(bd.x, new_time)))
-        val newBStore = bds.foldLeft(bstore)((accbst: BStore, bd: B) =>
+        val new_store = bds.foldLeft(bstore)((accbst: BStore, bd: B) =>
           accbst.update(allocBind(bd.x, new_time), atomicEval(bd.e, new_env, accbst)))
-        List(State(body, new_env, newBStore, kstore, kaddr, time))
+        List(State(body, new_env, new_store, kstore, kaddr, time))
 
       case State(Let(x, App(f, ae), e), env, bstore, kstore, kaddr, time) =>
         for (Clos(Lam(v, body), c_env) <- atomicEval(f, env, bstore).toList) yield {
           val baddr = allocBind(v, new_time)
           val new_env = c_env + (v -> baddr)
-          val newBStore = bstore.update(baddr, atomicEval(ae, env, bstore))
-          val newKAddr = allocKont(body, c_env, newBStore, new_time)
-          val newKStore = kstore.update(newKAddr, Cont(Frame(x, e, env), kaddr))
-          State(body, new_env, newBStore, newKStore, newKAddr, new_time)
+          val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+          val new_kaddr = allocKont(body, c_env, new_store, new_time)
+          val new_kstore = kstore.update(new_kaddr, Cont(Frame(x, e, env), kaddr))
+          State(body, new_env, new_store, new_kstore, new_kaddr, new_time)
         }
 
       case State(ae, env, bstore, kstore, kaddr, time) if isAtomic(ae)=>

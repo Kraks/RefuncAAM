@@ -5,8 +5,6 @@ import refunc.ast._
 import ANFAAM._
 
 object DirectStyleDC {
-  type Cont = Ans => Ans
-  
   @deprecated
   def ndcps[T](ts: Set[T], acc: Ans): (T, Cache) @cps[Ans] = shift { 
     f: (((T, Cache)) => Ans) => nd(ts, acc, f)
