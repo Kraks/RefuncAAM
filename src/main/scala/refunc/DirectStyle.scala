@@ -8,19 +8,19 @@ object DirectStyleDC {
   import SmallStepUBStack._
   
   type Cont = Ans => Ans
+  
+  @deprecated
+  def ndcps[T](ts: Set[T], acc: Ans): (T, Cache) @cps[Ans] = shift { 
+    f: (((T, Cache)) => Ans) => nd(ts, acc, f)
+  }
 
-  def nd[T](ts: Set[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
+  def nd[T](ts: Iterable[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
     if (ts.isEmpty) acc
     else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
   }
-  
-  @deprecated
-  def ndcps[T](ts: Set[T], acc: Ans): (T, Cache) @cps[Ans] = shift { f: (((T, Cache)) => Ans) => 
-    nd(ts, acc, f)
-  }
 
-  def choices[T](ts: Set[T], cache: Cache): (T, Cache) @cps[Ans] = shift { f: (((T, Cache)) => Ans) => 
-    nd(ts, Ans(Set[VS](), cache), f)
+  def choices[T](ts: Iterable[T], cache: Cache): (T, Cache) @cps[Ans] = shift { 
+    f: (((T, Cache)) => Ans) => nd(ts, Ans(Set[VS](), cache), f)
   }
   
   def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[Ans] = {
@@ -47,8 +47,8 @@ object DirectStyleDC {
           Ans(bdss, bdcache.outUpdate(config, bdss))
 
         case Let(x, App(f, ae), e) =>
-          val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-          val (Clos(Lam(v, body), c_env), clscache) = choices[Clos](closures, new_cache)
+          val closures = atomicEval(f, env, store)
+          val (Clos(Lam(v, body), c_env), clscache) = choices[Storable](closures, new_cache)
           val vbaddr = allocBind(v, new_time)
           val new_cenv = c_env + (v -> vbaddr)
           val new_store = store.update(vbaddr, atomicEval(ae, env, store))

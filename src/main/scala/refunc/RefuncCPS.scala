@@ -9,7 +9,7 @@ object RefuncCPS {
 
   type Cont = Ans => Ans
 
-  def nd[T,S](ts: Set[T], acc: S, f: (T, S, S=>S) => S, g: S => S): S = {
+  def nd[T,S](ts: Iterable[T], acc: S, f: (T, S, S=>S) => S, g: S => S): S = {
     if (ts.isEmpty) g(acc)
     else f(ts.head, acc, (vss: S) => nd(ts.tail, vss, f, g))
   }
@@ -40,8 +40,8 @@ object RefuncCPS {
           })
 
         case Let(x, App(f, ae), e) =>
-          val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-          nd[Clos, Ans](closures, Ans(Set[VS](), new_cache), { 
+          val closures = atomicEval(f, env, store)
+          nd[Storable, Ans](closures, Ans(Set[VS](), new_cache), { 
             case (Clos(Lam(v, body), c_env), clsans, clsnd) =>
               val vbaddr = allocBind(v, new_time)
               val new_cenv = c_env + (v -> vbaddr)
