@@ -5,15 +5,15 @@ import refunc.ast._
 import ANFAAM._
 
 object SmallStepUBStack {
-  case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
-
-  def tick(s: State): Time = (s.e::s.time).take(k)
+  case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time) {
+    def tick: Time = (e::time).take(k)
+  }
 
   def inject(e: Expr, env: Env = Map(), bstore: Store[BAddr, Storable] = Store[BAddr, Storable](Map())): State =
     State(e, env, bstore, List(), List())
 
   def step(s: State): List[State] = {
-    val new_time = tick(s)
+    val new_time = s.tick
     s match {
       case State(Let(x, ae, e), env, bstore, konts, time) if isAtomic(ae) =>
         val baddr = allocBind(x, new_time)

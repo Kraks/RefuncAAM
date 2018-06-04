@@ -11,15 +11,14 @@ object LinearSmallStepUBStack {
 
   case class NDState(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time, ndk: List[NDCont]) {
     def toState: State = State(e, env, bstore, konts, time)
+    def tick: Time = (e :: time).take(k)
   }
-
-  def tick(s: NDState): Time = (s.e::s.time).take(k)
 
   def inject(e: Expr, env: Env = Map(), bstore: Store[BAddr, Storable] = Store[BAddr, Storable](Map())): NDState =
     NDState(e, env, bstore, List(), List(), List())
 
   def step(nds: NDState): NDState = {
-    val new_time = tick(nds)
+    val new_time = nds.tick
     nds match {
       case NDState(Let(x, ae, e), env, bstore, konts, time, ndk) if isAtomic(ae) =>
         val baddr = allocBind(x, new_time)

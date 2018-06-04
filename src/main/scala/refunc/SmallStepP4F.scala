@@ -9,7 +9,7 @@ object SmallStepP4F {
   def allocKont(tgtExpr: Expr, tgtEnv: Env, tgtStore: BStore, time: Time): KAddr = P4FContAddr(tgtExpr, tgtEnv)
 
   def step(s: State): List[State] = {
-    val new_time = tick(s)
+    val new_time = s.tick
     s match {
       case State(Let(x, ae, e), env, bstore, kstore, kaddr, time) if isAtomic(ae) =>
         val baddr = allocBind(x, new_time)

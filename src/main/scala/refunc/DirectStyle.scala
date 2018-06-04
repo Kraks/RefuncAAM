@@ -27,7 +27,7 @@ object DirectStyleDC {
     val config = Config(e, env, store, time)
     if (cache.outContains(config)) Ans(cache.outGet(config), cache)
     else {
-      val new_time = (e::time).take(k)
+      val new_time = config.tick
       val new_cache = cache.outUpdate(config, cache.inGet(config))
 
       e match {
@@ -92,7 +92,7 @@ object DirectStyleSideEff {
     
     /* Use mutation to update the cache every time. */
     var new_cache = cache.outUpdate(config, cache.inGet(config))
-    val new_time = (e::time).take(k)
+    val new_time = config.tick
 
     e match {
       case Let(x, ae, e) if isAtomic(ae) =>

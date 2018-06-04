@@ -11,9 +11,8 @@ object FusedLinearSmallStepUBStack {
 
   case class NDState(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time, ndk: List[NDCont]) {
     def toState: State = State(e, env, bstore, konts, time)
+    def tick: Time = (e :: time).take(k)
   }
-
-  def tick(s: NDState): Time = (s.e::s.time).take(k)
 
   def inject(e: Expr, env: Env = Map(), bstore: Store[BAddr, Storable] = Store[BAddr, Storable](Map())): NDState =
     NDState(e, env, bstore, List(), List(), List())
@@ -22,7 +21,7 @@ object FusedLinearSmallStepUBStack {
     nds match {
       case NDState(ae, _, _, Nil, _, Nil) if isAtomic(ae) => seen
       case nds =>
-        val new_time = tick(nds)
+        val new_time = nds.tick
         val new_ndstate = nds match {
           case NDState(Let(x, ae, e), env, bstore, konts, time, ndk) if isAtomic(ae) =>
             val baddr = allocBind(x, new_time)

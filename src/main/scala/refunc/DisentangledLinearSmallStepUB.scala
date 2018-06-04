@@ -11,9 +11,8 @@ object DisLinearSmallStepUBStack {
 
   case class NDState(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time, ndk: List[NDCont]) {
     def toState: State = State(e, env, bstore, konts, time)
+    def tick: Time = (e :: time).take(k)
   }
-
-  def tick(s: NDState): Time = (s.e::s.time).take(k)
 
   def inject(e: Expr, env: Env = Map(), bstore: Store[BAddr, Storable] = Store[BAddr, Storable](Map())): NDState =
     NDState(e, env, bstore, List(), List(), List())
@@ -24,7 +23,7 @@ object DisLinearSmallStepUBStack {
       case nds =>
         val s = nds.toState
         val new_seen = if (seen.contains(s)) seen else seen + s
-        val new_time = tick(nds)
+        val new_time = nds.tick
         nds match {
           case NDState(Let(x, ae, e), env, bstore, konts, time, ndk) if isAtomic(ae) =>
             val baddr = allocBind(x, new_time)
@@ -59,7 +58,7 @@ object DisLinearSmallStepUBStack {
 
   def continue(nds: NDState, seen: Set[State]): Set[State] = {
     val NDState(ae, env, bstore, konts, time, ndk) = nds
-    val new_time = tick(nds)
+    val new_time = nds.tick
     konts match {
       case Nil => ndcontinue(nds, seen)
       case Frame(x, e, f_env)::konts =>

@@ -52,9 +52,9 @@ object ANFAAM {
   def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
   def allocKont(tgtExpr: Expr, tgtEnv: Env, tgtStore: BStore, time: Time): KAddr = ContAddr(tgtExpr)
 
-  case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, k: KAddr, time: Time)
-
-  def tick(s: State): Time = (s.e::s.time).take(k)
+  case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, kaddr: KAddr, time: Time) {
+    def tick: Time = (e :: time).take(k)
+  }
 
   def inject(e: Expr, env: Env = Map(), bstore: Store[BAddr, Storable] = Store[BAddr, Storable](Map())): State =
     State(e, env, bstore, Store[KAddr, Cont](Map(Halt -> Set())), Halt, List())
@@ -66,9 +66,13 @@ object ANFAAM {
     case _ => throw new NotImplementedError(e.toString)
   }
 
+  /****************************************************************/
+
   case class VS(vals: Set[Storable], time: Time, store: BStore)
 
-  case class Config(e: Expr, env: Env, store: BStore, time: Time)
+  case class Config(e: Expr, env: Env, store: BStore, time: Time) {
+    def tick: Time = (e :: time).take(k)
+  }
 
   case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
     def inGet(config: Config): Set[VS] = in.getOrElse(config, Set())

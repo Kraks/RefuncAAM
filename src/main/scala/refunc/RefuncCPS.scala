@@ -24,7 +24,7 @@ object RefuncCPS {
     val config = Config(e, env, store, time)
     if (cache.outContains(config)) cont(Ans(cache.outGet(config), cache))
     else {
-      val new_time = (e::time).take(k)
+      val new_time = config.tick
       val new_cache = cache.outUpdate(config, cache.inGet(config))
 
       e match {
@@ -111,7 +111,7 @@ object RefuncCPSBF {
     }
 
     val new_cache = cache.outUpdate(config, cache.inGet(config))
-    val new_time = (e::time).take(k)
+    val new_time = config.tick
     e match {
       case Let(x, App(f, ae), e) =>
         val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]

@@ -6,7 +6,7 @@ import ANFAAM._
 
 object SmallStep {
   def step(s: State): List[State] = {
-    val new_time = tick(s)
+    val new_time = s.tick
     s match {
       case State(Let(x, ae, e), env, bstore, kstore, kaddr, time) if isAtomic(ae) =>
         val baddr = allocBind(x, new_time)
