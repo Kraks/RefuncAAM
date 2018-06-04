@@ -16,7 +16,7 @@ object RefuncCPSNoCache {
     else f(ts.head, acc, (vss: S) => nd(ts.tail, vss, f, g))
   }
 
-  def aval(e: Expr, env: Env, store: BStore, time: Time, cont: Cont): Ans = {
+  def aeval(e: Expr, env: Env, store: BStore, time: Time, cont: Cont): Ans = {
     val new_time = (e::time).take(k)
     e match {
       case Let(x, App(f, ae), e) =>
@@ -26,13 +26,13 @@ object RefuncCPSNoCache {
           val baddr = allocBind(v, new_time)
           val new_cenv = c_env + (v -> baddr)
           val new_store = store.update(baddr, atomicEval(ae, env, store))
-          aval(body, new_cenv, new_store, new_time, (bdvss: Set[VS]) => {
+          aeval(body, new_cenv, new_store, new_time, (bdvss: Set[VS]) => {
             nd[VS, Ans](bdvss, Set[VS](), { case (vs, bdacc, bdnd) =>
               val VS(vals, time, store) = vs
               val baddr = allocBind(x, time)
               val new_env = env + (x -> baddr)
               val new_store = store.update(baddr, vals)
-              aval(e, new_env, new_store, time, { case evss => bdnd(bdacc ++ evss) })
+              aeval(e, new_env, new_store, time, { case evss => bdnd(bdacc ++ evss) })
             }, { 
               case evss => clsnd(evss ++ clsacc) 
             })
@@ -47,7 +47,7 @@ object RefuncCPSNoCache {
   }
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) =
-    aval(e, env, store, mtTime, (vss => vss))
+    aeval(e, env, store, mtTime, (vss => vss))
 }
 
 
@@ -65,7 +65,7 @@ object RefuncCPSNoCacheBF {
     }
   }
 
-  def aval(e: Expr, env: Env, store: BStore, time: Time, cont: Cont): Set[VS] = {
+  def aeval(e: Expr, env: Env, store: BStore, time: Time, cont: Cont): Set[VS] = {
     val new_time = (e::time).take(k)
     e match {
       case Let(x, App(f, ae), e) =>
@@ -75,14 +75,14 @@ object RefuncCPSNoCacheBF {
           val baddr = allocBind(v, new_time)
           val new_env = c_env + (v -> baddr)
           val new_store = store.update(baddr, atomicEval(ae, env, store))
-          aval(body, new_env, new_store, new_time, (bodyvss: Set[VS]) => { ndk(bodyvss++acc) })
+          aeval(body, new_env, new_store, new_time, (bodyvss: Set[VS]) => { ndk(bodyvss++acc) })
         }, (result_vss: Set[VS]) => {
           nd(result_vss.toList, Set[VS](), (vs: VS, acc: Set[VS], ndk: Cont) => {
             val VS(vals, time, store) = vs
             val baddr = allocBind(x, time)
             val new_env = env + (x -> baddr)
             val new_store = store.update(baddr, vals)
-            aval(e, new_env, new_store, time, (evss: Set[VS]) => { ndk(evss++acc) })
+            aeval(e, new_env, new_store, time, (evss: Set[VS]) => { ndk(evss++acc) })
           },
           cont)
         })
@@ -93,5 +93,5 @@ object RefuncCPSNoCacheBF {
   }
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) =
-    aval(e, env, store, mtTime, (vss => vss))
+    aeval(e, env, store, mtTime, (vss => vss))
 }

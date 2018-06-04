@@ -23,7 +23,7 @@ object DirectStyleDC {
     nd(ts, Ans(Set[VS](), cache), f)
   }
   
-  def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[Ans] = {
+  def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[Ans] = {
     val config = Config(e, env, store, time)
     if (cache.outContains(config)) Ans(cache.outGet(config), cache)
     else {
@@ -35,7 +35,7 @@ object DirectStyleDC {
           val baddr = allocBind(x, new_time)
           val new_env = env + (x -> baddr)
           val new_store = store.update(baddr, atomicEval(ae, env, store))
-          val Ans(evss, ecache) = aval(e, new_env, new_store, new_time, new_cache)
+          val Ans(evss, ecache) = aeval(e, new_env, new_store, new_time, new_cache)
           Ans(evss, ecache.outUpdate(config, evss))
 
         case Letrec(bds, body) => 
@@ -43,7 +43,7 @@ object DirectStyleDC {
             accenv + (bd.x -> allocBind(bd.x, new_time)))
           val new_store = bds.foldLeft(store)((accbst: BStore, bd: B) =>
             accbst.update(allocBind(bd.x, new_time), atomicEval(bd.e, new_env, accbst)))
-          val Ans(bdss, bdcache) = aval(body, new_env, new_store, new_time, new_cache)
+          val Ans(bdss, bdcache) = aeval(body, new_env, new_store, new_time, new_cache)
           Ans(bdss, bdcache.outUpdate(config, bdss))
 
         case Let(x, App(f, ae), e) =>
@@ -52,12 +52,12 @@ object DirectStyleDC {
           val vbaddr = allocBind(v, new_time)
           val new_cenv = c_env + (v -> vbaddr)
           val new_store = store.update(vbaddr, atomicEval(ae, env, store))
-          val Ans(bdvss, bdcache) = aval(body, new_cenv, new_store, new_time, clscache)
+          val Ans(bdvss, bdcache) = aeval(body, new_cenv, new_store, new_time, clscache)
           val (VS(vals, time, vsstore), vscache) = choices[VS](bdvss, bdcache)
           val baddr = allocBind(x, time)
           val new_env = env + (x -> baddr)
           val new_vsstore = vsstore.update(baddr, vals)
-          val Ans(evss, ecache) = aval(e, new_env, new_vsstore, time, vscache)
+          val Ans(evss, ecache) = aeval(e, new_env, new_vsstore, time, vscache)
           Ans(evss, ecache.outUpdate(config, evss))
 
         case ae if isAtomic(ae) =>
@@ -69,7 +69,7 @@ object DirectStyleDC {
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
-      val Ans(vss, anscache) = reset { aval(e, env, store, mtTime, cache) }
+      val Ans(vss, anscache) = reset { aeval(e, env, store, mtTime, cache) }
       val init_config = Config(e, env, store, mtTime)
       val new_cache = anscache.outUpdate(init_config, vss)
       if (new_cache.out == cache.out) { Ans(vss, new_cache) }
@@ -84,7 +84,7 @@ object DirectStyleSideEff {
   import SmallStepUBStack._
   import RefuncCPS._
 
-  def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans = {
+  def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans = {
     val config = Config(e, env, store, time)
     if (cache.outContains(config)) {
       return Ans(cache.outGet(config), cache)
@@ -99,7 +99,7 @@ object DirectStyleSideEff {
         val baddr = allocBind(x, new_time)
         val new_env = env + (x -> baddr)
         val new_store = store.update(baddr, atomicEval(ae, env, store))
-        val Ans(eval, ecache) = aval(e, new_env, new_store, new_time, new_cache)
+        val Ans(eval, ecache) = aeval(e, new_env, new_store, new_time, new_cache)
         Ans(eval, ecache.outUpdate(config, eval))
 
       case Letrec(bds, body) =>
@@ -107,7 +107,7 @@ object DirectStyleSideEff {
           accenv + (bd.x -> allocBind(bd.x, new_time)))
         val new_store = bds.foldLeft(store)((accbst: BStore, bd: B) =>
           accbst.update(allocBind(bd.x, new_time), atomicEval(bd.e, new_env, accbst)))
-        val Ans(vss, cache) = aval(body, new_env, new_store, new_time, new_cache)
+        val Ans(vss, cache) = aeval(body, new_env, new_store, new_time, new_cache)
         Ans(vss, cache.outUpdate(config, vss))
 
       case Let(x, App(f, ae), e) =>
@@ -116,13 +116,13 @@ object DirectStyleSideEff {
           val baddr = allocBind(v, new_time)
           val new_env = c_env + (v -> baddr)
           val new_store = store.update(baddr, atomicEval(ae, env, store))
-          val Ans(bdv, bdcache) = aval(body, new_env, new_store, new_time, new_cache)
+          val Ans(bdv, bdcache) = aeval(body, new_env, new_store, new_time, new_cache)
           new_cache = bdcache
           val evs = for (VS(vals, time, store) <- bdv) yield {
             val baddr = allocBind(x, time)
             val new_env = env + (x -> baddr)
             val new_store = store.update(baddr, vals)
-            val Ans(ev, ecache) = aval(e, new_env, new_store, time, new_cache)
+            val Ans(ev, ecache) = aeval(e, new_env, new_store, time, new_cache)
             new_cache = ecache.outUpdate(config, ev)
             ev
           }
@@ -138,7 +138,7 @@ object DirectStyleSideEff {
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
-      val Ans(vss, new_cache) = aval(e, env, store, mtTime, cache)
+      val Ans(vss, new_cache) = aeval(e, env, store, mtTime, cache)
       val updated_cache = new_cache.outUpdate(Config(e, env, store, mtTime), vss)
       if (updated_cache.out == cache.out) { Ans(vss, updated_cache) }
       else { iter(Cache(updated_cache.out, updated_cache.out)) }
