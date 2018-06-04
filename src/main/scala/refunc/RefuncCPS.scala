@@ -8,10 +8,16 @@ object RefuncCPS {
   import SmallStepUBStack._
 
   type Cont = Ans => Ans
-
+  
+  @deprecated
   def nd[T,S](ts: Iterable[T], acc: S, f: (T, S, S=>S) => S, g: S => S): S = {
     if (ts.isEmpty) g(acc)
     else f(ts.head, acc, (vss: S) => nd(ts.tail, vss, f, g))
+  }
+
+  def nd[T](ts: Iterable[T], acc: Ans, k: (T, Ans, Ans=>Ans) => Ans, m: Ans=>Ans): Ans = {
+    if (ts.isEmpty) m(acc)
+    else k(ts.head, acc, (ans: Ans) => nd(ts.tail, ans, k, m))
   }
   
   def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, cont: Cont): Ans = {
@@ -41,14 +47,14 @@ object RefuncCPS {
 
         case Let(x, App(f, ae), e) =>
           val closures = atomicEval(f, env, store)
-          nd[Storable, Ans](closures, Ans(Set[VS](), new_cache), { 
+          nd[Storable](closures, Ans(Set[VS](), new_cache), { 
             case (Clos(Lam(v, body), c_env), clsans, clsnd) =>
               val vbaddr = allocBind(v, new_time)
               val new_cenv = c_env + (v -> vbaddr)
               val new_store = store.update(vbaddr, atomicEval(ae, env, store))
               aeval(body, new_cenv, new_store, new_time, clsans.cache, { 
                 case Ans(bdvss, bdcache) =>
-                  nd[VS, Ans](bdvss, Ans(Set[VS](), bdcache), { 
+                  nd[VS](bdvss, Ans(Set[VS](), bdcache), { 
                     case (VS(vals, time, vssstore), bdans, bdnd) =>
                       val baddr = allocBind(x, time)
                       val new_env = env + (x -> baddr)
