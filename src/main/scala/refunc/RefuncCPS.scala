@@ -5,8 +5,6 @@ import refunc.ast._
 import ANFAAM._
 
 object RefuncCPS {
-  import SmallStepUBStack._
-
   type Cont = Ans => Ans
   
   @deprecated
@@ -94,8 +92,6 @@ object RefuncCPS {
 
 /* Experimental implementation with breadth first evaluation */
 object RefuncCPSBF {
-  import SmallStepUBStack._
-  
   type Cont = (Set[VS], Cache) => (Set[VS], Cache)
 
   def nd[T](ts: Set[T], acc: Set[VS], cache: Cache, 

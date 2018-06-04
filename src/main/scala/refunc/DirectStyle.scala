@@ -5,8 +5,6 @@ import refunc.ast._
 import ANFAAM._
 
 object DirectStyleDC {
-  import SmallStepUBStack._
-  
   type Cont = Ans => Ans
   
   @deprecated
@@ -81,7 +79,6 @@ object DirectStyleDC {
 
 object DirectStyleSideEff {
   /* Using side effect to update new_cache */
-  import SmallStepUBStack._
   import RefuncCPS._
 
   def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans = {

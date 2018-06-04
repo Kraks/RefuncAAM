@@ -22,8 +22,9 @@ object Concrete {
   def isAtomic(e: Expr): Boolean = e.isInstanceOf[Var] || e.isInstanceOf[Lam]
 }
 
+import Concrete._
+
 object CESK {
-  import Concrete._
   case class Frame(x: String, e: Expr, env: Env)
   type Kont = List[Frame]
   case class State(e: Expr, env: Env, store: Store, k: Kont)
@@ -55,8 +56,6 @@ object CESK {
 }
 
 object RefuncCESK {
-  import Concrete._
-
   case class VS(v: Storable, store: Store)
   type Ans = VS
   type Cont = Ans => Ans
@@ -79,4 +78,23 @@ object RefuncCESK {
   }
 
   def run(e: Expr) = eval(e, Map(), Map(), (vs: VS) => vs)
+}
+
+object DirectStyleCES {
+  import RefuncCESK._
+  def eval(e: Expr, env: Env, store: Store): VS = e match {
+    case Let(x, ae, e) if isAtomic(ae) =>
+      val addr = alloc(store)
+      eval(e, env+(x->addr), store+(addr->atomicEval(ae, env, store)))
+
+    case Let(x, App(f, ae), e) =>
+      val Clos(Lam(v, body), env_c) = atomicEval(f, env, store)
+      val vaddr = alloc(store)
+      val VS(appv, appstore) = eval(body, env_c+(v->vaddr), store+(vaddr->atomicEval(ae, env, store)))
+      val xaddr = alloc(appstore)
+      eval(e, env+(x->xaddr), appstore+(xaddr->appv))
+
+    case ae if isAtomic(ae) =>
+      VS(atomicEval(ae, env, store), store)
+  }
 }

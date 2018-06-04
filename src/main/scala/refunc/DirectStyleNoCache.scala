@@ -9,8 +9,6 @@ import ANFAAM._
 
 object DirectStyleDCNoCache2 {
   /* Depth first evaluation */
-  import SmallStepUBStack._
-  
   type Ans = Set[VS]
   type Cont = Ans => Ans
 
@@ -56,8 +54,6 @@ object DirectStyleDCNoCache2 {
 
 object DirectStyleDCNoCache {
   /* Depth first evaluation */
-  import SmallStepUBStack._
-  
   type Ans = Set[VS]
   type Cont = Ans => Ans
 

@@ -6,8 +6,6 @@ import refunc.ast._
 import ANFAAM._
 
 object RefuncCPSNoCache {
-  import SmallStepUBStack._
-  
   type Ans = Set[VS]
   type Cont = Ans => Ans
 
@@ -54,8 +52,6 @@ object RefuncCPSNoCache {
 
 /* Experimental implementation with breadth first evaluation */
 object RefuncCPSNoCacheBF {
-  import SmallStepUBStack._
-  
   type Cont = Set[VS] => Set[VS]
 
   def nd[T](cs: List[T], acc: Set[VS], f: (T, Set[VS], Cont) => Set[VS], g: Cont): Set[VS] = {
