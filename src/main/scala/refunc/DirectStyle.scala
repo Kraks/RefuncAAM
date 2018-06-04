@@ -14,8 +14,13 @@ object DirectStyleDC {
     else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
   }
   
+  @deprecated
   def ndcps[T](ts: Set[T], acc: Ans): (T, Cache) @cps[Ans] = shift { f: (((T, Cache)) => Ans) => 
     nd(ts, acc, f)
+  }
+
+  def choices[T](ts: Set[T], cache: Cache): (T, Cache) @cps[Ans] = shift { f: (((T, Cache)) => Ans) => 
+    nd(ts, Ans(Set[VS](), cache), f)
   }
   
   def aval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[Ans] = {
@@ -43,12 +48,12 @@ object DirectStyleDC {
 
         case Let(x, App(f, ae), e) =>
           val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-          val (Clos(Lam(v, body), c_env), clscache) = ndcps[Clos](closures, Ans(Set[VS](), new_cache))
+          val (Clos(Lam(v, body), c_env), clscache) = choices[Clos](closures, new_cache)
           val vbaddr = allocBind(v, new_time)
           val new_cenv = c_env + (v -> vbaddr)
           val new_store = store.update(vbaddr, atomicEval(ae, env, store))
           val Ans(bdvss, bdcache) = aval(body, new_cenv, new_store, new_time, clscache)
-          val (VS(vals, time, vsstore), vscache) = ndcps[VS](bdvss, Ans(Set[VS](), bdcache))
+          val (VS(vals, time, vsstore), vscache) = choices[VS](bdvss, bdcache)
           val baddr = allocBind(x, time)
           val new_env = env + (x -> baddr)
           val new_vsstore = vsstore.update(baddr, vals)
