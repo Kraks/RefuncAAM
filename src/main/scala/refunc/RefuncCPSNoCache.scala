@@ -9,38 +9,36 @@ object RefuncCPSNoCache {
   type Ans = Set[VS]
   type Cont = Ans => Ans
 
-  def nd[T,S](ts: Set[T], acc: S, f: (T, S, S=>S) => S, g: S => S): S = {
-    if (ts.isEmpty) g(acc)
-    else f(ts.head, acc, (vss: S) => nd(ts.tail, vss, f, g))
+  def nd[T](ts: Iterable[T], acc: Ans, k: (T, Ans, Ans=>Ans) => Ans, m: Ans=>Ans): Ans = {
+    if (ts.isEmpty) m(acc)
+    else k(ts.head, acc, (ans: Ans) => nd(ts.tail, ans, k, m))
   }
 
-  def aeval(e: Expr, env: Env, store: BStore, time: Time, cont: Cont): Ans = {
+  def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = {
     val new_time = (e::time).take(k)
     e match {
       case Let(x, App(f, ae), e) =>
-        val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-        nd[Clos, Ans](closures, Set[VS](), { case (clos, clsacc, clsnd) =>
+        val closures = atomicEval(f, env, store)
+        nd[Storable](closures, Set[VS](), { case (clos, clsacc, clsnd) =>
           val Clos(Lam(v, body), c_env) = clos
           val baddr = allocBind(v, new_time)
           val new_cenv = c_env + (v -> baddr)
           val new_store = store.update(baddr, atomicEval(ae, env, store))
           aeval(body, new_cenv, new_store, new_time, (bdvss: Set[VS]) => {
-            nd[VS, Ans](bdvss, Set[VS](), { case (vs, bdacc, bdnd) =>
+            nd[VS](bdvss, Set[VS](), { case (vs, bdacc, bdnd) =>
               val VS(vals, time, store) = vs
               val baddr = allocBind(x, time)
               val new_env = env + (x -> baddr)
               val new_store = store.update(baddr, vals)
               aeval(e, new_env, new_store, time, { case evss => bdnd(bdacc ++ evss) })
-            }, { 
-              case evss => clsnd(evss ++ clsacc) 
-            })
+            }, { case evss => clsnd(evss ++ clsacc) })
           })
         },
-        cont)
+        continue)
   
       case ae if isAtomic(ae) =>
         val ds = atomicEval(ae, env, store)
-        cont(Set(VS(ds, new_time, store)))
+        continue(Set(VS(ds, new_time, store)))
     }
   }
 
@@ -61,7 +59,7 @@ object RefuncCPSNoCacheBF {
     }
   }
 
-  def aeval(e: Expr, env: Env, store: BStore, time: Time, cont: Cont): Set[VS] = {
+  def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Set[VS] = {
     val new_time = (e::time).take(k)
     e match {
       case Let(x, App(f, ae), e) =>
@@ -80,11 +78,11 @@ object RefuncCPSNoCacheBF {
             val new_store = store.update(baddr, vals)
             aeval(e, new_env, new_store, time, (evss: Set[VS]) => { ndk(evss++acc) })
           },
-          cont)
+          continue)
         })
       case ae if isAtomic(ae) =>
         val ds = atomicEval(ae, env, store)
-        cont(Set(VS(ds, new_time, store)))
+        continue(Set(VS(ds, new_time, store)))
     }
   }
 

@@ -1362,28 +1362,33 @@ with type @Ans => Ans@. The function @aeval@ does not return: instead, it calls
 
 \textbf{Nondeterminism Abstractions.}
 To handle the inevitable nondeterminism, we define a generic function @nd@ as follows:
+
 \begin{lstlisting}
-def nd[T,S](ts: Set[T], acc: S, f: (T, S, S => S) => S, g: S => S): S = {
-  if (ts.isEmpty) g(acc)
-  else f(ts.head, acc, (vss: S) => nd(ts.tail, vss, f, g))
+def nd[T](ts: Iterable[T], acc: Ans, k: (T, Ans, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
+  if (ts.isEmpty) m(acc)
+  else k(ts.head, acc, (ans: Ans) => nd(ts.tail, ans, k, m))
 }
 \end{lstlisting}
 
-Given a set of elements of type @T@, an initial accumulated value of type @S@, a function @f@
-that works on element type @T@ and accumulated type @S@, and a function @g@ that
-works on and returns a value of type @S@, @nd@ applies @f@ to each element in the
-set iteratively, accumulates the value and finally applies @g@ on it.
+Given a collection of elements of type @T@, an initial accumlated value of type 
+@Ans@, a function @k@ that works on element's type @T@ and accumulated value's 
+type @Ans@ (note that @k@ also takes a continuation of type @Ans=>Ans@), 
+and a function @m@ that works on and returns a value of type @Ans@, 
+@nd@ chooses an element in the collection and applies @k@ to it, accumulates 
+the value and finally applies @m@ on the accumulated value when there is no element 
+in the collection.
 
 If we look at @continue@ and @ndcontinue@ in the disentangled AAM, we will find
 that @nd@ is an abstraction of those two functions. In function @continue@,
 there are two out calls to @ndcontinue@ and @drive_step@, this is the reason why
-we have functions @f@ and @g@ in @nd@.
+we have functions @k@ and @m@ in @nd@.
 
 Readers familiar with functional programming may think of @fold@ at this point; indeed,
 it is an implementation of @fold@ in continuation style. But here we have two
-continuations, one for the next element in the set, and one for the final result.
+continuations, one for the next element in the collection, and one for the final result.
 This is sometimes referred to as an extended continuation-passing style (ECPS)
-that has a continuation and a meta-continuation \cite{Danvy:1990:AC:91556.91622}.
+that function @k@ is a normal continuation and @m@ is a meta-continuation 
+\cite{Danvy:1990:AC:91556.91622}.
 
 \textbf{Evaluation without Caching.}
 Since our first version of @aeval@ implements the nondeterministic
@@ -1396,29 +1401,23 @@ returned to the upper fork point.
 
 \begin{lstlisting}
 case Let(x, App(f, ae), e) =>
-  val closures = aeval(f, env, store).asInstanceOf[Set[Clos]]
-  nd[Clos, Ans](closures, Set[VS](), { case (clos, clsacc, clsnd) =>
+  val closures = atomicEval(f, env, store)
+  nd[Storable](closures, Set[VS](), { case (clos, clsacc, clsnd) =>
     val Clos(Lam(v, body), c_env) = clos
     val baddr = allocBind(v, new_time)
     val new_cenv = c_env + (v -> baddr)
-    val new_store = store.update(baddr, aeval(ae, env, store))
+    val new_store = store.update(baddr, atomicEval(ae, env, store))
     aeval(body, new_cenv, new_store, new_time, (bdvss: Set[VS]) => {
-      nd[VS, Ans](bdvss, Set[VS](), { case (vs, bdacc, bdnd) =>
+      nd[VS](bdvss, Set[VS](), { case (vs, bdacc, bdnd) =>
         val VS(vals, time, store) = vs
         val baddr = allocBind(x, time)
         val new_env = env + (x -> baddr)
         val new_store = store.update(baddr, vals)
-        aeval(e, new_env, new_store, time, { 
-          /* accumulate the values of one path, and call next body expression of f */
-          case evss => bdnd(bdacc ++ evss) 
-        })
-      }, { 
-        /* accumulate the values of paths, and call next target closure */
-        case evss => clsnd(evss ++ clsacc) 
-      })
+        /* evaluates and accumluates the values of one path, then call bdnd */
+        aeval(e, new_env, new_store, time, { case evss => bdnd(bdacc++evss) }) 
+      }, { case evss => clsnd(evss++clsacc) }) /* accumulate the values of (multiple) paths, then call clsnd */
     })
-  },
-  continue)
+  }, continue)
 \end{lstlisting}
 
 The outer call to @nd@ evaluates over the set of possible closures of
@@ -1533,26 +1532,26 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: 
     val new_time = config.tick 
     e match {
       case Let(x, App(f, ae), e) =>
-        val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-        nd[Clos, Ans](closures, Ans(Set[VS](), new_cache), { 
+        val closures = atomicEval(f, env, store)
+        nd[Storable](closures, Ans(Set[VS](), new_cache), {
           case (Clos(Lam(v, body), c_env), clsans, clsnd) =>
             ...... /* sets vairables, e.g., new_cenv and new_store */
             aeval(body, new_cenv, new_store, new_time, clsans.cache, { case Ans(bdvss, bdcache) =>
-              nd[VS, Ans](bdvss, Ans(Set[VS](), bdcache), { 
+              nd[VS](bdvss, Ans(Set[VS](), bdcache), {
                 case (VS(vals, time, vssstore), bdans, bdnd) =>
                   ...... /* sets variables, e.g., new_env and new_store */
-                  aeval(e, new_env, new_store, time, bdans.cache, { 
+                  aeval(e, new_env, new_store, time, bdans.cache, {
                     /* updates the out cache after evaluated to the end of one path  */
                     case Ans(evss, ecache) => bdnd(bdans ++ Ans(evss, ecache.outUpdate(config, evss)))
                   })
               }, { case eans => clsnd(eans ++ clsans) })
             })
-        }, 
-        cont)
+        },
+        continue)
 
       case ae if isAtomic(ae) =>
         val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
-        cont(Ans(vs, new_cache.outUpdate(config, vs)))
+        continue(Ans(vs, new_cache.outUpdate(config, vs)))
     }
   }
 }
@@ -1686,48 +1685,50 @@ This corresponds to the extended continuation-passing style.
 But in our defining language (Scala), the delimited controls rely on the continuation-passing 
 transformation which is only one layer.
 
-To address this problem, we reintroduce two operators @nd@ and @ndcps@ for handling 
-non-deterministic choices in a way that mimics extended continuation-passing style.
+To address this problem, we reintroduce two operators @nd@ and @choices@ for handling 
+nondeterministic choices in a way that is direct-style but mimics extended 
+continuation-passing style.
 
 \textbf{Nondeterminism Operators, Again.}
-The first operator @nd@ is simplified from the previous one, but specialized with type 
-@Ans@ and @Cache@. We may still keep the types generic, but the presentation clearly, 
-exposing @Cache@ explictly reveals that cache should be monotonically accumulated to 
-the rest of computation. Now @nd@ only takes a function @f@ that applies on type 
-@(T, Cache)@ where the value of type @T@ comes from the set, and @nd@ performs recursive 
-call on itself over elements in the set @ts@. We also move the accumulation operation 
+The first operator @nd@ is adapted from the previous one, but here @nd@ has only one 
+continuation @k@. Introducing @Cache@ explicitly as the part of arguments of 
+continuation @k@ reveals that cache should be monotonically accumulated to 
+the rest of computation. Now the only continuation @k@ applies on type @(T, Cache)@ where
+the value of type @T@ comes from the collection, and @nd@ performs recursive invocation
+on itself over elements in the collection @ts@. We also move the accumulation operation
 (@++@) inside of @nd@.
 
 \begin{lstlisting}
-def nd[T](ts: Set[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
+def nd[T](ts: Iterable[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
   if (ts.isEmpty) acc
   else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
 }
 \end{lstlisting}
 
-The second operator @ndcps@ is implemented with delimited control operator 
+The second operator @choices@ is implemented with delimited control operator 
 @shift@ but simply calls our first operator @nd@ in body.
 
 \begin{lstlisting}
-def ndcps[T](ts: Set[T], acc: Ans): (T, Cache) @cps[Ans] = shift { f: (((T, Cache)) => Ans) =>
-  nd(ts, acc, f)
+def choices[T](ts: Iterable[T], cache: Cache): (T, Cache) @cps[Ans] = shift {
+  f: (((T, Cache)) => Ans) => nd(ts, Ans(Set[VS](), cache), f)
 }
 \end{lstlisting}
 
-The function @ndcps@ takes two arguments: a set of elements with type @T@, 
+The function @choices@ takes two arguments: a set of elements with type @T@, 
 and an initial accumulated value of type @Ans@.
-The @ndcps@ iteratively returns an element from the set along with the latest cache, 
+The @choices@ iteratively returns an element from the collection along with the latest cache, 
 and the return type is also annotated by \verb|@cps[Ans]|. 
-This annotation denotes the final returned value of @ndcps@ is type @Ans@.
+This annotation denotes the final returned value of @choices@ is type @Ans@.
 The @f@ introduced by the @shift@ operator is the delimited continuation from the 
-call-site of @ndcps@.
+call-site of @choices@.
 
 Now we can use these two operators to redefine @aeval@.
 We add an annotation \verb|@cps[Ans]| on the return type of the @aeval@ function.
 Then, for every nondeterministic choice in the abstract interpreter, we can simply call 
-@ndcps@ on the set of possible choices and write the program sequentially as a concrete 
-interpreter. @ndcps@ also returns the latest cache to its left-hand side definition.
-The cache is still accumulated to the next call to @ndcps@ or @aeval@, 
+@choices@ on the set of possible choices and write the program sequentially as concrete 
+interpreters, and the subsequent statements and expressions become the delimited continuation
+@f@. @choices@ also returns the latest cache to its left-hand side definition.
+The cache is still accumulated to the next call to @choices@ or @aeval@, 
 given the fact that the abstract interpreter should always use the latest cache.
 
 \begin{lstlisting}
@@ -1739,14 +1740,14 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[
     val new_cache = cache.outUpdate(config, cache.inGet(config))
     e match {
       case Let(x, App(f, ae), e) =>
-        val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-        val (Clos(Lam(v, body), c_env), clscache) = ndcps[Clos](closures, Ans(Set[VS](), new_cache))
+        val closures = atomicEval(f, env, store)
+        val (Clos(Lam(v, body), c_env), clscache) = choices[Storable](closures, new_cache)
         val vbaddr = allocBind(v, new_time)
         val new_cenv = c_env + (v -> vbaddr)
         val new_store = store.update(vbaddr, atomicEval(ae, env, store))
         /* evaluates the function application App(f, ae) */
         val Ans(bdvss, bdcache) = aeval(body, new_cenv, new_store, new_time, clscache)
-        val (VS(vals, time, vsstore), vscache) = ndcps[VS](bdvss, Ans(Set[VS](), bdcache))
+        val (VS(vals, time, vsstore), vscache) = choices[VS](bdvss, bdcache)
         val baddr = allocBind(x, time)
         val new_env = env + (x -> baddr)
         val new_vsstore = vsstore.update(baddr, vals)
@@ -1763,7 +1764,7 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[
 \end{lstlisting}
 
 The function @analyze@ is also changed by adding a @reset@ operator around the function 
-call to @aeval@. The afterwards updating on cache becomes sequential.
+call to @aeval@ to set the delimiter. The afterwards updating on cache becomes sequential.
 
 \begin{lstlisting}
 def analyze(e: Expr) = {

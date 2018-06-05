@@ -18,9 +18,9 @@ object RefuncCPS {
     else k(ts.head, acc, (ans: Ans) => nd(ts.tail, ans, k, m))
   }
   
-  def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, cont: Cont): Ans = {
+  def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
     val config = Config(e, env, store, time)
-    if (cache.outContains(config)) cont(Ans(cache.outGet(config), cache))
+    if (cache.outContains(config)) continue(Ans(cache.outGet(config), cache))
     else {
       val new_time = config.tick
       val new_cache = cache.outUpdate(config, cache.inGet(config))
@@ -31,7 +31,7 @@ object RefuncCPS {
           val new_env = env + (x -> baddr)
           val new_store = store.update(baddr, atomicEval(ae, env, store))
           aeval(e, new_env, new_store, new_time, new_cache, { 
-            case Ans(evss, ecache) => cont(Ans(evss, ecache.outUpdate(config, evss)))
+            case Ans(evss, ecache) => continue(Ans(evss, ecache.outUpdate(config, evss)))
           })
 
         case Letrec(bds, body) => 
@@ -40,7 +40,7 @@ object RefuncCPS {
           val new_store = bds.foldLeft(store)((accbst: BStore, bd: B) => 
             accbst.update(allocBind(bd.x, new_time), atomicEval(bd.e, new_env, accbst)))
           aeval(body, new_env, new_store, new_time, new_cache, { 
-            case Ans(bdss, bdcache) => cont(Ans(bdss, bdcache.outUpdate(config, bdss)))
+            case Ans(bdss, bdcache) => continue(Ans(bdss, bdcache.outUpdate(config, bdss)))
           })
 
         case Let(x, App(f, ae), e) =>
@@ -65,11 +65,11 @@ object RefuncCPS {
                   })
               })
           }, 
-          cont)
+          continue)
     
         case ae if isAtomic(ae) =>
           val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
-          cont(Ans(vs, new_cache.outUpdate(config, vs)))
+          continue(Ans(vs, new_cache.outUpdate(config, vs)))
       }
     }
   }
@@ -100,10 +100,10 @@ object RefuncCPSBF {
     else f(ts.head, acc, cache, (vss: Set[VS], cache: Cache) => nd(ts.tail, vss, cache, f, g))
   }
 
-  def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, cont: Cont): (Set[VS], Cache) = {
+  def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): (Set[VS], Cache) = {
     val config = Config(e, env, store, time)
     if (cache.outContains(config)) {
-      return cont(cache.outGet(config), cache)
+      return continue(cache.outGet(config), cache)
     }
 
     val new_cache = cache.outUpdate(config, cache.inGet(config))
@@ -129,12 +129,12 @@ object RefuncCPSBF {
               ndk(evss++acc, cache) 
             })
           },
-          (ans: Set[VS], cache: Cache) => cont(ans, cache.outUpdate(config, ans)))
+          (ans: Set[VS], cache: Cache) => continue(ans, cache.outUpdate(config, ans)))
         })
   
       case ae if isAtomic(ae) =>
         val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
-        cont(vs, new_cache.outUpdate(config, vs))
+        continue(vs, new_cache.outUpdate(config, vs))
     }
   }
 
