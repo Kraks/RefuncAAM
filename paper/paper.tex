@@ -771,9 +771,11 @@ analyses with different sensitivities, as well as to perform a finite
 state space analysis\cite{Gilray:2016:ACP:2951913.2951936}.
 To effectively approximate the runtime behavior, we introduce a finite
 program contour @time@ that encodes the program execution history.
-We use a list of execution contexts (expressions) to represent this, and
-as we will see in Section~\ref{kcfainst}, by applying different @tick@
-functions on the timestamp, we are able to obtain a family of analyses.
+The function @tick@ is used to refresh the "time" and get a "new time".
+We use a list of execution contexts (expressions) to represent the finite 
+program contour, and as we will see in Section~\ref{kcfainst}, by applying 
+different @tick@ functions on the timestamp, we are able to obtain a 
+family of analyses.
 
 \begin{lstlisting}
 type Time = List[Expr]
@@ -845,7 +847,7 @@ We have two cases to consider (code shown below):
 
 \begin{lstlisting}
 def step(s: State): List[State] = {
-  val new_time = tick(s)
+  val new_time = s.tick
   s match {
     case State(Let(x, App(f, ae), e), env, bstore, kstore, kaddr, time) =>
       val closures = atomicEval(f, env, bstore).toList
@@ -878,11 +880,13 @@ in the allocated addresses.
 Before transferring to successor states, we must use the @tick@ function to refresh the 
 timestamp, and then use this new timestamp for successors when allocating addresses.
 The @tick@ function returns the $k$ front-most expressions given the current state and its
-time history.
+time history. We implement @tick@ as a public method of case class @State@.
 
 \begin{lstlisting}
 def k: Int = 0
-def tick(s: State): Time = (s.e :: s.time).take(k)
+case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, kaddr: KAddr, time: Time) {
+  def tick: Time = (e :: time).take(k)
+}
 \end{lstlisting}
 
 If we instantiate $k$ to be $0$, the history degenerates to an empty list, and we obtain
@@ -962,7 +966,7 @@ from the function application @App(f, ae)@.
 
 \begin{lstlisting}
 def step(s: State): List[State] = {
-  val new_time = tick(s)
+  val new_time = s.tick
   s match {
     case State(Let(x, App(f, ae), e), env, bstore, konts, time) if isAtomic(ae) =>
       for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
@@ -1174,7 +1178,7 @@ def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
     case nds =>
       val s = nds.toState
       val new_seen = if (seen.contains(s)) seen else seen+s
-      val newTime = tick(nds)
+      val newTime = nds.tick
       val new_ndstate = nds match {
         case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndkonts) =>
           ......
@@ -1218,7 +1222,7 @@ def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
     case nds =>
       val s = nds.toState
       val new_seen = if (seen.contains(s)) seen else seen + s
-      val new_time = tick(nds)
+      val new_time = nds.tick
       nds match {
         case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>
           ......
@@ -1240,7 +1244,7 @@ The astute reader will notice a vague shape of interpreter in continuation style
 \begin{lstlisting}
 def continue(nds: NDState, seen: Set[State]): Set[State] = {
   val NDState(ae, env, bstore, konts, time, ndk) = nds
-  val new_time = tick(nds)
+  val new_time = nds.tick
   konts match {
     case Nil => ndcontinue(nds, seen)
     case Frame(x, e, f_env)::konts =>
@@ -1319,31 +1323,33 @@ through refunctionalization and caching.
 
 To properly represent final values, we introduce the case class @VS@ which
 contains a set of storable values, a timestamp, and a store.
+
 \begin{lstlisting}
 case class VS(vals: Set[Storable], time: Time, store: BStore)
 \end{lstlisting}
+
 An instance of @VS@ represents the computational result of one path in
 the nondeterministic evaluation.
 The reason that we include a store is that there might be a case in which two paths
 have the same values but different accumulated side effects (e.g., memory allocations).
 Since the whole computation is nondeterministic, the type of the final result
 values is a collection @Set[VS]@. For convenience, we define it as a type @Ans@:
+
 \begin{lstlisting}
 type Ans = Set[VS]
 \end{lstlisting}
 
 As previously mentioned, the components of states are lifted as arguments to
 @aeval@. Therefore, the pattern matching on the state becomes just a match on
-expression @e@.
+expression @e@. The shape of function @aeval@ looks like:
+
 \begin{lstlisting}
 type Cont = Ans => Ans
 def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = {
-  val new_time = (e::time).take(k)
+  val new_time = ......
   e match {
-    case Let(x, App(f, ae), e) =>
-      ......
-    case ae if isAtomic(ae) =>
-      ......
+    case Let(x, App(f, ae), e) => ......
+    case ae if isAtomic(ae) => ......
   }
 }
 \end{lstlisting}
@@ -1455,6 +1461,7 @@ programs that may diverge.
 We do not have the concept of an explicit stack or state,
 so to represent the cache we introduce a configuration @Config@ as
 a state-like definition which borrows the components from state, sans continuations.
+
 \begin{lstlisting}
 case class Config(e: Expr, env: Env, store: BStore, time: Time)
 \end{lstlisting}
@@ -1523,7 +1530,7 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: 
   if (cache.outContains(config)) cont(Ans(cache.outGet(config), cache))
   else {
     val new_cache = cache.outUpdate(config, cache.inGet(config))
-    val new_time = (e::time).take(k)
+    val new_time = config.tick 
     e match {
       case Let(x, App(f, ae), e) =>
         val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
@@ -1728,7 +1735,7 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[
   val config = Config(e, env, store, time)
   if (cache.outContains(config)) Ans(cache.outGet(config), cache)
   else {
-    val new_time = (e::time).take(k)
+    val new_time = config.tick
     val new_cache = cache.outUpdate(config, cache.inGet(config))
     e match {
       case Let(x, App(f, ae), e) =>
