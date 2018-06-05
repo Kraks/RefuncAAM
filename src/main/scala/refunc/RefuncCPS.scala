@@ -6,16 +6,10 @@ import ANFAAM._
 
 object RefuncCPS {
   type Cont = Ans => Ans
-  
-  @deprecated
-  def nd[T,S](ts: Iterable[T], acc: S, f: (T, S, S=>S) => S, g: S => S): S = {
-    if (ts.isEmpty) g(acc)
-    else f(ts.head, acc, (vss: S) => nd(ts.tail, vss, f, g))
-  }
 
-  def nd[T](ts: Iterable[T], acc: Ans, k: (T, Ans, Ans=>Ans) => Ans, m: Ans=>Ans): Ans = {
+  def nd[T](ts: Iterable[T], acc: Ans, k: (T, Cache, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
     if (ts.isEmpty) m(acc)
-    else k(ts.head, acc, (ans: Ans) => nd(ts.tail, ans, k, m))
+    else k(ts.head, acc.cache, (ans: Ans) => nd(ts.tail, acc ++ ans, k, m))
   }
   
   def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
@@ -46,23 +40,20 @@ object RefuncCPS {
         case Let(x, App(f, ae), e) =>
           val closures = atomicEval(f, env, store)
           nd[Storable](closures, Ans(Set[VS](), new_cache), { 
-            case (Clos(Lam(v, body), c_env), clsans, clsnd) =>
+            case (Clos(Lam(v, body), c_env), clscache, clsnd) =>
               val vbaddr = allocBind(v, new_time)
               val new_cenv = c_env + (v -> vbaddr)
               val new_store = store.update(vbaddr, atomicEval(ae, env, store))
-              aeval(body, new_cenv, new_store, new_time, clsans.cache, { 
-                case Ans(bdvss, bdcache) =>
-                  nd[VS](bdvss, Ans(Set[VS](), bdcache), { 
-                    case (VS(vals, time, vssstore), bdans, bdnd) =>
-                      val baddr = allocBind(x, time)
-                      val new_env = env + (x -> baddr)
-                      val new_store = vssstore.update(baddr, vals)
-                      aeval(e, new_env, new_store, time, bdans.cache, { 
-                        case Ans(evss, ecache) => bdnd(bdans ++ Ans(evss, ecache.outUpdate(config, evss)))
-                      })
-                  }, { 
-                    case eans => clsnd(eans ++ clsans)
-                  })
+              aeval(body, new_cenv, new_store, new_time, clscache, { case Ans(bdvss, bdcache) =>
+                nd[VS](bdvss, Ans(Set[VS](), bdcache), { 
+                  case (VS(vals, time, vssstore), bdvsscache, bdnd) =>
+                    val baddr = allocBind(x, time)
+                    val new_env = env + (x -> baddr)
+                    val new_store = vssstore.update(baddr, vals)
+                    aeval(e, new_env, new_store, time, bdvsscache, { 
+                      case Ans(evss, ecache) => bdnd(Ans(evss, ecache.outUpdate(config, evss)))
+                    })
+                }, clsnd)
               })
           }, 
           continue)
