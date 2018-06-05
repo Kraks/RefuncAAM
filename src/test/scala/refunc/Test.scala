@@ -31,7 +31,7 @@ trait RefuncTest extends FunSuite {
   
   val description = "None"
 
-  /* Assertions for TDProgTest, TNDProgTest and NTTNDProgTest. */
+  /* Assertions for TDProgTest and TNDProgTest. */
   def runTest(id: Int, prog: Expr, initenv: Env, initstore: BStore) {
     for (k <- 0 to K) {
       ANFAAM.k = k
@@ -98,6 +98,11 @@ trait RefuncTest extends FunSuite {
          * with side effects (DirectStyleSideEff). */
         assert(summarizeState(SmallStepP4F.analyze(prog, initenv, initstore)) ==
                summarizeVSS(DirectStyleSideEff.analyze(prog, initenv, initstore).vss))
+
+        /* Since here we test terminated programs, so RefuncCPS without caching should have
+         * the same result against to RefuncCPS with caching. */
+        assert(RefuncCPS.analyze(prog, initenv, initstore).vss ==
+               RefuncCPSNoCache.analyze(prog, initenv, initstore))
       }
     }
   }

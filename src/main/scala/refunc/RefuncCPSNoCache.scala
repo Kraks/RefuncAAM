@@ -17,6 +17,19 @@ object RefuncCPSNoCache {
   def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = {
     val new_time = (e::time).take(k)
     e match {
+      case Let(x, ae, e) if isAtomic(ae) =>
+        val baddr = allocBind(x, new_time)
+        val new_env = env + (x -> baddr)
+        val new_store = store.update(baddr, atomicEval(ae, env, store))
+        aeval(e, new_env, new_store, new_time, continue)
+
+      case Letrec(bds, body) => 
+        val new_env = bds.foldLeft(env)((accenv: Env, bd: B) =>
+          accenv + (bd.x -> allocBind(bd.x, new_time)))
+        val new_store = bds.foldLeft(store)((accbst: BStore, bd: B) => 
+          accbst.update(allocBind(bd.x, new_time), atomicEval(bd.e, new_env, accbst)))
+        aeval(body, new_env, new_store, new_time, continue)
+      
       case Let(x, App(f, ae), e) =>
         val closures = atomicEval(f, env, store)
         nd[Storable](closures, Set[VS](), { case (clos, clsnd) =>
