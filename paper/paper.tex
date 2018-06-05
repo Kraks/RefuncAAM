@@ -1181,9 +1181,9 @@ def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
       val newTime = nds.tick
       val new_ndstate = nds match {
         case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndkonts) =>
-          ......
+          ...
         case NDState(ae, env, bstore, konts, time, ndkonts) if isAtomic(ae) =>
-          ......
+          ...
       }
       drive_step(new_ndstate, new_seen)
   }
@@ -1225,7 +1225,7 @@ def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
       val new_time = nds.tick
       nds match {
         case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>
-          ......
+          ...
           drive_step(NDState(body, new_env, new_store, new_frames, new_time, new_ndk), new_seen)
         case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
           continue(nds, new_seen)
@@ -1346,10 +1346,10 @@ expression @e@. The shape of function @aeval@ looks like:
 \begin{lstlisting}
 type Cont = Ans => Ans
 def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = {
-  val new_time = ......
+  val new_time = ...
   e match {
-    case Let(x, App(f, ae), e) => ......
-    case ae if isAtomic(ae) => ......
+    case Let(x, App(f, ae), e) => ...
+    case ae if isAtomic(ae) => ...
   }
 }
 \end{lstlisting}
@@ -1535,11 +1535,11 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: 
         val closures = atomicEval(f, env, store)
         nd[Storable](closures, Ans(Set[VS](), new_cache), {
           case (Clos(Lam(v, body), c_env), clsans, clsnd) =>
-            ...... /* sets vairables, e.g., new_cenv and new_store */
+            ... /* sets vairables, e.g., new_cenv and new_store */
             aeval(body, new_cenv, new_store, new_time, clsans.cache, { case Ans(bdvss, bdcache) =>
               nd[VS](bdvss, Ans(Set[VS](), bdcache), {
                 case (VS(vals, time, vssstore), bdans, bdnd) =>
-                  ...... /* sets variables, e.g., new_env and new_store */
+                  ... /* sets variables, e.g., new_env and new_store */
                   aeval(e, new_env, new_store, time, bdans.cache, {
                     /* updates the out cache after evaluated to the end of one path  */
                     case Ans(evss, ecache) => bdnd(bdans ++ Ans(evss, ecache.outUpdate(config, evss)))
