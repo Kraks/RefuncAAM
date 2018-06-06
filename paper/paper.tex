@@ -939,16 +939,20 @@ a given program.
 
 In this section, we describe a variant of AAM that allows the stack to be
 unbounded which uses a precise call stack as we did in the concrete CESK machine.
-Instead of allocating continuations in the store and embedding
-addresses of continuations in states, we intend to use a list of frames
-to explicitly model the stack.
-By doing so, we recover the call stack as precise as runtimes
-(so called pushdown control-flow analysis), but since
-the stack is unbounded, the analysis is potentially not computable.
-For readers who are not familiar with pushdown analysis, we have a detailed
-discussion in Section~\ref{pdcfarevisit}.
-The reason we show it here is to establish an artifact with precise call/return 
-matching used for the next step of transformation.
+Instead of allocating continuations in the store and embedding addresses of 
+continuations in states, we intend to use a list of frames to explicitly model 
+the stack. By doing so, we recover the call stack as precise as runtimes
+(so called pushdown control-flow analysis), but since the stack is unbounded, 
+the state space is potentially infinite. 
+
+The pushdown AAM with unbounded stack is also described by \citeauthor{van2012systematic} 
+\cite{van2012systematic}. 
+The reason we show it here is to keep the consistency of abstract semantics during 
+transformations -- since the final abstract definitional interpreters simply inherit
+a precise control-flow from its defining language, we also would like to start from a
+pushdown AAM that is also able to precisely match call and returns.
+For readers who are not familiar with pushdown analysis, we have a detailed discussion 
+in Section~\ref{pdcfarevisit}.
 
 In the definition of @State@, the continuation store disappears, and
 component @konts@ becomes a list of frames. 
@@ -1675,9 +1679,9 @@ We have multiple choices of how to proceed:
   \item By representing the extended continuation-passing style with delimited controls,
     we derive a new form of abstract interpreters in direct-style.
   \item In fact, we may also just use the same caching algorithm but with side effects such as
-    assignments and mutations to update the cache, and then achieve the same
-    definitional interpreter with pushdown control-flows. In this case, nondeterminism can be
-    easily handled via @for@ comprehension.
+    assignments and mutations to update the cache, and then achieve the same definitional 
+    interpreter with pushdown control-flows. In this case, nondeterminism can be easily 
+    handled via @for@ comprehension.
 \end{itemize}
 
 These coincidences should not be a surprise since existing literature is extraordinarily rich
@@ -1896,6 +1900,9 @@ We use the delimited control operators @shift@ and @reset@ that are implemented 
 and monads are well-known \cite{Danvy:1990:AC:91556.91622, wadler1992essence, danvy1992representing, moggi1991notions}.
 
 \section{Conclusion}\label{sec:conclusion}
+
+% TODO: P4F v.s. direct-style + caching
+% TODO: dyck graph summarization v.s. direct-style + caching
 
 In this functional pearl, we fill the gap between small-step abstract abstract machines 
 and big-step abstract definitional interpreters by developing a series of syntactical 
