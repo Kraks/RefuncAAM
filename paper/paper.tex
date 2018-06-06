@@ -1715,7 +1715,7 @@ def nd[T](ts: Iterable[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
 \end{lstlisting}
 
 The second operator @choices@ is implemented with delimited control operator 
-@shift@ but simply calls our first operator @nd@ in body.
+@shift@ but simply calls our first operator @nd@ in its body.
 
 \begin{lstlisting}
 def choices[T](ts: Iterable[T], cache: Cache): (T, Cache) @cps[Ans] = shift {
@@ -1731,9 +1731,10 @@ This annotation denotes the final returned value of @choices@ is type @Ans@.
 The @f@ is the delimited continuation captured by the @shift@ operator, which
 is form by the statements after @choices@'s call-site.
 
-Now we can use these two operators to redefine @aeval@.
-We add an annotation \verb|@cps[Ans]| on the return type of the @aeval@ function to enable
-applying delimited control operators.
+Now we can use these two operators to redefine @aeval@. The abstract evaluator @aeval@ is
+rewritten in direct-style, so that the last argument @cont@ disappears; we also add an 
+annotation \verb|@cps[Ans]| on the return type to enable using delimited control operators 
+in it.
 Then, for every nondeterministic choice in the abstract interpreter, we can simply call 
 @choices@ on the set of possible choices and write the program sequentially as concrete 
 interpreters, and the subsequent statements and expressions become the delimited continuation
