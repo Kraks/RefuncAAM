@@ -61,7 +61,7 @@ object ANFAAM {
 
   def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
     case Num(i) => Set(NumV(i))
-    case Var(x) => bstore(env(x)).toSet
+    case Var(x) => bstore(env(x))
     case lam@Lam(x, body) => Set(Clos(lam, env))
     case _ => throw new NotImplementedError(e.toString)
   }

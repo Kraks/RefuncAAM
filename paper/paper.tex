@@ -903,11 +903,9 @@ has a built-in mapping that maps the continuation address for @Halt@ to an empty
 continuations. We also provide an empty program contour as our initial time.
 
 \begin{lstlisting}
-def inject(e: Expr): State =
-  State(e, Map(),
-        Store[BAddr, Storable](Map()),
-        Store[KAddr, Cont](Map(Halt -> Set())),
-        Halt, List())
+val mtTime = List();                         val mtStore = Store[BAddr, Storable](Map())
+val mtEnv = Map[String, BAddr]();            val mtKStore = Store[KAddr, Cont](Map(Halt -> Set()))
+def inject(e: Expr): State = State(e, mtEnv, mtStore, mtKStore, Halt, mtTime)
 \end{lstlisting}
 
 However, in contrast to the concrete CESK machine, the @drive@ function performs 
@@ -1332,7 +1330,7 @@ An instance of @VS@ represents the computational result of one path in
 the nondeterministic evaluation.
 The reason that we include a store is that there might be a case in which two paths
 have the same values but different accumulated side effects (e.g., memory allocations).
-Since the whole computation is nondeterministic, the type of the final result
+Since the whole computation is potentially nondeterministic, the type of the final result
 values is a collection @Set[VS]@. For convenience, we define it as a type @Ans@:
 
 \begin{lstlisting}
@@ -1357,121 +1355,124 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = {
 An additional argument @continue@ which has type @Cont@ is also introduced.
 Recall that in the disentangled AAM, the second case in @drive_step@
 makes a call to @continue@. Here, the reemerging @continue@ is a function
-with type @Ans => Ans@. The function @aeval@ does not return: instead, it calls
+of type @Ans => Ans@. The function @aeval@ does not return: instead, it calls
 @continue@ with the result values.
 
 \textbf{Nondeterminism Abstractions.}
 To handle the inevitable nondeterminism, we define a generic function @nd@ as follows:
 
 \begin{lstlisting}
-def nd[T](ts: Iterable[T], acc: Ans, k: (T, Ans, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
+def nd[T](ts: Iterable[T], acc: Ans, k: (T, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
   if (ts.isEmpty) m(acc)
-  else k(ts.head, acc, (ans: Ans) => nd(ts.tail, ans, k, m))
+  else k(ts.head, (ans: Ans) => nd(ts.tail, acc ++ ans, k, m))
 }
 \end{lstlisting}
 
+%TODO: better word to replace `accumulate`
 Given a collection of elements of type @T@, an initial accumlated value of type 
-@Ans@, a function @k@ that works on element's type @T@ and accumulated value's 
-type @Ans@ (note that @k@ also takes a continuation of type @Ans=>Ans@), 
-and a function @m@ that works on and returns a value of type @Ans@, 
-@nd@ chooses an element in the collection and applies @k@ to it, accumulates 
-the value and finally applies @m@ on the accumulated value when there is no element 
-in the collection.
+@Ans@, a function @k@ that works on element's type @T@ and takes a continuation 
+of type @Ans=>Ans@, and a function @m@ that works on and returns a value of type 
+@Ans@ (which is also type @Ans=>Ans@), @nd@ chooses an element in the collection 
+and applies @k@ to it, accumulates the value (@acc++ans@ where the @ans@ is the 
+result comes from @k@) and eventually applies function @m@ on the accumulated 
+value when there is no element in the collection.
 
+%TODO: consider rewrite this paragraph and explain the relation to `continue`.
 If we look at @continue@ and @ndcontinue@ in the disentangled AAM, we will find
 that @nd@ is an abstraction of those two functions. In function @continue@,
-there are two out calls to @ndcontinue@ and @drive_step@, this is the reason why
-we have functions @k@ and @m@ in @nd@.
+there are two out calls to @drive_step@ and @ndcontinue@, here the application
+of @k@ simulates @drive_step@, and @m@ simulates @ndcontinue@.
 
 Readers familiar with functional programming may think of @fold@ at this point; indeed,
-it is an implementation of @fold@ in continuation style. But here we have two
-continuations, one for the next element in the collection, and one for the final result.
+it is a variant implementation of @fold@ in continuation style. But here we have two
+continuations, one for the next element in the collection, and one for the eventual result.
 This is sometimes referred to as an extended continuation-passing style (ECPS)
 that function @k@ is a normal continuation and @m@ is a meta-continuation 
 \cite{Danvy:1990:AC:91556.91622}.
 
 \textbf{Evaluation without Caching.}
-Since our first version of @aeval@ implements the nondeterministic
-evaluation, given the defined @nd@, the evaluation function @aeval@ can be easily
-defined. In the case that @e@ is a @let@ expression,
-we invoke @nd@ twice and perform a nesting two-step, depth-first evaluation
-over possible values of @App(f, ae)@.
-The values of branches from a fork point will be accumulated, and then
-returned to the upper fork point.
+Since our first version of @aeval@ implements only the nondeterministic evaluation, 
+given the defined @nd@ operator, the evaluation function @aeval@ can be easily defined. 
+In the case that @e@ is a @let@ expression, we invoke @nd@ twice and perform a nesting 
+two-step, depth-first evaluation over possible values of @App(f, ae)@.
+The values of branches from a fork point will be accumulated inside of @nd@, and 
+then returned to the upper fork point.
 
 \begin{lstlisting}
 case Let(x, App(f, ae), e) =>
   val closures = atomicEval(f, env, store)
-  nd[Storable](closures, Set[VS](), { case (clos, clsacc, clsnd) =>
+  nd[Storable](closures, Set[VS](), { case (clos, clsnd) =>
     val Clos(Lam(v, body), c_env) = clos
     val baddr = allocBind(v, new_time)
     val new_cenv = c_env + (v -> baddr)
     val new_store = store.update(baddr, atomicEval(ae, env, store))
     aeval(body, new_cenv, new_store, new_time, (bdvss: Set[VS]) => {
-      nd[VS](bdvss, Set[VS](), { case (vs, bdacc, bdnd) =>
+      nd[VS](bdvss, Set[VS](), { case (vs, bdnd) =>
         val VS(vals, time, store) = vs
         val baddr = allocBind(x, time)
         val new_env = env + (x -> baddr)
         val new_store = store.update(baddr, vals)
-        /* evaluates and accumluates the values of one path, then call bdnd */
-        aeval(e, new_env, new_store, time, { case evss => bdnd(bdacc++evss) }) 
-      }, { case evss => clsnd(evss++clsacc) }) /* accumulate the values of (multiple) paths, then call clsnd */
+        /* evaluate e with new env and store, then transfer to next body's value */
+        aeval(e, new_env, new_store, time, bdnd)
+      }, clsnd) /* transfer to next target closure of f */
     })
-  }, continue)
+  },
+  continue)
 \end{lstlisting}
 
-The outer call to @nd@ evaluates over the set of possible closures of
+The outer application of @nd@ evaluates over the set of possible target closures of
 @f@. For each such closure, we go into its body with a new environment and a new store.
 Remember that the function @aeval@ returns a set of @VS@ objects to its continuation,
 so the continuation argument @bdvss@ is a set of @VS@ objects which represent values
 from multiple computation paths when evaluating this single @body@ expression.
 
-We next consider the inner call to @nd@, which evaluates over the set of body values @bdvss@.
-For each @VS@, the timestamp and store in @VS@ will be instantiated to
-@aeval@.
-The inner application of @aeval@ returns a set of values of one computation path to its
-continuation, where the continuation will accumulate the result and transfer
-evaluation to the next body value.
+We next consider the inner application of @nd@, which evaluates over the set of body's 
+value/stores @bdvss@. For each @VS@, the timestamp and store in @VS@ will be instantiated to
+the next application of @aeval@. The inner application of @aeval@ evaluates @e@ with the
+substituted environment and store, then returns a set of values of one computation path 
+to its continuation @bdnd@, where the continuation will accumulate the result and 
+transfer evaluation to the next body value.
+
+The meta-continuation of the inner @nd@ is @clsnd@, meaning that we need to transfer 
+to the next target closure of @f@. The meta-continuation of the outer @nd@ is just 
+@continue@, as what we normally would do for CPS interpreters.
 
 \begin{lstlisting}
-case ae if isAtomic(ae) =>
-  val ds = atomicEval(ae, env, store); continue(Set(VS(ds, new_time, store)))
+case ae if isAtomic(ae) => val ds = atomicEval(ae, env, store); continue(Set(VS(ds, new_time, store)))
 \end{lstlisting}
 
-If the expression is atomic, then we simply construct a new instance of
-@VS@ and return it to the @continue@ function.
+If the argument expression @e@ is atomic, which is the second case of match, we simply 
+construct a new instance of @VS@ and return it to the @continue@ function.
 
-At the end, the initial invocation to @aeval@ is passed with an identity
-function as a halting continuation:
+At the end, the initial invocation to @aeval@ is passed with initial environments,
+especially an identity function as the halting continuation:
 \begin{lstlisting}
-def analyze(e: Expr) =
-  aeval(e, Map[String, BAddr](), Store[BAddr, Storable](Map()), List(), (ans => ans))
+def analyze(e: Expr) = aeval(e, mtEnv, mtStore, mtTime, (ans => ans))
 \end{lstlisting}
 
 \subsection{Caching Fixed-Points}
 
 Based on the refunctionalized AAM from the last section, we use the same nondeterministic
-operator @nd@, but further extend it to a fixed-point cached evaluation in this section.
+operator @nd@, but further extend it to a fixed-point cached version in this section.
 The fixed-point caching algorithm performs a sound over-approximation of all possible
 concrete reachable paths and values, and also prevents non-termination when analyzing 
 programs that may diverge.
 
 \textbf{Configuration.}
-We do not have the concept of an explicit stack or state,
-so to represent the cache we introduce a configuration @Config@ as
-a state-like definition which borrows the components from state, sans continuations.
+We do not have the concept of an explicit stack or state, so to represent the cache 
+we introduce a configuration @Config@ as a state-like definition which borrows the 
+components from state, sans continuations.
 
 \begin{lstlisting}
 case class Config(e: Expr, env: Env, store: BStore, time: Time)
 \end{lstlisting}
 
 \textbf{Cache.}
-Recall that the latent assumption of the worklist algorithm in classical AAM
-is that if we have seen a state @s@, it means we also have seen the successors
-of state @s@.
-The caching algorithm we adopt here replays the same assumption but in a big-step
-manner: if we have seen the configuration @c@, then it means we also have seen
-the values that are evaluated by the configuration @c@.
+Recall that the latent assumption of the worklist algorithm in classical AAM is that 
+if we have seen a state @s@, it means we also have seen all the successors of state @s@.
+The caching algorithm we adopt here replays the same assumption but in a big-step 
+manner: if we have seen the configuration @c@, then it means we also have seen the 
+values that are evaluated from the configuration @c@.
 Here we will apply the fixed-point caching algorithm as described from
 \citeauthor{darais2017abstracting}'s ADI paper \cite{darais2017abstracting}.
 
@@ -1486,27 +1487,48 @@ case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
 }
 \end{lstlisting}
 
-The @Cache@ contains two maps @in@ and @out@ which are both mappings from
-configurations to sets of @VS@. The @in@ cache contains mappings from the
-previous iteration of evaluation, and the @out@ cache contains mappings after the current
-iteration of evaluation. Once we have evaluated a term to some values,
-we update the @out@ cache. In the next iteration, we will use the @out@
-from the previous iteration as the @in@ cache for the current iteration.
+The @Cache@ contains two maps @in@ and @out@ which are both mappings from configurations 
+to sets of @VS@. The @in@ cache contains mappings from the previous iteration of evaluation, 
+and the @out@ cache contains mappings after the current iteration of evaluation. 
+Once we have evaluated a term to some values, we update the @out@ cache. In the next 
+iteration, we will use the @out@ from the previous iteration as the @in@ cache for the 
+current iteration.
 
 \textbf{Cache-Passing Style.}
-We can now transform our interpreter into cache-passing style.
-We begin by changing the return type @Ans@ to a case class which contains a @VS@ set and
-a cache.
+We can now transform our interpreter into cache-passing style. We begin by changing the 
+return type @Ans@ to a case class which contains a @VS@ set and a cache. @Ans@ also supports
+its own accumulating operation @++@ which defines as union on @Set[VS]@ and join on caches.
 
 \begin{lstlisting}
-case class Ans(vss: Set[VS], cache: Cache)
+case class Ans(vss: Set[VS], cache: Cache) {
+  def ++(ans: Ans): Ans = { Ans(vss ++ ans.vss, cache.join(ans.cache)) }
+}
 \end{lstlisting}
 
-The skeleton of function @aeval@ largely remains the same.
-Every place which has a value of @Ans@ is also replaced as direct pattern matching so
-that we can use the fields in @Ans@ immediately.
-The cache is used in a monotonic way: each function call to @aeval@ or @nd@ is
-passed with the latest cache from the most recent continuation's result.
+The nondeterministic operator @nd@ is also slightly rewrite to cache-passing style:
+continuation @k@ takes an additional argument of type @Cache@; the current accumulated
+cache @acc.cache@ is exposed to @k@ when applies.
+
+\begin{lstlisting}
+def nd[T](ts: Iterable[T], acc: Ans, k: (T, Cache, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
+  if (ts.isEmpty) m(acc)
+  else k(ts.head, acc.cache, (ans: Ans) => nd(ts.tail, acc ++ ans, k, m))
+}
+\end{lstlisting}
+
+The skeleton of function @aeval@ largely remains the same. 
+
+\begin{lstlisting}
+def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
+  val config = Config(e, env, store, time)
+  if (cache.outContains(config)) cont(Ans(cache.outGet(config), cache))
+  else {
+    val new_cache = cache.outUpdate(config, cache.inGet(config))
+    val new_time = config.tick 
+    e match { ...  }
+  }
+}
+\end{lstlisting}
 
 Upon entering @aeval@, we first determine whether the @out@ cache
 contains some values for the current configuration and use them immediately (if present).
@@ -1517,44 +1539,36 @@ If, however, we have not hit the @out@ cache, we retrieve the values from the @i
 and update the @out@ cache with values from the @in@ cache. This retrieval from the @in@ 
 cache may return an empty set of values if there is no such mapping for the configuration 
 from the previous iteration.
-In reality, we first conservatively assume that all computations can be diverged, and
-if not, we update its values in the mapping after evaluation.
-In terms of partial orders and lattices, it is the case that starts
-the Kleene iteration from the bottom of the lattice.
+In reality, we first conservatively assume that all computations can be diverged, and if 
+not, we update its values in the mapping after evaluation. In terms of partial orders and 
+lattices, it is the case that starts the Kleene iteration from the bottom of the lattice.
+
+The two cases of match are shown below. Note that the cache is used in a monotonic way: 
+each function call to @aeval@ or @nd@ is passed with the latest cache from the most recent 
+continuation of @aeval@ or @nd@.
 
 \begin{lstlisting}
-def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
-  val config = Config(e, env, store, time)
-  /* lookups the out cache, uses the values if contains this config */
-  if (cache.outContains(config)) cont(Ans(cache.outGet(config), cache))
-  else {
-    val new_cache = cache.outUpdate(config, cache.inGet(config))
-    val new_time = config.tick 
-    e match {
-      case Let(x, App(f, ae), e) =>
-        val closures = atomicEval(f, env, store)
-        nd[Storable](closures, Ans(Set[VS](), new_cache), {
-          case (Clos(Lam(v, body), c_env), clsans, clsnd) =>
-            ... /* sets vairables, e.g., new_cenv and new_store */
-            aeval(body, new_cenv, new_store, new_time, clsans.cache, { case Ans(bdvss, bdcache) =>
-              nd[VS](bdvss, Ans(Set[VS](), bdcache), {
-                case (VS(vals, time, vssstore), bdans, bdnd) =>
-                  ... /* sets variables, e.g., new_env and new_store */
-                  aeval(e, new_env, new_store, time, bdans.cache, {
-                    /* updates the out cache after evaluated to the end of one path  */
-                    case Ans(evss, ecache) => bdnd(bdans ++ Ans(evss, ecache.outUpdate(config, evss)))
-                  })
-              }, { case eans => clsnd(eans ++ clsans) })
+case Let(x, App(f, ae), e) =>
+  val closures = atomicEval(f, env, store)
+  nd[Storable](closures, Ans(Set[VS](), new_cache), {
+    case (Clos(Lam(v, body), c_env), clscache, clsnd) =>
+      val vbaddr = allocBind(v, new_time); val new_cenv = c_env + (v -> vbaddr)
+      val new_store = store.update(vbaddr, atomicEval(ae, env, store))
+      aeval(body, new_cenv, new_store, new_time, clscache, { case Ans(bdvss, bdcache) =>
+        nd[VS](bdvss, Ans(Set[VS](), bdcache), {
+          case (VS(vals, time, vssstore), bdvsscache, bdnd) =>
+            val baddr = allocBind(x, time); val new_env = env + (x -> baddr)
+            val new_store = vssstore.update(baddr, vals)
+            aeval(e, new_env, new_store, time, bdvsscache, {
+              case Ans(evss, ecache) => bdnd(Ans(evss, ecache.outUpdate(config, evss)))
             })
-        },
-        continue)
-
-      case ae if isAtomic(ae) =>
-        val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
-        continue(Ans(vs, new_cache.outUpdate(config, vs)))
-    }
-  }
-}
+        }, clsnd)
+      })
+  },
+  continue)
+case ae if isAtomic(ae) =>
+  val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
+  continue(Ans(vs, new_cache.outUpdate(config, vs)))
 \end{lstlisting}
 
 After completing the evaluation, we obtain a set of @VS@ objects and must update the @out@ cache.
@@ -1563,15 +1577,11 @@ since it is where we reach the end of one computation path.
 For the second case, we update the @out@ cache before calling the @continue@ continuation.
 
 \begin{lstlisting}
-val mtEnv = Map[String, BAddr](); val mtStore = Store[BAddr, Storable](Map()); val mtTime = List()
 val mtCache = Cache(Store[Config, VS](Map()), Store[Config, VS](Map()))
-
 def analyze(e: Expr) = {
   def iter(cache: Cache): Ans = {
-    val Ans(vss, new_cache) = aeval(e, mtEnv, mtStore, mtTime, cache, {
-      case Ans(vss, cache) => 
-        val initConfig = Config(e, mtEnv, mtStore, mtTime) 
-        Ans(vss, cache.outUpdate(initConfig, vss))
+    val Ans(vss, new_cache) = aeval(e, mtEnv, mtStore, mtTime, cache, { case Ans(vss, cache) => 
+        Ans(vss, cache.outUpdate(Config(e, mtEnv, mtStore, mtTime), vss))
     })
     if (new_cache.out == cache.out) { Ans(vss, new_cache) }
     else { iter(Cache(new_cache.out, new_cache.out)) }
@@ -1690,13 +1700,12 @@ nondeterministic choices in a way that is direct-style but mimics extended
 continuation-passing style.
 
 \textbf{Nondeterminism Operators, Again.}
-The first operator @nd@ is adapted from the previous one, but here @nd@ has only one 
-continuation @k@. Introducing @Cache@ explicitly as the part of arguments of 
-continuation @k@ reveals that cache should be monotonically accumulated to 
-the rest of computation. Now the only continuation @k@ applies on type @(T, Cache)@ where
-the value of type @T@ comes from the collection, and @nd@ performs recursive invocation
-on itself over elements in the collection @ts@. We also move the accumulation operation
-(@++@) inside of @nd@.
+%Introducing @Cache@ explicitly as the part of arguments of continuation @k@ reveals 
+%that cache should be monotonically accumulated to the rest of computation. 
+The first operator @nd@ is adapted from the previous one, but the meta-continuation
+@m@ has been eliminated here. Now the only continuation @k@ applies on tuple type @(T, Cache)@ 
+where the value of type @T@ comes from the collection, and @nd@ performs recursive invocation
+on itself over elements in the collection @ts@. 
 
 \begin{lstlisting}
 def nd[T](ts: Iterable[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
@@ -1716,14 +1725,15 @@ def choices[T](ts: Iterable[T], cache: Cache): (T, Cache) @cps[Ans] = shift {
 
 The function @choices@ takes two arguments: a set of elements with type @T@, 
 and an initial accumulated value of type @Ans@.
-The @choices@ iteratively returns an element from the collection along with the latest cache, 
-and the return type is also annotated by \verb|@cps[Ans]|. 
+The @choices@ iteratively returns an element from the collection along with the 
+latest cache, and the return type is also annotated by \verb|@cps[Ans]|. 
 This annotation denotes the final returned value of @choices@ is type @Ans@.
-The @f@ introduced by the @shift@ operator is the delimited continuation from the 
-call-site of @choices@.
+The @f@ is the delimited continuation captured by the @shift@ operator, which
+is form by the statements after @choices@'s call-site.
 
 Now we can use these two operators to redefine @aeval@.
-We add an annotation \verb|@cps[Ans]| on the return type of the @aeval@ function.
+We add an annotation \verb|@cps[Ans]| on the return type of the @aeval@ function to enable
+applying delimited control operators.
 Then, for every nondeterministic choice in the abstract interpreter, we can simply call 
 @choices@ on the set of possible choices and write the program sequentially as concrete 
 interpreters, and the subsequent statements and expressions become the delimited continuation
@@ -1736,28 +1746,22 @@ def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[
   val config = Config(e, env, store, time)
   if (cache.outContains(config)) Ans(cache.outGet(config), cache)
   else {
-    val new_time = config.tick
-    val new_cache = cache.outUpdate(config, cache.inGet(config))
+    val new_time = config.tick; val new_cache = cache.outUpdate(config, cache.inGet(config))
     e match {
       case Let(x, App(f, ae), e) =>
         val closures = atomicEval(f, env, store)
         val (Clos(Lam(v, body), c_env), clscache) = choices[Storable](closures, new_cache)
-        val vbaddr = allocBind(v, new_time)
-        val new_cenv = c_env + (v -> vbaddr)
+        val vbaddr = allocBind(v, new_time); val new_cenv = c_env + (v -> vbaddr)
         val new_store = store.update(vbaddr, atomicEval(ae, env, store))
-        /* evaluates the function application App(f, ae) */
         val Ans(bdvss, bdcache) = aeval(body, new_cenv, new_store, new_time, clscache)
         val (VS(vals, time, vsstore), vscache) = choices[VS](bdvss, bdcache)
-        val baddr = allocBind(x, time)
-        val new_env = env + (x -> baddr)
+        val baddr = allocBind(x, time); val new_env = env + (x -> baddr)
         val new_vsstore = vsstore.update(baddr, vals)
-        /* evaluates the body expression from the let */
         val Ans(evss, ecache) = aeval(e, new_env, new_vsstore, time, vscache)
         Ans(evss, ecache.outUpdate(config, evss))
-
       case ae if isAtomic(ae) =>
-        val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
-        Ans(vs, new_cache.outUpdate(config, vs))
+        val vss = Set(VS(atomicEval(ae, env, store), new_time, store))
+        Ans(vss, new_cache.outUpdate(config, vss))
     }
   }
 }
@@ -1770,8 +1774,7 @@ call to @aeval@ to set the delimiter. The afterwards updating on cache becomes s
 def analyze(e: Expr) = {
   def iter(cache: Cache): Ans = {
     val Ans(vss, anscache) = reset { aeval(e, mtEnv, mtStore, mtTime, cache) }
-    val initConfig = Config(e, mtEnv, mtStore, mtTime) 
-    val new_cache = anscache.outUpdate(initConfig, vss)
+    val new_cache = anscache.outUpdate(Config(e, mtEnv, mtStore, mtTime), vss)
     if (new_cache.out == cache.out) { Ans(vss, new_cache) }
     else { iter(Cache(new_cache.out, new_cache.out)) }
   }
