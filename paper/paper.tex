@@ -578,16 +578,10 @@ four components:
 The Scala representations for the components of the CESK machine are as follows:
 
 \begin{lstlisting}
-type Addr = Int
-type Env = Map[String, Addr]
-type Store = Map[Addr, Storable]
-
+type Addr = Int;           type Env = Map[String, Addr];           type Store = Map[Addr, Storable]
 abstract class Storable
 case class Clos(v: Lam, env: Env) extends Storable
-
-case class Frame(x: String, e: Expr, env: Env)
-type Kont = List[Frame]
-
+case class Frame(x: String, e: Expr, env: Env);                    type Kont = List[Frame]
 case class State(e: Expr, env: Env, store: Store, k: Kont)
 \end{lstlisting}
 
@@ -747,9 +741,6 @@ But since the continuation store may contain multiple continuations, the derefer
 of continuation addresses is also nondeterministic.
 
 \begin{lstlisting}
-abstract class Storable
-case class Clos(v: Lam, env: Env) extends Storable
-
 case class Frame(x: String, e: Expr, env: Env)
 case class Cont(frame: Frame, kaddr: KAddr)
 \end{lstlisting}
@@ -954,17 +945,17 @@ pushdown AAM that is also able to precisely match calls and returns.
 For readers who are not familiar with pushdown analysis, we have a detailed discussion 
 in Section~\ref{pdcfarevisit}.
 
-In the definition of @State@, the continuation store disappears, and
-component @konts@ becomes a list of frames. 
-The other components remain unchanged as in the Section \ref{aam}.
+In the definition of @State@, the continuation store and continuation address disappear;
+instead, a list of frames represents the stack. An empty list denotes that we have reached 
+the halt. The other components remain unchanged as in the Section \ref{aam}.
 
 \begin{lstlisting}
 case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
 \end{lstlisting}
 
-The state transition function @step@ shown below is still
-nondeterministic, but the only nondeterminism happening is when dereferencing the callee @f@
-from the function application @App(f, ae)@.
+The state transition function @step@ shown below is still nondeterministic, but the only 
+nondeterminism happening is when dereferencing the callee @f@ from the function application 
+@App(f, ae)@.
 
 \begin{lstlisting}
 def step(s: State): List[State] = {
@@ -1055,6 +1046,7 @@ the first a \emph{normal continuation}, and the second a \emph{nondeterministic 
 case class NDCont(cls: List[Clos], argvs: Set[Storable], store: BStore, time: Time, frames: List[Frame])
 case class NDState(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time, ndk: List[NDCont]) {
   def toState: State = State(e, env, bstore, konts, time)
+  def tick: Time = ...
 }
 \end{lstlisting}
 
@@ -1105,16 +1097,14 @@ case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
         NDState(ae, env, bstore, konts, time, ndk) /* transfer to the most recent fork point */
       case NDCont(cls, argvs, bstore, time, frames)::ndk =>
         val Clos(Lam(v, body), c_env) = cls.head
-        val baddr = allocBind(v, time)
-        val new_env = c_env + (v -> baddr)
+        val baddr = allocBind(v, time); val new_env = c_env + (v -> baddr)
         val new_store = bstore.update(baddr, argvs)
         val new_ndk = NDCont(cls.tail, argvs, bstore, tile, frames)::ndk
         /* resume the fork point with the next closure */
         NDState(body, new_env, new_store, frames, time, new_ndk)
     }
     case Frame(x, e, f_env)::konts =>
-      val baddr = allocBind(x, newTime)
-      val new_env = f_env + (x -> baddr)
+      val baddr = allocBind(x, newTime); val new_env = f_env + (x -> baddr)
       val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
       NDState(e, new_env, new_store, konts, newTime, ndk) /* normal return */
   }
@@ -1178,14 +1168,11 @@ def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
   nds match {
     case NDState(ae, _, _, Nil, _, Nil) if isAtomic(ae) => seen
     case nds =>
-      val s = nds.toState
+      val s = nds.toState; val newTime = nds.tick
       val new_seen = if (seen.contains(s)) seen else seen+s
-      val newTime = nds.tick
       val new_ndstate = nds match {
-        case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndkonts) =>
-          ...
-        case NDState(ae, env, bstore, konts, time, ndkonts) if isAtomic(ae) =>
-          ...
+        case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndkonts) => ...
+        case NDState(ae, env, bstore, konts, time, ndkonts) if isAtomic(ae) => ...
       }
       drive_step(new_ndstate, new_seen)
   }
@@ -1222,9 +1209,8 @@ def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
   nds match {
     case NDState(ae, _, _, Nil, _, Nil) if isAtomic(ae) => seen
     case nds =>
-      val s = nds.toState
+      val s = nds.toState; val new_time = nds.tick
       val new_seen = if (seen.contains(s)) seen else seen + s
-      val new_time = nds.tick
       nds match {
         case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>
           ...
@@ -1245,13 +1231,11 @@ The astute reader will notice a vague shape of interpreter in continuation style
 
 \begin{lstlisting}
 def continue(nds: NDState, seen: Set[State]): Set[State] = {
-  val NDState(ae, env, bstore, konts, time, ndk) = nds
-  val new_time = nds.tick
+  val NDState(ae, env, bstore, konts, time, ndk) = nds; val new_time = nds.tick
   konts match {
     case Nil => ndcontinue(nds, seen)
     case Frame(x, e, f_env)::konts =>
-      val baddr = allocBind(x, new_time)
-      val new_env = f_env + (x -> baddr)
+      val baddr = allocBind(x, new_time); val new_env = f_env + (x -> baddr)
       val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
       drive_step(NDState(e, new_env, new_store, konts, new_time, ndk), seen)
   }
@@ -1277,8 +1261,7 @@ def ndcontinue(nds: NDState, seen: Set[State]): Set[State] = {
       drive_step(NDState(ae, env, bstore, konts, time, ndk), seen)
     case NDCont(cls, argvs, bstore, time, frames)::ndk =>
       val Clos(Lam(v, body), c_env) = cls.head
-      val baddr = allocBind(v, time)
-      val new_env = c_env + (v -> baddr)
+      val baddr = allocBind(v, time); val new_env = c_env + (v -> baddr)
       val new_store = bstore.update(baddr, argvs)
       val new_ndk = NDCont(cls.tail, argvs, bstore, time, frames)::ndk
       drive_step(NDState(body, new_env, new_store, frames, time, new_ndk, seen))
@@ -1407,14 +1390,12 @@ case Let(x, App(f, ae), e) =>
   val closures = atomicEval(f, env, store)
   nd[Storable](closures, Set[VS](), { case (clos, clsnd) =>
     val Clos(Lam(v, body), c_env) = clos
-    val baddr = allocBind(v, new_time)
-    val new_cenv = c_env + (v -> baddr)
+    val baddr = allocBind(v, new_time); val new_cenv = c_env + (v -> baddr)
     val new_store = store.update(baddr, atomicEval(ae, env, store))
     aeval(body, new_cenv, new_store, new_time, (bdvss: Set[VS]) => {
       nd[VS](bdvss, Set[VS](), { case (vs, bdnd) =>
         val VS(vals, time, store) = vs
-        val baddr = allocBind(x, time)
-        val new_env = env + (x -> baddr)
+        val baddr = allocBind(x, time); val new_env = env + (x -> baddr)
         val new_store = store.update(baddr, vals)
         /* evaluate e with new env and store, then transfer to next body's value */
         aeval(e, new_env, new_store, time, bdnd)
@@ -1468,7 +1449,7 @@ we introduce a configuration @Config@ as a state-like definition which borrows t
 components from state, sans continuations.
 
 \begin{lstlisting}
-case class Config(e: Expr, env: Env, store: BStore, time: Time)
+case class Config(e: Expr, env: Env, store: BStore, time: Time) { ... }
 \end{lstlisting}
 
 \textbf{Cache.}
