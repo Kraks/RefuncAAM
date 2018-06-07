@@ -1714,7 +1714,7 @@ The @choices@ iteratively returns an element from the collection along with the
 latest cache, and the return type is also annotated by \verb|@cps[Ans]|. 
 This annotation denotes the final returned value of @choices@ is type @Ans@.
 The @f@ is the delimited continuation captured by the @shift@ operator, which
-is form by the statements after @choices@'s call-site.
+is formed by the statements after @choices@'s call-site.
 
 Now we can use these two operators to redefine @aeval@. The abstract evaluator @aeval@ is
 rewritten in direct-style, so that the last argument @cont@ disappears; we also add an 
