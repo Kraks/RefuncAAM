@@ -530,11 +530,12 @@ so we elide them in this paper.
 To begin, we present the concrete syntax of a call-by-value $\lambda$-calculus language
 in ANF.
 
+%------------------------------------------------------------------------------------------------------------
 \begin{lstlisting}
-    e $\in$ Exp ∂::= ae | (let ([x (ae ae)]) e)
-   ae $\in$ AExp ::= ∂x | lam
-  lam $\in$ Lam ∂::= (lambda (x) e)
-    x $\in$ Var   (variable names)
+                                    ae $\in$ AExp ::= ∂x | lam
+                                     x $\in$ Var   (variable names)
+                                   lam $\in$ Lam ∂::= (lambda (x) e)
+                                     e $\in$ Exp ∂::= ae | (let ([x (ae ae)]) e)
 \end{lstlisting}
 
 In ANF, an expression is either an atomic expression or a @let@ expression.
@@ -549,11 +550,11 @@ The abstract syntax in Scala is shown as follows. We assume that the source prog
 to the ANF convention, and we do not enforce it in the term structure of Scala constructs.
 
 \begin{lstlisting}
-sealed trait Expr
-case class Var(x: String) extends Expr
-case class App(e1: Expr, e2: Expr) extends Expr
-case class Lam(x: String, body: Expr) extends Expr
-case class Let(x: String, e: App, body: Expr) extends Expr
+                            sealed trait Expr
+                            case class Var(x: String) extends Expr
+                            case class App(e1: Expr, e2: Expr) extends Expr
+                            case class Lam(x: String, body: Expr) extends Expr
+                            case class Let(x: String, e: App, body: Expr) extends Expr
 \end{lstlisting}
 
 \subsection{CESK Machine} \label{cesk}
@@ -578,11 +579,11 @@ four components:
 The Scala representations for the components of the CESK machine are as follows:
 
 \begin{lstlisting}
-type Addr = Int;           type Env = Map[String, Addr];           type Store = Map[Addr, Storable]
-abstract class Storable
-case class Clos(v: Lam, env: Env) extends Storable
-case class Frame(x: String, e: Expr, env: Env);                    type Kont = List[Frame]
-case class State(e: Expr, env: Env, store: Store, k: Kont)
+              type Addr = Int;     type Env = Map[String, Addr];    type Store = Map[Addr, Storable]
+              abstract class Storable
+              case class Clos(v: Lam, env: Env) extends Storable
+              case class Frame(x: String, e: Expr, env: Env);       type Kont = List[Frame]
+              case class State(e: Expr, env: Env, store: Store, k: Kont)
 \end{lstlisting}
 
 It is worth noting that the continuation class @Kont@ is defined as a list of
@@ -602,33 +603,33 @@ in the domain of @store@.
 The @isAtomic@ function is used as a predicate to determine if the expression is atomic.
 
 \begin{lstlisting}
-def atomicEval(e: Expr, env: Env, store: Store): Storable = e match {
-  case Var(x) => store(env(x))
-  case lam @ Lam(x, body) => Clos(lam, env)
-}
-def alloc(store: Store): Addr = store.keys.size + 1
-def isAtomic(e: Expr): Boolean = e.isInstanceOf[Var] || e.isInstanceOf[Lam]
+                   def atomicEval(e: Expr, env: Env, store: Store): Storable = e match {
+                     case Var(x) => store(env(x))
+                     case lam @ Lam(x, body) => Clos(lam, env)
+                   }
+                   def alloc(store: Store): Addr = store.keys.size + 1
+                   def isAtomic(e: Expr): Boolean = e.isInstanceOf[Var] || e.isInstanceOf[Lam]
 \end{lstlisting}
 
 We can now faithfully describe the state transition function @step@,
 which when given a machine state, determines its successor state.
 
 \begin{lstlisting}
-def step(s: State): State = s match {
-  case State(Let(x, App(f, ae), e), env, store, k) if isAtomic(ae) =>
-    val Clos(Lam(v, body), env_c) = atomicEval(f, env, store)
-    val addr = alloc(store)
-    val new_env = env_c + (v -> addr)
-    val new_store = store + (addr -> atomicEval(ae, env, store))
-    val frame = Frame(x, e, env)
-    State(body, new_env, new_store, frame::k)
-  case State(ae, env, store, k) if isAtomic(ae) =>
-    val Frame(x, e, env_k)::ks = k
-    val addr = alloc(store)
-    val new_env = env_k + (x -> addr)
-    val new_store = store + (addr -> atomicEval(ae, env, store))
-    State(e, new_env, new_store, ks)
-}
+                   def step(s: State): State = s match {
+                     case State(Let(x, App(f, ae), e), env, store, k) if isAtomic(ae) =>
+                       val Clos(Lam(v, body), env_c) = atomicEval(f, env, store)
+                       val addr = alloc(store)
+                       val new_env = env_c + (v -> addr)
+                       val new_store = store + (addr -> atomicEval(ae, env, store))
+                       val frame = Frame(x, e, env)
+                       State(body, new_env, new_store, frame::k)
+                     case State(ae, env, store, k) if isAtomic(ae) =>
+                       val Frame(x, e, env_k)::ks = k
+                       val addr = alloc(store)
+                       val new_env = env_k + (x -> addr)
+                       val new_store = store + (addr -> atomicEval(ae, env, store))
+                       State(e, new_env, new_store, ks)
+                   }
 \end{lstlisting}
 
 As shown and previously discussed, we examine the only two cases which the state may be.
@@ -663,7 +664,7 @@ To run the program, we first use the @inject@ function (below) to construct an i
 machine state given a closed expression @e@. The initial state contains an empty environment,
 store, and stack.
 \begin{lstlisting}
-def inject(e: Expr): State = State(e, Map(), Map(), Nil)
+                         def inject(e: Expr): State = State(e, Map(), Map(), Nil)
 \end{lstlisting}
 
 The @drive@ function is then used to evaluate to a final state by iteratively applying 
@@ -672,11 +673,11 @@ expression and the continuation stack is empty. Naturally, we can then extract t
 from the final state at last.
 
 \begin{lstlisting}
-def drive(s: State): State = s match {
-  case State(ae, _, _, Nil) if isAtomic(ae) => s
-  case _ => drive(step(s))
-}
-def eval(e: Expr): State = drive(inject(e))
+                              def drive(s: State): State = s match {
+                                case State(ae, _, _, Nil) if isAtomic(ae) => s
+                                case _ => drive(step(s))
+                              }
+                              def eval(e: Expr): State = drive(inject(e))
 \end{lstlisting}
 
 \subsection{Abstracting Abstract Machines} \label{aam}
@@ -721,16 +722,15 @@ a fixed point of store can always be reached through Kleene's
 iteration when analyzing the program
 
 \begin{lstlisting}
-case class Store[K,V](map: Map[K, Set[V]]) {
-  def apply(addr: K): List[V] = map(addr).toList
-  def update(addr: K, d: Set[V]): Store[K,V] = {
-    val oldd = map.getOrElse(addr, Set())
-    Store[K, V](map ++ Map(addr -> (d ++ oldd)))
-  }
-  def update(addr: K, sd: V): Store[K,V] = update(addr, Set(sd))
-}
-type BStore = Store[BAddr, Storable]
-type KStore = Store[KAddr, Cont]
+                          case class Store[K,V](map: Map[K, Set[V]]) {
+                            def apply(addr: K): List[V] = map(addr).toList
+                            def update(addr: K, d: Set[V]): Store[K,V] = {
+                              val oldd = map.getOrElse(addr, Set())
+                              Store[K, V](map ++ Map(addr -> (d ++ oldd)))
+                            }
+                            def update(addr: K, sd: V): Store[K,V] = update(addr, Set(sd))
+                          }
+               type BStore = Store[BAddr, Storable];            type KStore = Store[KAddr, Cont]
 \end{lstlisting}
 
 The codomain of binding stores @Storable@ is the same as previously defined for CESK 
@@ -741,8 +741,7 @@ But since the continuation store may contain multiple continuations, the derefer
 of continuation addresses is also nondeterministic.
 
 \begin{lstlisting}
-case class Frame(x: String, e: Expr, env: Env)
-case class Cont(frame: Frame, kaddr: KAddr)
+     case class Frame(x: String, e: Expr, env: Env);      case class Cont(frame: Frame, kaddr: KAddr)
 \end{lstlisting}
 
 As a consequence, the components of states are also changed: the store is divided
@@ -751,7 +750,7 @@ By dereferencing this address in a continuation store, we can retrieve the actua
 transfer of controls. The definition of environment @Env@ remains the same.
 
 \begin{lstlisting}
-case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, k: KAddr, time: Time)
+         case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, k: KAddr, time: Time)
 \end{lstlisting}
 
 \subsubsection{Allocating Addresses}
@@ -769,7 +768,7 @@ different @tick@ functions on the timestamp, we are able to obtain a
 family of analyses.
 
 \begin{lstlisting}
-type Time = List[Expr]
+                                          type Time = List[Expr]
 \end{lstlisting}
 
 As previously mentioned, the space of addresses must be finite in AAM.
@@ -783,19 +782,19 @@ finite.
 %\todo{why target expression, allocation polyvariance}
 
 \begin{lstlisting}
-case class BAddr(x: String, time: Time)
-
-abstract class KAddr
-case object Halt extends KAddr
-case class ContAddr(tgt: Expr) extends KAddr
+                                 case class BAddr(x: String, time: Time)
+                                
+                                 abstract class KAddr
+                                 case object Halt extends KAddr
+                                 case class ContAddr(tgt: Expr) extends KAddr
 \end{lstlisting}
 
 We introduce two helper functions, @allocBind@ and @allocKont@, which will be
 used to allocate binding addresses and continuation addresses.
 
 \begin{lstlisting}
-def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
-def allocKont(tgtExpr: Expr): KAddr = ContAddr(tgtExpr)
+                           def allocKont(tgtExpr: Expr): KAddr = ContAddr(tgtExpr)
+                           def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
 \end{lstlisting}
 
 \subsubsection{Single-Step Transition}
@@ -806,10 +805,10 @@ function (below) is also nondeterministic. Given an atomic expression @e@,
 If the expression is simply a @lambda@ term, the returned set is a singleton.
 
 \begin{lstlisting}
-def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
-  case Var(x) => bstore(env(x))
-  case lam@Lam(x, body) => Set(Clos(lam, env))
-}
+                   def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
+                     case Var(x) => bstore(env(x))
+                     case lam@Lam(x, body) => Set(Clos(lam, env))
+                   }
 \end{lstlisting}
 
 The structure of function @step@ is similar to the concrete CESK machine,
@@ -837,29 +836,29 @@ We have two cases to consider (code shown below):
 \end{itemize}
 
 \begin{lstlisting}
-def step(s: State): List[State] = {
-  val new_time = s.tick
-  s match {
-    case State(Let(x, App(f, ae), e), env, bstore, kstore, kaddr, time) =>
-      val closures = atomicEval(f, env, bstore).toList
-      for (Clos(Lam(v, body), env_c) <- closures) yield {
-        val baddr = allocBind(v, new_time)
-        val new_env = env_c + (v -> baddr)
-        val new_bstore = bstore.update(baddr, atomicEval(ae, env, bstore))
-        val new_kaddr = allocKont(body)
-        val new_kstore = kstore.update(new_kaddr, Cont(Frame(x, e, env), kaddr))
-        State(body, new_env, new_bstore, new_kstore, new_kaddr, new_time)
-      }
-    case State(ae, env, bstore, kstore, kaddr, time) if isAtomic(ae) =>
-      val conts = kstore(kaddr).toList
-      for (Cont(Frame(x, e, env_f), f_kaddr) <- conts) yield {
-        val baddr = allocBind(x, new_time)
-        val new_env = env_f + (x -> baddr)
-        val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-        State(e, new_env, new_store, kstore, f_kaddr, new_time)
-      }
-  }
-}
+              def step(s: State): List[State] = {
+                val new_time = s.tick
+                s match {
+                  case State(Let(x, App(f, ae), e), env, bstore, kstore, kaddr, time) =>
+                    val closures = atomicEval(f, env, bstore).toList
+                    for (Clos(Lam(v, body), env_c) <- closures) yield {
+                      val baddr = allocBind(v, new_time)
+                      val new_env = env_c + (v -> baddr)
+                      val new_bstore = bstore.update(baddr, atomicEval(ae, env, bstore))
+                      val new_kaddr = allocKont(body)
+                      val new_kstore = kstore.update(new_kaddr, Cont(Frame(x, e, env), kaddr))
+                      State(body, new_env, new_bstore, new_kstore, new_kaddr, new_time)
+                    }
+                  case State(ae, env, bstore, kstore, kaddr, time) if isAtomic(ae) =>
+                    val conts = kstore(kaddr).toList
+                    for (Cont(Frame(x, e, env_f), f_kaddr) <- conts) yield {
+                      val baddr = allocBind(x, new_time)
+                      val new_env = env_f + (x -> baddr)
+                      val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+                      State(e, new_env, new_store, kstore, f_kaddr, new_time)
+                    }
+                }
+              }
 \end{lstlisting}
 
 \subsubsection{$k$-Call-Sensitive Instantiation} \label{kcfainst}
@@ -874,10 +873,10 @@ The @tick@ function returns the $k$ front-most expressions given the current sta
 time history. We implement @tick@ as a public method of case class @State@.
 
 \begin{lstlisting}
-def k: Int = 0
-case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, kaddr: KAddr, time: Time) {
-  def tick: Time = (e :: time).take(k)
-}
+    def k: Int = 0
+    case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, kaddr: KAddr, time: Time) {
+      def tick: Time = (e :: time).take(k)
+    }
 \end{lstlisting}
 
 If we instantiate $k$ to be $0$, the history degenerates to an empty list, and we obtain
@@ -894,9 +893,9 @@ has a built-in mapping that maps the continuation address for @Halt@ to an empty
 continuations. We also provide an empty program contour as our initial time.
 
 \begin{lstlisting}
-val mtTime = List();                         val mtStore = Store[BAddr, Storable](Map())
-val mtEnv = Map[String, BAddr]();            val mtKStore = Store[KAddr, Cont](Map(Halt -> Set()))
-def inject(e: Expr): State = State(e, mtEnv, mtStore, mtKStore, Halt, mtTime)
+    val mtTime = List();                         val mtStore = Store[BAddr, Storable](Map())
+    val mtEnv = Map[String, BAddr]();            val mtKStore = Store[KAddr, Cont](Map(Halt -> Set()))
+    def inject(e: Expr): State = State(e, mtEnv, mtStore, mtKStore, Halt, mtTime)
 \end{lstlisting}
 
 However, in contrast to the concrete CESK machine, the @drive@ function performs 
@@ -911,13 +910,12 @@ If the worklist is empty, @drive@ simply returns the set of reachable states
 up to the current execution point.
 
 \begin{lstlisting}
-def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
-  case Nil => seen
-  case hd::tl if seen.contains(hd) => drive(tl, seen)
-  case hd::tl => drive(step(hd).toList ++ tl, seen + hd)
-}
-
-def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
+              def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
+                case Nil => seen
+                case hd::tl if seen.contains(hd) => drive(tl, seen)
+                case hd::tl => drive(step(hd).toList ++ tl, seen + hd)
+              }
+              def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
 \end{lstlisting}
 
 Finally, a user may invoke the @analyze@ function to obtain all reachable states for 
@@ -950,7 +948,7 @@ instead, a list of frames represents the stack. An empty list denotes that we ha
 the halt. The other components remain unchanged as in the Section \ref{aam}.
 
 \begin{lstlisting}
-case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
+            case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
 \end{lstlisting}
 
 The state transition function @step@ shown below is still nondeterministic, but the only 
@@ -958,28 +956,28 @@ nondeterminism happening is when dereferencing the callee @f@ from the function 
 @App(f, ae)@.
 
 \begin{lstlisting}
-def step(s: State): List[State] = {
-  val new_time = s.tick
-  s match {
-    case State(Let(x, App(f, ae), e), env, bstore, konts, time) if isAtomic(ae) =>
-      for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
-        val frame = Frame(x, e, env)
-        val baddr = allocBind(v, new_time)
-        val new_env = env_c + (v -> baddr)
-        val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-        State(body, new_env, new_store, frame::konts, new_time)
-      }
-    case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
-      konts match {
-        case Nil => List()
-        case Frame(x, e, env_f)::konts =>
-          val baddr = allocBind(x, new_time)
-          val new_env = env_f + (x -> baddr)
-          val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-          List(State(e, new_env, new_store, konts, new_time))
-      }
-  }
-}
+            def step(s: State): List[State] = {
+              val new_time = s.tick
+              s match {
+                case State(Let(x, App(f, ae), e), env, bstore, konts, time) if isAtomic(ae) =>
+                  for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
+                    val frame = Frame(x, e, env)
+                    val baddr = allocBind(v, new_time)
+                    val new_env = env_c + (v -> baddr)
+                    val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+                    State(body, new_env, new_store, frame::konts, new_time)
+                  }
+                case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
+                  konts match {
+                    case Nil => List()
+                    case Frame(x, e, env_f)::konts =>
+                      val baddr = allocBind(x, new_time)
+                      val new_env = env_f + (x -> baddr)
+                      val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+                      List(State(e, new_env, new_store, konts, new_time))
+                  }
+              }
+            }
 \end{lstlisting}
 
 In the first case of pattern matching, we may have multiple choices of closure for callee @f@.
@@ -996,12 +994,12 @@ simply enumerate reachable states. To see this, consider a program that has two 
 recursive functions:
 
 \begin{lstlisting}
-(letrec ([f1 (lambda (x)
-               (let ([x1 (f2 x)]) x1))]
-         [f2 (lambda (y)
-               (let ([y1 (f1 y)]) y1))])
-  (let ([z (f1 1)])
-    z))
+                                  (letrec ([f1 (lambda (x)
+                                                 (let ([x1 (f2 x)]) x1))]
+                                           [f2 (lambda (y)
+                                                 (let ([y1 (f1 y)]) y1))])
+                                    (let ([z (f1 1)])
+                                      z))
 \end{lstlisting}
 
 Function @f1@ and @f2@ mutually invoke each other, so the stack will
@@ -1061,17 +1059,17 @@ The following code shows the first case of matching an instance of @NDState@ in
 the @step@ function:
 
 \begin{lstlisting}
-case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>
-  val closures = atomicEval(f, env, bstore).toList.asInstanceOf[List[Clos]]
-  val Clos(Lam(v, body), c_env) = closures.head
-  val frame = Frame(x, e, env)
-  val new_frames = frame::konts
-  val baddr = allocBind(v, new_time)
-  val new_env = c_env + (v -> baddr)
-  val argvs = atomicEval(ae, env, bstore)
-  val new_store = bstore.update(baddr, argvs)
-  val new_ndk = NDCont(closures.tail, argvs, bstore, new_time, new_frames)::ndk
-  NDState(body, new_env, new_store, new_frames, new_time, new_ndk)
+             case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>
+               val closures = atomicEval(f, env, bstore).toList.asInstanceOf[List[Clos]]
+               val Clos(Lam(v, body), c_env) = closures.head
+               val frame = Frame(x, e, env)
+               val new_frames = frame::konts
+               val baddr = allocBind(v, new_time)
+               val new_env = c_env + (v -> baddr)
+               val argvs = atomicEval(ae, env, bstore)
+               val new_store = bstore.update(baddr, argvs)
+               val new_ndk = NDCont(closures.tail, argvs, bstore, new_time, new_frames)::ndk
+               NDState(body, new_env, new_store, new_frames, new_time, new_ndk)
 \end{lstlisting}
 
 By atomically evaluating @f@, we obtain a set of closures, with the transition being 
@@ -1090,24 +1088,24 @@ In the second case (shown below), we will see how @NDCont@ deals with
 nondeterminism.
 
 \begin{lstlisting}
-case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
-  konts match {
-    case Nil => ndk match {
-      case NDCont(Nil, _, _, _, _)::ndk =>
-        NDState(ae, env, bstore, konts, time, ndk) /* transfer to the most recent fork point */
-      case NDCont(cls, argvs, bstore, time, frames)::ndk =>
-        val Clos(Lam(v, body), c_env) = cls.head
-        val baddr = allocBind(v, time); val new_env = c_env + (v -> baddr)
-        val new_store = bstore.update(baddr, argvs)
-        val new_ndk = NDCont(cls.tail, argvs, bstore, tile, frames)::ndk
-        /* resume the fork point with the next closure */
-        NDState(body, new_env, new_store, frames, time, new_ndk)
-    }
-    case Frame(x, e, f_env)::konts =>
-      val baddr = allocBind(x, newTime); val new_env = f_env + (x -> baddr)
-      val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-      NDState(e, new_env, new_store, konts, newTime, ndk) /* normal return */
-  }
+          case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
+            konts match {
+              case Nil => ndk match {
+                case NDCont(Nil, _, _, _, _)::ndk =>
+                  NDState(ae, env, bstore, konts, time, ndk) /* transfer to the most recent fork point */
+                case NDCont(cls, argvs, bstore, time, frames)::ndk =>
+                  val Clos(Lam(v, body), c_env) = cls.head
+                  val baddr = allocBind(v, time); val new_env = c_env + (v -> baddr)
+                  val new_store = bstore.update(baddr, argvs)
+                  val new_ndk = NDCont(cls.tail, argvs, bstore, tile, frames)::ndk
+                  /* resume the fork point with the next closure */
+                  NDState(body, new_env, new_store, frames, time, new_ndk)
+              }
+              case Frame(x, e, f_env)::konts =>
+                val baddr = allocBind(x, newTime); val new_env = f_env + (x -> baddr)
+                val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+                NDState(e, new_env, new_store, konts, newTime, ndk) /* normal return */
+            }
 \end{lstlisting}
 
 If the normal continuation @konts@ is an empty list, then it means we have reached
@@ -1132,15 +1130,15 @@ The nondeterministic continuation @new_ndk@ is also updated by the removal of th
 \end{itemize}
 
 \begin{lstlisting}
-def drive(nds: NDState, seen: Set[State]): Set[State] = {
-  nds match {
-    case NDState(ae, _, _, Nil, _, Nil) if isAtomic(ae) => seen
-    case nds =>
-      val s = nds.toState
-      if (seen.contains(s)) drive(step(nds), seen)
-      else drive(step(nds), seen + s)
-  }
-}
+                    def drive(nds: NDState, seen: Set[State]): Set[State] = {
+                      nds match {
+                        case NDState(ae, _, _, Nil, _, Nil) if isAtomic(ae) => seen
+                        case nds =>
+                          val s = nds.toState
+                          if (seen.contains(s)) drive(step(nds), seen)
+                          else drive(step(nds), seen + s)
+                      }
+                    }
 \end{lstlisting}
 
 The @drive@ function is also changed: there is no worklist anymore, as all the
@@ -1164,19 +1162,19 @@ The fused function @drive_step@ is essentially formed by merging the functionali
 and returns a set of reachable states once it terminates.
 
 \begin{lstlisting}
-def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
-  nds match {
-    case NDState(ae, _, _, Nil, _, Nil) if isAtomic(ae) => seen
-    case nds =>
-      val s = nds.toState; val newTime = nds.tick
-      val new_seen = if (seen.contains(s)) seen else seen+s
-      val new_ndstate = nds match {
-        case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndkonts) => ...
-        case NDState(ae, env, bstore, konts, time, ndkonts) if isAtomic(ae) => ...
-      }
-      drive_step(new_ndstate, new_seen)
-  }
-}
+             def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
+               nds match {
+                 case NDState(ae, _, _, Nil, _, Nil) if isAtomic(ae) => seen
+                 case nds =>
+                   val s = nds.toState; val newTime = nds.tick
+                   val new_seen = if (seen.contains(s)) seen else seen+s
+                   val new_ndstate = nds match {
+                     case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndkonts) => ...
+                     case NDState(ae, env, bstore, konts, time, ndkonts) if isAtomic(ae) => ...
+                   }
+                   drive_step(new_ndstate, new_seen)
+               }
+             }
 \end{lstlisting}
 
 With this, we have a single function to perform both abstract evaluation and the collection of
@@ -1185,7 +1183,7 @@ initial set of states reached, we can easily define the entrance function @analy
 follows:
 
 \begin{lstlisting}
-def analyze(e: Expr): Set[State] = drive_step(inject(e), Set())
+                    def analyze(e: Expr): Set[State] = drive_step(inject(e), Set())
 \end{lstlisting}
 
 \section{Disentangling} \label{disen}
@@ -1205,21 +1203,21 @@ language; and @ndcontinue@, which dispatches nondeterministic continuations @NDC
 and which is invoked from @continue@ when the normal stack is empty.
 
 \begin{lstlisting}
-def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
-  nds match {
-    case NDState(ae, _, _, Nil, _, Nil) if isAtomic(ae) => seen
-    case nds =>
-      val s = nds.toState; val new_time = nds.tick
-      val new_seen = if (seen.contains(s)) seen else seen + s
-      nds match {
-        case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>
-          ...
-          drive_step(NDState(body, new_env, new_store, new_frames, new_time, new_ndk), new_seen)
-        case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
-          continue(nds, new_seen)
-      }
-  }
-}
+        def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
+          nds match {
+            case NDState(ae, _, _, Nil, _, Nil) if isAtomic(ae) => seen
+            case nds =>
+              val s = nds.toState; val new_time = nds.tick
+              val new_seen = if (seen.contains(s)) seen else seen + s
+              nds match {
+                case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) =>
+                  ...
+                  drive_step(NDState(body, new_env, new_store, new_frames, new_time, new_ndk), new_seen)
+                case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
+                  continue(nds, new_seen)
+              }
+          }
+        }
 \end{lstlisting}
 
 The above code shows the skeleton of @drive_step@.
@@ -1230,16 +1228,16 @@ The code for the second case is replaced entirely by a function call to @continu
 The astute reader will notice a vague shape of interpreter in continuation style has emerged.
 
 \begin{lstlisting}
-def continue(nds: NDState, seen: Set[State]): Set[State] = {
-  val NDState(ae, env, bstore, konts, time, ndk) = nds; val new_time = nds.tick
-  konts match {
-    case Nil => ndcontinue(nds, seen)
-    case Frame(x, e, f_env)::konts =>
-      val baddr = allocBind(x, new_time); val new_env = f_env + (x -> baddr)
-      val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-      drive_step(NDState(e, new_env, new_store, konts, new_time, ndk), seen)
-  }
-}
+               def continue(nds: NDState, seen: Set[State]): Set[State] = {
+                 val NDState(ae, env, bstore, konts, time, ndk) = nds; val new_time = nds.tick
+                 konts match {
+                   case Nil => ndcontinue(nds, seen)
+                   case Frame(x, e, f_env)::konts =>
+                     val baddr = allocBind(x, new_time); val new_env = f_env + (x -> baddr)
+                     val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
+                     drive_step(NDState(e, new_env, new_store, konts, new_time, ndk), seen)
+                 }
+               }
 \end{lstlisting}
 
 Function @continue@ is mainly what we have seen for the second case in
@@ -1254,19 +1252,19 @@ An analogy to this in standard CEK machines would be an abstract class (e.g., @c
 three variants: @halt@, @arg(value, cont)@, and @arg(exp, env, cont)@.
 
 \begin{lstlisting}
-def ndcontinue(nds: NDState, seen: Set[State]): Set[State] = {
-  val NDState(ae, env, bstore, konts, time, ndk) = nds
-  ndk match {
-    case NDCont(Nil, _, _, _, _)::ndk =>
-      drive_step(NDState(ae, env, bstore, konts, time, ndk), seen)
-    case NDCont(cls, argvs, bstore, time, frames)::ndk =>
-      val Clos(Lam(v, body), c_env) = cls.head
-      val baddr = allocBind(v, time); val new_env = c_env + (v -> baddr)
-      val new_store = bstore.update(baddr, argvs)
-      val new_ndk = NDCont(cls.tail, argvs, bstore, time, frames)::ndk
-      drive_step(NDState(body, new_env, new_store, frames, time, new_ndk, seen))
-  }
-}
+               def ndcontinue(nds: NDState, seen: Set[State]): Set[State] = {
+                 val NDState(ae, env, bstore, konts, time, ndk) = nds
+                 ndk match {
+                   case NDCont(Nil, _, _, _, _)::ndk =>
+                     drive_step(NDState(ae, env, bstore, konts, time, ndk), seen)
+                   case NDCont(cls, argvs, bstore, time, frames)::ndk =>
+                     val Clos(Lam(v, body), c_env) = cls.head
+                     val baddr = allocBind(v, time); val new_env = c_env + (v -> baddr)
+                     val new_store = bstore.update(baddr, argvs)
+                     val new_ndk = NDCont(cls.tail, argvs, bstore, time, frames)::ndk
+                     drive_step(NDState(body, new_env, new_store, frames, time, new_ndk, seen))
+                 }
+               }
 \end{lstlisting}
 
 The shape for @ndcontinue@ is similar to @continue@; after
@@ -1310,7 +1308,7 @@ To properly represent final values, we introduce the case class @VS@ which
 contains a set of storable values, a timestamp, and a store.
 
 \begin{lstlisting}
-case class VS(vals: Set[Storable], time: Time, store: BStore)
+                           case class VS(vals: Set[Storable], time: Time, store: BStore)
 \end{lstlisting}
 
 An instance of @VS@ represents the computational result of one path in
@@ -1321,7 +1319,7 @@ Since the whole computation is potentially nondeterministic, the type of the fin
 values is a collection @Set[VS]@. For convenience, we define it as a type @Ans@:
 
 \begin{lstlisting}
-type Ans = Set[VS]
+                                              type Ans = Set[VS]
 \end{lstlisting}
 
 As previously mentioned, the components of states are lifted as arguments to
@@ -1329,14 +1327,14 @@ As previously mentioned, the components of states are lifted as arguments to
 expression @e@. The shape of function @aeval@ looks like:
 
 \begin{lstlisting}
-type Cont = Ans => Ans
-def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = {
-  val new_time = ...
-  e match {
-    case Let(x, App(f, ae), e) => ...
-    case ae if isAtomic(ae) => ...
-  }
-}
+                type Cont = Ans => Ans
+                def aeval(e: Expr, env: Env, store: BStore, time: Time, continue: Cont): Ans = {
+                  val new_time = ...
+                  e match {
+                    case Let(x, App(f, ae), e) => ...
+                    case ae if isAtomic(ae) => ...
+                  }
+                }
 \end{lstlisting}
 
 An additional argument @continue@ which has type @Cont@ is also introduced.
@@ -1349,10 +1347,10 @@ of type @Ans => Ans@. The function @aeval@ does not return: instead, it calls
 To handle the inevitable nondeterminism, we define a generic function @nd@ as follows:
 
 \begin{lstlisting}
-def nd[T](ts: Iterable[T], acc: Ans, k: (T, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
-  if (ts.isEmpty) m(acc)
-  else k(ts.head, (ans: Ans) => nd(ts.tail, acc ++ ans, k, m))
-}
+           def nd[T](ts: Iterable[T], acc: Ans, k: (T, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
+             if (ts.isEmpty) m(acc)
+             else k(ts.head, (ans: Ans) => nd(ts.tail, acc ++ ans, k, m))
+           }
 \end{lstlisting}
 
 %TODO: better word to replace `accumulate`
@@ -1386,23 +1384,23 @@ The values of branches from a fork point will be accumulated inside of @nd@, and
 then returned to the upper fork point.
 
 \begin{lstlisting}
-case Let(x, App(f, ae), e) =>
-  val closures = atomicEval(f, env, store)
-  nd[Storable](closures, Set[VS](), { case (clos, clsnd) =>
-    val Clos(Lam(v, body), c_env) = clos
-    val baddr = allocBind(v, new_time); val new_cenv = c_env + (v -> baddr)
-    val new_store = store.update(baddr, atomicEval(ae, env, store))
-    aeval(body, new_cenv, new_store, new_time, (bdvss: Set[VS]) => {
-      nd[VS](bdvss, Set[VS](), { case (vs, bdnd) =>
-        val VS(vals, time, store) = vs
-        val baddr = allocBind(x, time); val new_env = env + (x -> baddr)
-        val new_store = store.update(baddr, vals)
-        /* evaluate e with new env and store, then transfer to next body's value */
-        aeval(e, new_env, new_store, time, bdnd)
-      }, clsnd) /* transfer to next target closure of f */
-    })
-  },
-  continue)
+               case Let(x, App(f, ae), e) =>
+                 val closures = atomicEval(f, env, store)
+                 nd[Storable](closures, Set[VS](), { case (clos, clsnd) =>
+                   val Clos(Lam(v, body), c_env) = clos
+                   val baddr = allocBind(v, new_time); val new_cenv = c_env + (v -> baddr)
+                   val new_store = store.update(baddr, atomicEval(ae, env, store))
+                   aeval(body, new_cenv, new_store, new_time, (bdvss: Set[VS]) => {
+                     nd[VS](bdvss, Set[VS](), { case (vs, bdnd) =>
+                       val VS(vals, time, store) = vs
+                       val baddr = allocBind(x, time); val new_env = env + (x -> baddr)
+                       val new_store = store.update(baddr, vals)
+                       /* evaluate e with new env and store, then transfer to next body's value */
+                       aeval(e, new_env, new_store, time, bdnd)
+                     }, clsnd) /* transfer to next target closure of f */
+                   })
+                 },
+                 continue)
 \end{lstlisting}
 
 The outer application of @nd@ evaluates over the set of possible target closures of
@@ -1423,7 +1421,8 @@ to the next target closure of @f@. The meta-continuation of the outer @nd@ is ju
 @continue@, as what we normally would do for CPS interpreters.
 
 \begin{lstlisting}
-case ae if isAtomic(ae) => val ds = atomicEval(ae, env, store); continue(Set(VS(ds, new_time, store)))
+               case ae if isAtomic(ae) => 
+                 val ds = atomicEval(ae, env, store); continue(Set(VS(ds, new_time, store)))
 \end{lstlisting}
 
 If the argument expression @e@ is atomic, which is the second case of match, we simply 
@@ -1432,7 +1431,7 @@ construct a new instance of @VS@ and return it to the @continue@ function.
 At the end, the initial invocation to @aeval@ is passed with initial environments,
 especially an identity function as the halting continuation:
 \begin{lstlisting}
-def analyze(e: Expr) = aeval(e, mtEnv, mtStore, mtTime, (ans => ans))
+                    def analyze(e: Expr) = aeval(e, mtEnv, mtStore, mtTime, (ans => ans))
 \end{lstlisting}
 
 \subsection{Caching Fixed-Points}
@@ -1449,7 +1448,7 @@ we introduce a configuration @Config@ as a state-like definition which borrows t
 components from state, sans continuations.
 
 \begin{lstlisting}
-case class Config(e: Expr, env: Env, store: BStore, time: Time) { ... }
+                  case class Config(e: Expr, env: Env, store: BStore, time: Time) { ... }
 \end{lstlisting}
 
 \textbf{Cache.}
@@ -1464,12 +1463,12 @@ Here we will apply the fixed-point caching algorithm as described from
 The case class @Cache@ and its operations are defined as follow:
 
 \begin{lstlisting}
-case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
-  def inGet(config: Config): Set[VS] = in.getOrElse(config, Set())
-  def outGet(config: Config): Set[VS] = out.getOrElse(config, Set())
-  def outContains(config: Config): Boolean = out.contains(config)
-  def outUpdate(config: Config, vss: Set[VS]): Cache = Cache(in, out.update(config, vss))
-}
+             case class Cache(in: Store[Config, VS], out: Store[Config, VS]) {
+               def inGet(config: Config): Set[VS] = in.getOrElse(config, Set())
+               def outGet(config: Config): Set[VS] = out.getOrElse(config, Set())
+               def outContains(config: Config): Boolean = out.contains(config)
+               def outUpdate(config: Config, vss: Set[VS]): Cache = Cache(in, out.update(config, vss))
+             }
 \end{lstlisting}
 
 The @Cache@ contains two maps @in@ and @out@ which are both mappings from configurations 
@@ -1483,11 +1482,11 @@ current iteration.
 We can now transform our interpreter into cache-passing style. We begin by changing the 
 return type @Ans@ to a case class which contains a @VS@ set and a cache. @Ans@ also supports
 its own accumulating operation @++@ which defines as union on @Set[VS]@ and join on caches.
-
+% TODO join?
 \begin{lstlisting}
-case class Ans(vss: Set[VS], cache: Cache) {
-  def ++(ans: Ans): Ans = { Ans(vss ++ ans.vss, cache.join(ans.cache)) }
-}
+                case class Ans(vss: Set[VS], cache: Cache) {
+                  def ++(ans: Ans): Ans = { Ans(vss ++ ans.vss, cache.join(ans.cache)) }
+                }
 \end{lstlisting}
 
 The nondeterministic operator @nd@ is also slightly rewrite to cache-passing style:
@@ -1495,24 +1494,24 @@ continuation @k@ takes an additional argument of type @Cache@; the current accum
 cache @acc.cache@ is exposed to @k@ when applies.
 
 \begin{lstlisting}
-def nd[T](ts: Iterable[T], acc: Ans, k: (T, Cache, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
-  if (ts.isEmpty) m(acc)
-  else k(ts.head, acc.cache, (ans: Ans) => nd(ts.tail, acc ++ ans, k, m))
-}
+        def nd[T](ts: Iterable[T], acc: Ans, k: (T, Cache, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
+          if (ts.isEmpty) m(acc)
+          else k(ts.head, acc.cache, (ans: Ans) => nd(ts.tail, acc ++ ans, k, m))
+        }
 \end{lstlisting}
 
 The skeleton of function @aeval@ largely remains the same. 
 
 \begin{lstlisting}
-def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
-  val config = Config(e, env, store, time)
-  if (cache.outContains(config)) cont(Ans(cache.outGet(config), cache))
-  else {
-    val new_cache = cache.outUpdate(config, cache.inGet(config))
-    val new_time = config.tick 
-    e match { ...  }
-  }
-}
+        def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
+          val config = Config(e, env, store, time)
+          if (cache.outContains(config)) cont(Ans(cache.outGet(config), cache))
+          else {
+            val new_cache = cache.outUpdate(config, cache.inGet(config))
+            val new_time = config.tick 
+            e match { ...  }
+          }
+        }
 \end{lstlisting}
 
 Upon entering @aeval@, we first determine whether the @out@ cache
@@ -1533,27 +1532,27 @@ each function call to @aeval@ or @nd@ is passed with the latest cache from the m
 continuation of @aeval@ or @nd@.
 
 \begin{lstlisting}
-case Let(x, App(f, ae), e) =>
-  val closures = atomicEval(f, env, store)
-  nd[Storable](closures, Ans(Set[VS](), new_cache), {
-    case (Clos(Lam(v, body), c_env), clscache, clsnd) =>
-      val vbaddr = allocBind(v, new_time); val new_cenv = c_env + (v -> vbaddr)
-      val new_store = store.update(vbaddr, atomicEval(ae, env, store))
-      aeval(body, new_cenv, new_store, new_time, clscache, { case Ans(bdvss, bdcache) =>
-        nd[VS](bdvss, Ans(Set[VS](), bdcache), {
-          case (VS(vals, time, vssstore), bdvsscache, bdnd) =>
-            val baddr = allocBind(x, time); val new_env = env + (x -> baddr)
-            val new_store = vssstore.update(baddr, vals)
-            aeval(e, new_env, new_store, time, bdvsscache, {
-              case Ans(evss, ecache) => bdnd(Ans(evss, ecache.outUpdate(config, evss)))
-            })
-        }, clsnd)
-      })
-  },
-  continue)
-case ae if isAtomic(ae) =>
-  val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
-  continue(Ans(vs, new_cache.outUpdate(config, vs)))
+         case Let(x, App(f, ae), e) =>
+           val closures = atomicEval(f, env, store)
+           nd[Storable](closures, Ans(Set[VS](), new_cache), {
+             case (Clos(Lam(v, body), c_env), clscache, clsnd) =>
+               val vbaddr = allocBind(v, new_time); val new_cenv = c_env + (v -> vbaddr)
+               val new_store = store.update(vbaddr, atomicEval(ae, env, store))
+               aeval(body, new_cenv, new_store, new_time, clscache, { case Ans(bdvss, bdcache) =>
+                 nd[VS](bdvss, Ans(Set[VS](), bdcache), {
+                   case (VS(vals, time, vssstore), bdvsscache, bdnd) =>
+                     val baddr = allocBind(x, time); val new_env = env + (x -> baddr)
+                     val new_store = vssstore.update(baddr, vals)
+                     aeval(e, new_env, new_store, time, bdvsscache, {
+                       case Ans(evss, ecache) => bdnd(Ans(evss, ecache.outUpdate(config, evss)))
+                     })
+                 }, clsnd)
+               })
+           },
+           continue)
+         case ae if isAtomic(ae) =>
+           val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
+           continue(Ans(vs, new_cache.outUpdate(config, vs)))
 \end{lstlisting}
 
 After completing the evaluation, we obtain a set of @VS@ objects and must update the @out@ cache.
@@ -1562,17 +1561,17 @@ since it is where we reach the end of one computation path.
 For the second case, we update the @out@ cache before calling the @continue@ continuation.
 
 \begin{lstlisting}
-val mtCache = Cache(Store[Config, VS](Map()), Store[Config, VS](Map()))
-def analyze(e: Expr) = {
-  def iter(cache: Cache): Ans = {
-    val Ans(vss, new_cache) = aeval(e, mtEnv, mtStore, mtTime, cache, { case Ans(vss, cache) => 
-        Ans(vss, cache.outUpdate(Config(e, mtEnv, mtStore, mtTime), vss))
-    })
-    if (new_cache.out == cache.out) { Ans(vss, new_cache) }
-    else { iter(Cache(new_cache.out, new_cache.out)) }
-  }
-  iter(mtCache)
-}
+       val mtCache = Cache(Store[Config, VS](Map()), Store[Config, VS](Map()))
+       def analyze(e: Expr) = {
+         def iter(cache: Cache): Ans = {
+           val Ans(vss, new_cache) = aeval(e, mtEnv, mtStore, mtTime, cache, { case Ans(vss, cache) => 
+               Ans(vss, cache.outUpdate(Config(e, mtEnv, mtStore, mtTime), vss))
+           })
+           if (new_cache.out == cache.out) { Ans(vss, new_cache) }
+           else { iter(Cache(new_cache.out, new_cache.out)) }
+         }
+         iter(mtCache)
+       }
 \end{lstlisting}
 
 Finally, the @analyze@ function (as the entrance of the analysis) does a looping iteration
@@ -1602,10 +1601,10 @@ To see how traditional control-flow analysis suffers from spurious return-flows,
 we can consider the following example:
 
 \begin{lstlisting}
-(let ([id (lambda (z) z)])
-  (let ([x (id 1)])
-    (let ([y (id 2)])
-      x)))
+                                         (let ([id (lambda (z) z)])
+                                           (let ([x (id 1)])
+                                             (let ([y (id 2)])
+                                               x)))
 \end{lstlisting}
 
 In $k$-CFA algorithm or the abstract abstract machine shown in Section~\ref{aam},
@@ -1693,19 +1692,19 @@ where the value of type @T@ comes from the collection, and @nd@ performs recursi
 on itself over elements in the collection @ts@. 
 
 \begin{lstlisting}
-def nd[T](ts: Iterable[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
-  if (ts.isEmpty) acc
-  else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
-}
+                  def nd[T](ts: Iterable[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
+                    if (ts.isEmpty) acc
+                    else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
+                  }
 \end{lstlisting}
 
 The second operator @choices@ is implemented with delimited control operator 
 @shift@ but simply calls our first operator @nd@ in its body.
 
 \begin{lstlisting}
-def choices[T](ts: Iterable[T], cache: Cache): (T, Cache) @cps[Ans] = shift {
-  f: (((T, Cache)) => Ans) => nd(ts, Ans(Set[VS](), cache), f)
-}
+              def choices[T](ts: Iterable[T], cache: Cache): (T, Cache) @cps[Ans] = shift {
+                f: (((T, Cache)) => Ans) => nd(ts, Ans(Set[VS](), cache), f)
+              }
 \end{lstlisting}
 
 The function @choices@ takes two arguments: a set of elements with type @T@, 
@@ -1728,44 +1727,44 @@ The cache is still accumulated to the next call to @choices@ or @aeval@,
 given the fact that the abstract interpreter should always use the latest cache.
 
 \begin{lstlisting}
-def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[Ans] = {
-  val config = Config(e, env, store, time)
-  if (cache.outContains(config)) Ans(cache.outGet(config), cache)
-  else {
-    val new_time = config.tick; val new_cache = cache.outUpdate(config, cache.inGet(config))
-    e match {
-      case Let(x, App(f, ae), e) =>
-        val closures = atomicEval(f, env, store)
-        val (Clos(Lam(v, body), c_env), clscache) = choices[Storable](closures, new_cache)
-        val vbaddr = allocBind(v, new_time); val new_cenv = c_env + (v -> vbaddr)
-        val new_store = store.update(vbaddr, atomicEval(ae, env, store))
-        val Ans(bdvss, bdcache) = aeval(body, new_cenv, new_store, new_time, clscache)
-        val (VS(vals, time, vsstore), vscache) = choices[VS](bdvss, bdcache)
-        val baddr = allocBind(x, time); val new_env = env + (x -> baddr)
-        val new_vsstore = vsstore.update(baddr, vals)
-        val Ans(evss, ecache) = aeval(e, new_env, new_vsstore, time, vscache)
-        Ans(evss, ecache.outUpdate(config, evss))
-      case ae if isAtomic(ae) =>
-        val vss = Set(VS(atomicEval(ae, env, store), new_time, store))
-        Ans(vss, new_cache.outUpdate(config, vss))
-    }
-  }
-}
+        def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[Ans] = {
+          val config = Config(e, env, store, time)
+          if (cache.outContains(config)) Ans(cache.outGet(config), cache)
+          else {
+            val new_time = config.tick; val new_cache = cache.outUpdate(config, cache.inGet(config))
+            e match {
+              case Let(x, App(f, ae), e) =>
+                val closures = atomicEval(f, env, store)
+                val (Clos(Lam(v, body), c_env), clscache) = choices[Storable](closures, new_cache)
+                val vbaddr = allocBind(v, new_time); val new_cenv = c_env + (v -> vbaddr)
+                val new_store = store.update(vbaddr, atomicEval(ae, env, store))
+                val Ans(bdvss, bdcache) = aeval(body, new_cenv, new_store, new_time, clscache)
+                val (VS(vals, time, vsstore), vscache) = choices[VS](bdvss, bdcache)
+                val baddr = allocBind(x, time); val new_env = env + (x -> baddr)
+                val new_vsstore = vsstore.update(baddr, vals)
+                val Ans(evss, ecache) = aeval(e, new_env, new_vsstore, time, vscache)
+                Ans(evss, ecache.outUpdate(config, evss))
+              case ae if isAtomic(ae) =>
+                val vss = Set(VS(atomicEval(ae, env, store), new_time, store))
+                Ans(vss, new_cache.outUpdate(config, vss))
+            }
+          }
+        }
 \end{lstlisting}
 
 The function @analyze@ is also changed by adding a @reset@ operator around the function 
 call to @aeval@ to set the delimiter. The afterwards updating on cache becomes sequential.
 
 \begin{lstlisting}
-def analyze(e: Expr) = {
-  def iter(cache: Cache): Ans = {
-    val Ans(vss, anscache) = reset { aeval(e, mtEnv, mtStore, mtTime, cache) }
-    val new_cache = anscache.outUpdate(Config(e, mtEnv, mtStore, mtTime), vss)
-    if (new_cache.out == cache.out) { Ans(vss, new_cache) }
-    else { iter(Cache(new_cache.out, new_cache.out)) }
-  }
-  iter(mtCache)
-}
+             def analyze(e: Expr) = {
+               def iter(cache: Cache): Ans = {
+                 val Ans(vss, anscache) = reset { aeval(e, mtEnv, mtStore, mtTime, cache) }
+                 val new_cache = anscache.outUpdate(Config(e, mtEnv, mtStore, mtTime), vss)
+                 if (new_cache.out == cache.out) { Ans(vss, new_cache) }
+                 else { iter(Cache(new_cache.out, new_cache.out)) }
+               }
+               iter(mtCache)
+             }
 \end{lstlisting}
 
 Now we have arrived the end of this series of transformations. Starting from an 
