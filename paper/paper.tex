@@ -982,10 +982,9 @@ nondeterminism happening is when dereferencing the callee @f@ from the function 
 
 In the first case of pattern matching, we may have multiple choices of closure for callee @f@.
 For each closure in the set, a new frame is constructed and pushed onto the stack.
-The code for handling the second case (atomic expressions) is the same as the concrete CESK
-machines.
+The code for handling the second case (atomic expressions) is the same as the concrete CESK machines. \\
 
-\textbf{Note on Computability.}
+\textit{Note on Computability.}
 Unfortunately, even though other components in the states are finite,
 this AAM with an unbounded stack is still not computable.
 This is because the unbounded stack can grow to arbitrary depth which implies that the state
@@ -1341,9 +1340,9 @@ An additional argument @continue@ which has type @Cont@ is also introduced.
 Recall that in the disentangled AAM, the second case in @drive_step@
 makes a call to @continue@. Here, the reemerging @continue@ is a function
 of type @Ans => Ans@. The function @aeval@ does not return: instead, it calls
-@continue@ with the result values.
+@continue@ with the result values. \\
 
-\textbf{Nondeterminism Abstractions.}
+\textit{Nondeterminism Abstractions.}
 To handle the inevitable nondeterminism, we define a generic function @nd@ as follows:
 
 \begin{lstlisting}
@@ -1373,9 +1372,9 @@ it is a variant implementation of @fold@ in continuation style. But here we have
 continuations, one for the next element in the collection, and one for the eventual result.
 This is sometimes referred to as an extended continuation-passing style (ECPS)
 that function @k@ is a normal continuation and @m@ is a meta-continuation 
-\cite{Danvy:1990:AC:91556.91622}.
+\cite{Danvy:1990:AC:91556.91622}. \\
 
-\textbf{Evaluation without Caching.}
+\textit{Evaluation without Caching.}
 Since our first version of @aeval@ implements only the nondeterministic evaluation, 
 given the defined @nd@ operator, the evaluation function @aeval@ can be easily defined. 
 In the case that @e@ is a @let@ expression, we invoke @nd@ twice and perform a nesting 
@@ -1440,9 +1439,9 @@ Based on the refunctionalized AAM from the last section, we use the same nondete
 operator @nd@, but further extend it to a fixed-point cached version in this section.
 The fixed-point caching algorithm performs a sound over-approximation of all possible
 concrete reachable paths and values, and also prevents non-termination when analyzing 
-programs that may diverge.
+programs that may diverge. \\
 
-\textbf{Configuration.}
+\textit{Configuration.}
 We do not have the concept of an explicit stack or state, so to represent the cache 
 we introduce a configuration @Config@ as a state-like definition which borrows the 
 components from state, sans continuations.
@@ -1451,7 +1450,7 @@ components from state, sans continuations.
                   case class Config(e: Expr, env: Env, store: BStore, time: Time) { ... }
 \end{lstlisting}
 
-\textbf{Cache.}
+\textit{Cache.}
 Recall that the latent assumption of the worklist algorithm in classical AAM is that 
 if we have seen a state @s@, it means we also have seen all the successors of state @s@.
 The caching algorithm we adopt here replays the same assumption but in a big-step 
@@ -1476,9 +1475,9 @@ to sets of @VS@. The @in@ cache contains mappings from the previous iteration of
 and the @out@ cache contains mappings after the current iteration of evaluation. 
 Once we have evaluated a term to some values, we update the @out@ cache. In the next 
 iteration, we will use the @out@ from the previous iteration as the @in@ cache for the 
-current iteration.
+current iteration. \\
 
-\textbf{Cache-Passing Style.}
+\textit{Cache-Passing Style.}
 We can now transform our interpreter into cache-passing style. We begin by changing the 
 return type @Ans@ to a case class which contains a @VS@ set and a cache. @Ans@ also implements 
 its own accumulating operation @++@ which defines as union on @Set[VS]@ and join on caches.
@@ -1589,9 +1588,9 @@ initial configuration in the final cache.
 In the previous section, we have established a computable pushdown control-flow
 analysis through refunctionalization and caching. In this section,
 we revisit the pushdown control-flow problem and examine what we have done to
-overcome it.
+overcome it. \\
 
-\textbf{The Problem with Return-flows.}
+\textit{The Problem with Return-flows.}
 Pushdown control-flow is a property in analysis that precisely models
 the runtime call stack of the analyzed program.
 A pushdown control-flow analysis provides an as-exact-as-runtime return-flow
@@ -1621,9 +1620,9 @@ Under $1$-CFA, the algorithm is able to distinguish that variable @z@ of functio
 @id@ has two different values at two call sites, so variable @y@
 would not be polluted by @1@.
 However, variable @x@ still points to value set @{1, 2}@, because two call-sites still 
-share the same continuation and $1$-CFA is still unable to separate the return-flows.
+share the same continuation and $1$-CFA is still unable to separate the return-flows. \\
 
-\textbf{Call/Return Matching through Refunctionalization and Caching.}
+\textit{Call/Return Matching through Refunctionalization and Caching.}
 The refunctionalized AAM we obtained has the perfect match on return-flows even though 
 we do not have a stack model. The higher-order functions representing continuations 
 already connect all the execution in order. In fact, the continuations (call stack) 
@@ -1682,9 +1681,9 @@ transformation which is only one layer.
 
 To address this problem, we reintroduce two operators @nd@ and @choices@ for handling 
 nondeterministic choices in a way that is direct-style but mimics extended 
-continuation-passing style.
+continuation-passing style. \\
 
-\textbf{Nondeterminism Operators, Again.}
+\textit{Nondeterminism Operators, Again.}
 %Introducing @Cache@ explicitly as the part of arguments of continuation @k@ reveals 
 %that cache should be monotonically accumulated to the rest of computation. 
 The first operator @nd@ is adapted from the previous one, but the meta-continuation
