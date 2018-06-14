@@ -1480,9 +1480,10 @@ current iteration.
 
 \textbf{Cache-Passing Style.}
 We can now transform our interpreter into cache-passing style. We begin by changing the 
-return type @Ans@ to a case class which contains a @VS@ set and a cache. @Ans@ also supports
+return type @Ans@ to a case class which contains a @VS@ set and a cache. @Ans@ also implements 
 its own accumulating operation @++@ which defines as union on @Set[VS]@ and join on caches.
-% TODO join?
+The join operation of caches is defined as joining its two store components.
+
 \begin{lstlisting}
                 case class Ans(vss: Set[VS], cache: Cache) {
                   def ++(ans: Ans): Ans = { Ans(vss ++ ans.vss, cache.join(ans.cache)) }
