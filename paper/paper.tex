@@ -1567,19 +1567,21 @@ def analyze(e: Expr) = {
     val Ans(vss, new_cache) = aeval(e, mtEnv, mtStore, mtTime, cache, { case Ans(vss, cache) => 
         Ans(vss, cache.outUpdate(Config(e, mtEnv, mtStore, mtTime), vss))
     })
-    if (new_cache.out == cache.out) { Ans(vss, new_cache) }
-    else { iter(Cache(new_cache.out, new_cache.out)) }
+    if (new_cache.out == new_cache.in) Ans(vss, new_cache)
+    else iter(Cache(new_cache.out, Store[Config, VS](Map())))
   }
   iter(mtCache)
 }
 \end{lstlisting}
 
+% TODO: explain more on how caches work
 Finally, the @analyze@ function (as the entrance of the analysis) does a looping iteration
 to find the fixed-point on caches starting from an empty cache.
-If the @out@ cache of this iteration is equivalent to the @out@ cache from the last iteration,
-then we have reached a fixed-point that over-approximates the concrete evaluations,
-and thus can be returned.
-Otherwise, the next iteration with the new @out@ cache will be activated.
+If the @out@ cache of this iteration is equivalent to its @in@ cache, which means no more 
+fact was discovered during this iteration, then we have reached a fixed-point that 
+over-approximates the concrete evaluations, and thus can be returned.
+Otherwise, the next iteration with the new @out@ cache installed at the @in@ cache position 
+will be activated; in the meanwhile, an empty cache will be used as the @out@ cache.
 Note that the continuation of the initial call to @aeval@ sets up the values for the
 initial configuration in the final cache.
 
@@ -1656,12 +1658,13 @@ We have multiple choices of how to proceed:
   \item By monadifying the continuations, we obtain the abstracting
     definitional interpreters in monadic style which are what \citeauthor{darais2017abstracting}
     describe \cite{darais2017abstracting}.
-  \item By representing the extended continuation-passing style with delimited controls,
-    we derive a new form of abstract interpreters in direct-style.
+  \item By representing the extended continuation-passing style with delimited control operators
+    such as @shift@ and @reset@, we derive a new form of abstract interpreters in direct-style.
   \item In fact, we may also just use the same caching algorithm but with side effects such as
     assignments and mutations to update the cache, and then achieve the same definitional 
-    interpreter with pushdown control-flows. In this case, nondeterminism can be easily 
-    handled via @for@ comprehension.
+    interpreter with pushdown control-flows. \citeauthor{friedman-ai} in a tutorial on abstract 
+    interpreters use this style to model caches and updates \cite{friedman-ai}.
+    In this case, nondeterminism can be easily handled via @for@ comprehension. 
 \end{itemize}
 
 These coincidences should not be a surprise since existing literature is extraordinarily rich
@@ -1760,15 +1763,15 @@ def analyze(e: Expr) = {
   def iter(cache: Cache): Ans = {
     val Ans(vss, anscache) = reset { aeval(e, mtEnv, mtStore, mtTime, cache) }
     val new_cache = anscache.outUpdate(Config(e, mtEnv, mtStore, mtTime), vss)
-    if (new_cache.out == cache.out) { Ans(vss, new_cache) }
-    else { iter(Cache(new_cache.out, new_cache.out)) }
+    if (new_cache.out == new_cache.in) Ans(vss, new_cache)
+    else iter(Cache(new_cache.out, Store[Config, VS](Map())))
   }
   iter(mtCache)
 }
 \end{lstlisting}
 
 Now we have arrived the end of this series of transformations. Starting from an 
-small-step abstract abstract machine,  eventually we obtain an big-step definitional
+small-step abstract abstract machine, eventually we obtain an big-step definitional
 interpreter with pushdown control-flows and written in direct-style.
 
 %specify higher-order definitional interpreters using first-order means (cite)

@@ -72,8 +72,8 @@ object RefuncCPS {
           val init_config = Config(e, env, store, mtTime)
           Ans(vss, cache.outUpdate(init_config, vss))
       })
-      if (new_cache.out == cache.out) { Ans(vss, new_cache) }
-      else { iter(Cache(new_cache.out, new_cache.out)) }
+      if (new_cache.out == new_cache.in) { Ans(vss, new_cache) }
+      else { iter(Cache(new_cache.out, Store[Config, VS](Map()))) }
     }
     iter(Cache.mtCache)
   }

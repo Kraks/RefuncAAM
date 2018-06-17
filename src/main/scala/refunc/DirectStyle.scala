@@ -68,8 +68,8 @@ object DirectStyleDC {
       val Ans(vss, anscache) = reset { aeval(e, env, store, mtTime, cache) }
       val init_config = Config(e, env, store, mtTime)
       val new_cache = anscache.outUpdate(init_config, vss)
-      if (new_cache.out == cache.out) { Ans(vss, new_cache) }
-      else { iter(Cache(new_cache.out, new_cache.out)) }
+      if (new_cache.out == new_cache.in) { Ans(vss, new_cache) }
+      else { iter(Cache(new_cache.out, Store[Config, VS](Map()))) }
     }
     iter(Cache.mtCache)
   }
@@ -135,8 +135,8 @@ object DirectStyleSideEff {
     def iter(cache: Cache): Ans = {
       val Ans(vss, new_cache) = aeval(e, env, store, mtTime, cache)
       val updated_cache = new_cache.outUpdate(Config(e, env, store, mtTime), vss)
-      if (updated_cache.out == cache.out) { Ans(vss, updated_cache) }
-      else { iter(Cache(updated_cache.out, updated_cache.out)) }
+      if (updated_cache.out == new_cache.in) { Ans(vss, updated_cache) }
+      else { iter(Cache(updated_cache.out, Store[Config, VS](Map()))) }
     }
     iter(Cache.mtCache)
   }
