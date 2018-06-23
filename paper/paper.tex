@@ -7,7 +7,7 @@
 %% For single-blind review submission, w/ CCS and ACM Reference
 %\documentclass[acmsmall,review]{acmart}\settopmatter{printfolios=true}
 %% For final camera-ready submission, w/ required CCS and ACM Reference
-\documentclass[acmsmall]{acmart}\settopmatter{}
+\documentclass[acmsmall, review]{acmart}\settopmatter{}
 
 %% Journal information
 %% Supplied to authors by publisher for camera-ready submission;
@@ -208,7 +208,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   transform small-step abstract abstract machines into big-step abstract  definitional
   interpreters.
   The transformations include linearization, fusing, disentangling, refunctionalizing,
-  and un-CPS to direct-style with delimited controls. Linearization expresses
+  and un-CPS to direct-style with delimited control. Linearization expresses
   non-deterministic choices by first-order data types, after which refunctionalization
   sequentializes the evaluation order by higher-order functions.
   All transformations properly handle the collecting semantics and the nondeterminism 
@@ -399,7 +399,7 @@ Those transformations are summarized here, with their associated section:
   \item We show \textbf{linearization} in Section~\ref{linear}. By expressing the
     nondeterministic choices as a first-order data type, we linearize the execution
     of abstract abstract machines; the transition of machine states therefore becomes 
-    deterministic. Notably, this introduces another layer of controls that will also 
+    deterministic. Notably, this introduces another layer of control that will also 
     be refunctionalized later.
 
   \item In Section~\ref{fusing}, we then present the \textbf{fusing} transformation.
@@ -418,7 +418,7 @@ Those transformations are summarized here, with their associated section:
     and precise call/return matching is obtained through these transformations.
 
   \item The last transformation we show is that of transforming the refunctionalized AAM to a
-    \textbf{direct-style} interpreter (Section~\ref{directstyle}) by using delimited controls.
+    \textbf{direct-style} interpreter (Section~\ref{directstyle}) by using delimited control operators.
 \end{itemize}
 
 These transformations are used throughout the paper, with refunctionalization and
@@ -485,7 +485,7 @@ concluding thoughts in Section~\ref{sec:conclusion}.
 % functions.
 % In Section~\ref{directstyle}, we transform the refunctionalized AAM to two
 % different direct styles: one implemented with monads, the other using
-% delimited controls.
+% delimited control operators.
 
 % Finally, we discuss related work in Section~\ref{sec:related}, followed by concluding thoughts in Section~\ref{sec:conclusion}.
 
@@ -747,7 +747,7 @@ of continuation addresses is also nondeterministic.
 As a consequence, the components of states are also changed: the store is divided
 into binding stores and continuation stores; the continuation stack becomes an address.
 By dereferencing this address in a continuation store, we can retrieve the actual 
-transfer of controls. The definition of environment @Env@ remains the same.
+transfer of control. The definition of environment @Env@ remains the same.
 
 \begin{lstlisting}
   case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, k: KAddr, time: Time)
@@ -1032,7 +1032,7 @@ In order to address this problem, our first step of transformations
 is to linearize all nondeterministic choices.
 This step removes all nondeterminism from the @step@ function.
 Likewise, the @Frame@ saves the information of the caller in concrete executions.
-We then introduce another layer of controls, and define a case class @NDCont@
+We then introduce another layer of control, and define a case class @NDCont@
 that saves the information at a fork point when we have multiple target closures.
 We also add a new field @ndk@ to the definition of state, which we now call @NDState@.
 For clarity of presentation in differentiating between the two continuations, we elect to call
@@ -1668,17 +1668,17 @@ We have multiple choices of how to proceed:
 
 These coincidences should not be a surprise since existing literature is extraordinarily rich
 in showing the correspondence between monads and continuation-passing style as well as
-delimited controls since their very beginning era \cite{Danvy:1990:AC:91556.91622, wadler1992essence,
+delimited control since their very beginning era \cite{Danvy:1990:AC:91556.91622, wadler1992essence,
 danvy1992representing, moggi1991notions}.
 
 In this section, we present the second version that uses delimited control operators.
 
-\subsection{Un-CPS by Delimited Controls} \label{uncps}
+\subsection{Back to Direct-Style with Delimited Control} \label{uncps}
 
 As previously identified, there are two layers of continuations: one for the normal stack 
 of the analyzed language, and the other for the nondeterministic choices of closures.
 This corresponds to the extended continuation-passing style.
-But in our defining language (Scala), the delimited controls rely on the continuation-passing 
+But in our defining language (Scala), the delimited control operators rely on the continuation-passing 
 transformation which is only one layer.
 
 To address this problem, we reintroduce two operators @nd@ and @choices@ for handling 
@@ -1876,9 +1876,9 @@ we reveal that refunctionalization plays an important role for inheriting the
 stack from the metalanguage.
 The target of the series of transformations in this paper is abstract definitional
 interpreters, and we additionally demonstrate abstract interpreters written direct-style with
-delimited controls. 
+delimited control operators. 
 We use the delimited control operators @shift@ and @reset@ that are implemented in Scala 
-\cite{rompf2009implementing}. The correspondence of delimited controls (as well as continuations) 
+\cite{rompf2009implementing}. The correspondence of delimited control (as well as continuations) 
 and monads are well-known \cite{Danvy:1990:AC:91556.91622, wadler1992essence, danvy1992representing, moggi1991notions}.
 
 \section{Conclusion}\label{sec:conclusion}
