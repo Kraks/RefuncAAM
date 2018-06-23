@@ -213,8 +213,8 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   after which refunctionalization transforms the datatype representing continuations
   into higher-order functions.
   Following the idea that in deterministic languages, reduction contexts of reduction
-  semantics are defunctionalized continuations, we further apply this idea to AAM --
-  reduction contexts of it are refunctionalized to extended continuation-passing style.
+  semantics are defunctionalized continuations, we further apply this idea to nondeterministic
+  AAM -- reduction contexts of it are refunctionalized to extended continuation-passing style.
 
   All transformations properly handle the collecting semantics and the nondeterminism 
   of abstract interpretation. Remarkably, we reveal how precise call/return matching in 
@@ -289,7 +289,7 @@ Broadly speaking, abstract abstract machines and abstract definitional interpret
 different forms of abstract interpreters. They are obtained by applying a combination 
 of abstractions to their concrete counterparts, abstract machines and definitional 
 interpreters, respectively. An interesting question, and the subject of this paper, is 
-how we can interderive these abstract semantics artifacts from the respective other one.
+how we can interderive these abstract semantic artifacts from the respective other one.
 
 In the concrete world, the relations among reduction semantics, abstract machines,
 definitional interpreters, and monadic interpreters have been intensively studied by
@@ -302,15 +302,15 @@ One can derive definitional interpreters by refunctionalizing the evaluation con
 abstract machines, and by defunctionalizing the higher-order functions, one may obtain 
 abstract machines in the reverse direction.
 
-In the domain of abstract semantics artifacts, by contrast, the relations between small-step
+In the domain of abstract semantic artifacts, by contrast, the relations between small-step
 abstract abstract machines and big-step abstract definitional interpreters, as well as the 
 question of deriving one from the other, are not well studied.
-The fundamental difference between concrete semantics artifacts and abstract semantics
-artifacts is nondeterminism. In addition to ensuring termination, abstract semantics
-artifacts are usually equipped with a cache of explored state that is guaranteed to reach
-the least fixed-point eventually.
+One of the fundamental differences between concrete semantic artifacts and abstract semantic
+artifacts is nondeterminism. In addition to ensuring termination, abstract semantic
+artifacts are usually equipped with a cache of reachable states, the cache is
+updated in a monotonic way and guaranteed to reach the least fixed-point eventually.
 In this functional pearl, we provide a constructive answer to the question of interderiving
-abstract semantics artifacts and relate AAM and ADI by presenting a series of syntactical
+abstract semantic artifacts and relate AAM and ADI by presenting a series of syntactical
 transformations on the program from small-step abstract abstract machines to big-step 
 abstract definitional interpreters.
 
@@ -330,7 +330,7 @@ can be obtained.
        \begin{smallmatrix} \text{big-step} \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  &
        \begin{smallmatrix} \text{disentangled}  \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
        \begin{smallmatrix} \text{refunctionalized}  \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
-       \begin{smallmatrix} \text{monadic} \\ \text{abstracting} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix}  \\
+       \begin{smallmatrix} \text{monadic} \\ \text{abstract} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix}  \\
        \begin{smallmatrix} \text{abstract} \\ \text{machines} \end{smallmatrix} &
          &
        %\begin{smallmatrix} \text{big-step} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  &
@@ -378,7 +378,7 @@ can be obtained.
      [start chain, color=gray] \chainin (m-3-1);
      {
        [start branch=C] \chainin (m-3-5)
-       [join={node[above, labeled] {\text{Known as Danvy's correspondences for concrete semantics artifacts }}}];
+       [join={node[above, labeled] {\text{Known as Danvy's correspondences for concrete semantic artifacts }}}];
      }
    }
  \end{tikzpicture}
@@ -391,7 +391,8 @@ can be obtained.
 We begin by reviewing some background necessary for this work in Section~\ref{background}, 
 as well as introducing some of the basic code structures used throughout the paper. 
 We then address the main contribution of this paper, which is the filling of the gap between
-small-step AAM and big-step ADI by developing a series of systematic transformations. 
+small-step AAM and big-step ADI by applying a series of well-known systematic transformations
+drawn from concrete semantic artifacts.
 Figure \ref{fig:trans} shows the transformations.
 
 Those transformations are summarized here, with their associated section:
@@ -403,11 +404,11 @@ Those transformations are summarized here, with their associated section:
     deterministic. Notably, this introduces another layer of control that will also 
     be refunctionalized later.
 
-  \item In Section~\ref{fusing}, we then present the \textbf{fusing} transformation.
+  \item In Section~\ref{fusing}, we then present the \textbf{lightweight fusion} transformation.
     The fusing transformation simply combines the single-step function @step@ and the 
     driving function into one, but keeps all the machine state representations.
 
-  \item Section~\ref{disen} discusses \textbf{disentangling}, which disassembles the 
+  \item Section~\ref{disen} discusses \textbf{disentanglement}, which disassembles the 
     fused AAM to be several individual functions, with each function handling one data 
     type represented by a continuation.
 
@@ -443,8 +444,8 @@ concluding thoughts in Section~\ref{sec:conclusion}.
 %   between small-step AAM and big-step ADI by developing a series of
 %   systematic transformations.
 %   We show that the correspondence between abstract
-%   machines and interpreters exists not only in concrete semantics artifacts,
-%   but also in abstract semantics artifacts.
+%   machines and interpreters exists not only in concrete semantic artifacts,
+%   but also in abstract semantic artifacts.
 %   Galois connection?
 %   \note{JD: Section number?}
 
@@ -591,7 +592,7 @@ It is worth noting that the continuation class @Kont@ is defined as a list of
 frames, where a frame can be considered an evaluation context in reduction semantics.
 We represent frames using the @Frame@ class, which stores the information of a single
 call-site, i.e., the information that can be used to resume the interrupted computation.
-A @Frame@ constitutes a variable name @x@ to be bound later, a control expression
+A @Frame@ constitutes a variable name @x@ to be bound later, and a control component
 to which the program may resume, and its environment.
 
 \subsubsection{Single-Step Transition}
@@ -648,11 +649,11 @@ As shown and previously discussed, we examine the only two cases which the state
   the variable name @x@ at the left-hand position of the @Let@, the body expression of 
   @Let@, and the lexical environment of the body expression.
 
-\item If the state is not a @Let@ expression, then it must be an atomic expression, as seen
-  in the above code. In this scenario, we begin by extracting the top frame of all available
-  continuations. The control (i.e., an atomic expression) of the current state is the 
-  evaluated term that is being bound to the variable @x@ from the top frame.
-  The environment and store are updated with @x@ mapping to the closure value of @ae@.
+\item If the control component is not a @Let@ expression, then it must be an atomic expression,
+  as seen in the above code. In this scenario, we begin by extracting the top frame of
+  all available continuations. The variable @x@ from the top frame will be bound to
+  the result of evaluating the atomic expression @ae@ by updating the environment and
+  store.
   Finally, the successor state is transferred to expression @e@ from the top frame,
   which is the body of a @Let@ expression, with the updated environment, store, and
   the rest of the stack @ks@.
@@ -699,15 +700,15 @@ control-flow analysis.
 
 \subsubsection{Machine Components}
 
-Similar to CESK machines, the machine state of AAM has a control expression,
-an environment, a store, and continuation, as well as a timestamp.
-However, there are several notable differences between AAM's store and CESK machine's store.
-In AAM, the store maps addresses to sets of values; it stores all possible values
-for a particular address. As such, dereferencing addresses becomes nondeterministic.
-Also, the store performs \emph{joining}, rather than overwriting, when updating elements.
-Furthermore, the continuations are likewise allocated on the store instead of formed into a
-linked list, and the continuations are in a state which then turns into a continuation
-address.
+Similar to CESK machines, the machine state of AAM has a control, an environment, a store,
+and continuation, as well as a timestamp. However, there are several notable differences
+between AAM's store and CESK machine's store. In AAM, the store maps addresses to sets of
+values; it stores all possible values for a particular address. As such, dereferencing
+addresses becomes nondeterministic. Also, the store performs \emph{joining}, rather than
+overwriting, when updating elements. Furthermore, the continuations are likewise allocated
+on the store instead of formed into a linked list, and the continuation component becomes
+an address that maps to a set of continuations in the store instead of directly embedded
+in the state.
 
 For clarity, we divide the store into two separate stores: the binding stores @BStore@, and
 the continuation store @KStore@.
@@ -761,12 +762,12 @@ In abstract interpretation, however, these are key ingredients to achieve
 analyses with different sensitivities, as well as to perform a finite
 state space analysis\cite{Gilray:2016:ACP:2951913.2951936}.
 To effectively approximate the runtime behavior, we introduce a finite
-program contour @time@ that encodes the program execution history.
+program contours @time@ that encodes the program execution history.
 The function @tick@ is used to refresh the "time" and get a "new time".
-We use a list of execution contexts (expressions) to represent the finite 
-program contour, and as we will see in Section~\ref{kcfainst}, by applying 
-different @tick@ functions on the timestamp, we are able to obtain a 
-family of analyses.
+We use a list of expression (which are drawn from the control component)
+to encode the calling contexts history, and as we will see in Section~
+\ref{kcfainst}, by applying different @tick@ functions on the timestamp,
+we are able to obtain a family of analyses.
 
 \begin{lstlisting}
   type Time = List[Expr]
@@ -816,7 +817,7 @@ except the nondeterminism which makes @step@ return a list of reachable successo
 We have two cases to consider (code shown below):
 
 \begin{itemize}
-  \item If the current control expression is a @Let@, then the result of @App(f, ae)@ will 
+  \item If the current control component is a @Let@, then the result of @App(f, ae)@ will 
     be bound to variable @x@. In this case, we retrieve the set of closures that @f@ may 
     represent. For each closure in the set, we perform nearly the same operations as in the
     concrete CESK machines, with an important difference: the continuation is allocated on 
@@ -930,7 +931,7 @@ In this section, we describe a variant of AAM that allows the stack to be
 unbounded which uses a precise call stack as we did in the concrete CESK machine.
 Instead of allocating continuations in the store and embedding addresses of 
 continuations in states, we intend to use a list of frames to explicitly model 
-the stack. By doing so, we recover the call stack as precise as runtimes
+the stack. By doing so, we recover the call stack as the same as runtimes
 (so called pushdown control-flow analysis), but since the stack is unbounded, 
 the state space is potentially infinite. 
 
@@ -1008,10 +1009,9 @@ However, no two existing stack components are identical in the state space.
 \section{Linearization} \label{linear}
 
 In the previous section, we show that by keeping an unabstracted stack in the state
-space, we can recover the precise call/return match.
-In this and following sections, we begin describing the transformations step by step.
-Our base machine for now is the AAM with unbounded stack, though
-as we will later transform the stack to higher-order functions
+space, we can recover the precise call/return match. Now we begin describing the
+transformations step by step. Our base machine for now is the AAM with unbounded
+stack, though as we will later transform the stack to higher-order functions
 representing continuations, it does not matter what kind of AAM we start from.
 This is because transforming to higher-order functions forces us to sequentialize
 the order of abstract evaluation, and neither requiring construction of a frame on stack,
@@ -1147,14 +1147,14 @@ The termination of the analysis occurs when we reach an @NDState@ in which the e
 is atomic and both the normal continuation and nondeterminism continuation are
 empty lists. This corresponds to the case that @todo@ list is empty.
 
-At this point, we have obtain a linearized abstract abstract machine. If we imagine that the
+At this point, we have obtained a linearized abstract abstract machine. If we imagine that the
 classical AAM explores a graph of reachable states, then the linearized AAM flattens the
 graph to a linear sequence.
 
-\section{Fusing} \label{fusing}
+\section{Lightweight Fusion} \label{fusing}
 
-Fusing is a transformation that combines the @step@ and @drive@ functions into a single
-function.
+Then we apply a lightweight fusion transformation that combines the @step@ and @drive@
+functions into a single function.
 The fused function @drive_step@ is essentially formed by merging the functionality of
 @step@ into the @drive@ function.
 @drive_step@ takes an @NDState@ and a set of explored states as an argument
@@ -1185,7 +1185,7 @@ follows:
   def analyze(e: Expr): Set[State] = drive_step(inject(e), Set())
 \end{lstlisting}
 
-\section{Disentangling} \label{disen}
+\section{Disentanglement} \label{disen}
 
 With fusing complete, our AAM
 appears similar to a ``big-step'' interpreter, although it still has the machine
@@ -1224,7 +1224,8 @@ At the end of the first case of pattern matching, we invoke @drive_step@ recursi
 \footnote{The code for constructing new environments, stores, and frames is elided for 
 simplicity of presentation.}.
 The code for the second case is replaced entirely by a function call to @continue@.
-The astute reader will notice a vague shape of interpreter in continuation style has emerged.
+The shape of an interpreter in continuation-passing style has emerged.
+%The astute reader will notice a vague shape of interpreter in continuation style has emerged.
 
 \begin{lstlisting}
   def continue(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1634,7 +1635,7 @@ is naturally matched.
 
 In fact, what we started is an AAM with an unbounded stack which already precisely 
 matches the calls and returns.
-Refunctionalization makes the interpreter be a ``big-step'' semantics artifact, 
+Refunctionalization makes the interpreter be a ``big-step'' semantic artifact, 
 then the consequence is we have no places to save the context information. 
 But refunctionalization not only forces us to sequentialize the order nondeterministic 
 evaluation through higher-order functions representing continuations, 
@@ -1784,8 +1785,8 @@ interpreter with pushdown control-flows and written in direct-style.
 to approximate a program's runtime behavior\cite{cousot1977abstract}.
 Control-flow analysis is one instance of abstract interpretation on functional programs
 that can be traced to Jones \cite{jones1981flow}. \citeauthor{Shivers:1988:CFA:53990.54007} 
-introduces $k$-CFA which uses $k$ recent calling contexts as program contour that 
-differentiates values from different contexts \cite{Shivers:1988:CFA:53990.54007, 
+introduced $k$-CFA which uses $k$ recent calling contexts as program contours that 
+differentiate values from different contexts \cite{Shivers:1988:CFA:53990.54007, 
 Shivers:1991:SSC:115865.115884}.
 The recent formulation of control-flow analysis is the abstracting abstract machines
 methodology \cite{van2012systematic, van2010abstracting} which forms the starting point
@@ -1799,8 +1800,8 @@ Defunctionalization and refunctionalization build connections between abstract
 machines and interpreters.
 \citeauthor{Reynolds:72} first shows defunctionalization as a program transformation 
 technique that can be used to transform higher-order functions to first-order functions
-when specifying a programming language by an interpreter \cite{Reynolds:72, Reynolds:HOSC98-revisited}.
-Refunctionalization is the left inverse of this transformation.
+when writing a definitional interpreter \cite{Reynolds:72, Reynolds:HOSC98-revisited}.
+Refunctionalization is a left inverse of this transformation.
 
 Over the years, Danvy and his collaborators applied refunctionalization and defunctionalization 
 to many different abstract machines and semantics, including the CEK machines, the CLS machines,
@@ -1814,12 +1815,13 @@ Dijkstra's shunting-yard algorithm \cite{Danvy:2006:RW:2171265.2171268}.
 For deterministic languages, \citeauthor{Danvy:2008:DIP:1411204.1411206} shows
 a reduction semantics is a structural operational semantics in continuation style,
 where the reduction context is a defunctionalized continuation \cite{Danvy:2008:DIP:1411204.1411206}.
+% Danvy also shows in nondeterministic languages ...
 Our work further shows that for nondeterministic languages, there is another layer of continuations
 that controls the nondeterministic choices. After identifying and explicitly exposing 
 (Section~\ref{linear}) that layer of nondeterministic continuations, the whole program can 
 then be refunctionalized to extended continuation-passing style.
 
-Fusion as one of the transformation in our paper is also studied by 
+Lightweight fusion as one of the transformation in our paper is also studied by 
 \citeauthor{Ohori:2007:LFF:1190216.1190241} \cite{Ohori:2007:LFF:1190216.1190241}. \\
 
 \textit{Pushdown Control-Flow Analysis.}
@@ -1829,7 +1831,7 @@ match based on small-step abstracting abstract machines.
 
 CFA2 is the first solution that solves the return-flows problem~\cite{vardoulakis2010cfa2},
 but CFA2 has several drawbacks: it works only on continuation-passing style programs,
-and does not supports polyvariant analysis, in addition to an exponential time
+and does not supports polyvariant analysis, in addition to having an exponential time
 complexity.
 Pushdown control-flow analysis (PDCFA) is a mechanism which maintains this precision
 through the use of a Dyke state graph representing all possible stacks contained
@@ -1888,15 +1890,15 @@ and monads are well-known \cite{Danvy:1990:AC:91556.91622, wadler1992essence, da
 % TODO: dyck graph summarization v.s. direct-style + caching
 
 In this functional pearl, we fill the gap between small-step abstract abstract machines 
-and big-step abstract definitional interpreters by developing a series of syntactical 
+and big-step abstract definitional interpreters by applying a series of syntactical 
 transformations. Among these transformations, linearization turns a worklist into another
 layer of continuations; refunctionalization converts the first-order data types representing
 continuations to higher-order functions; and finally un-CPS with delimited control transforms
 the abstract interpreter into a sequence of expressions, which looks no different to a
 concrete interpreter.
 
-We show the functional correspondence not only exists between concrete semantics artifacts
-but also exists between abstract semantics artifacts. An interesting open question would
+We show the functional correspondence not only exists between concrete semantic artifacts
+but also exists between abstract semantic artifacts. An interesting open question would
 be whether there also exists a correspondence of static analyses formalized in different 
 denotational style and operational style.
 
