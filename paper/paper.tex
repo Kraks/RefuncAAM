@@ -1021,7 +1021,7 @@ it has an equivalent stack model to abstract definitional interpreters (our fina
 
 In Danvy's paper \textit{Defunctionalized Interpreters for Programming
   Languages}, he mentions that for deterministic languages, a reduction semantics
-is a structural operational semantics in continuation style, where the reduction
+is a structural operational semantics in continuation-passing style, where the reduction
 context is a defunctionalized continuation \cite{Danvy:2008:DIP:1411204.1411206}.
 This poses a problem, as the underlying semantics of AAM is fundamentally nondeterministic.
 But the evaluation context (i.e., the @Frame@ in our program) is \emph{not}
@@ -1225,7 +1225,6 @@ At the end of the first case of pattern matching, we invoke @drive_step@ recursi
 simplicity of presentation.}.
 The code for the second case is replaced entirely by a function call to @continue@.
 The shape of an interpreter in continuation-passing style has emerged.
-%The astute reader will notice a vague shape of interpreter in continuation style has emerged.
 
 \begin{lstlisting}
   def continue(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1369,7 +1368,7 @@ there are two out calls to @drive_step@ and @ndcontinue@, here the application
 of @k@ simulates @drive_step@, and @m@ simulates @ndcontinue@.
 
 Readers familiar with functional programming may think of @fold@ at this point; indeed,
-it is a variant implementation of @fold@ in continuation style. But here we have two
+it is a variant implementation of @fold@ in continuation-passing style. But here we have two
 continuations, one for the next element in the collection, and one for the eventual result.
 This is sometimes referred to as an extended continuation-passing style (ECPS)
 that function @k@ is a normal continuation and @m@ is a meta-continuation 
@@ -1756,8 +1755,8 @@ given the fact that the abstract interpreter should always use the latest cache.
   }
 \end{lstlisting}
 
-The function @analyze@ is also changed by adding a @reset@ operator around the function 
-call to @aeval@ to set the delimiter. The afterwards updating on cache becomes sequential.
+The function @analyze@ is also changed by calling a @reset@ operator around the function 
+call of @aeval@ to set the delimiter. The afterwards updating on cache becomes sequential.
 
 \begin{lstlisting}
   def analyze(e: Expr) = {
@@ -1771,8 +1770,8 @@ call to @aeval@ to set the delimiter. The afterwards updating on cache becomes s
   }
 \end{lstlisting}
 
-Now we have arrived the end of this series of transformations. Starting from an 
-small-step abstract abstract machine, eventually we obtain an big-step definitional
+Now we have arrived the end of this series of transformations. Starting from a
+small-step abstract abstract machine, eventually we obtain a big-step definitional
 interpreter with pushdown control-flows and written in direct-style.
 
 %specify higher-order definitional interpreters using first-order means (cite)
@@ -1813,7 +1812,7 @@ Other applications are also found to be applicable, such as Dyck word recognizer
 Dijkstra's shunting-yard algorithm \cite{Danvy:2006:RW:2171265.2171268}.
 
 For deterministic languages, \citeauthor{Danvy:2008:DIP:1411204.1411206} shows
-a reduction semantics is a structural operational semantics in continuation style,
+a reduction semantics is a structural operational semantics in continuation-passing style,
 where the reduction context is a defunctionalized continuation \cite{Danvy:2008:DIP:1411204.1411206}.
 % Danvy also shows in nondeterministic languages ...
 Our work further shows that for nondeterministic languages, there is another layer of continuations
@@ -1846,7 +1845,7 @@ which guarantees that no spurious merging will occur during returns.
 for small-step AAM to achieve pushdown analysis \cite{gilray2016pushdown}.
 This method is both simple to implement and computationally inexpensive and so called Pushdown 
 for Free (P4F). Based on the AAM we presented in Section \ref{aam}, the only changes in the 
-code required is not only keeping track of the entry-point expression of callee, but also 
+code required is not only keeping track of the entry-point expression of the callee, but also 
 holding the target environment when allocating a continuation addresses.
 No other pieces of code would need to be modified.
 Notably, this change only causes constant-factor increase in time complexity of
@@ -1872,7 +1871,7 @@ abstract interpreter for small-step semantics \cite{Sergey:2013:MAI:2491956.2491
 
 This paper is greatly inspired by~\citeauthor{darais2017abstracting}'s work.
 The difference on the surface is that ours works for A-Normal Form $\lambda$-calculus,
-instead of plain $\lambda$-calculus, although our work can also be easily adopted to handle a plain
+instead of plain $\lambda$-calculus, although our work can also be easily adapted to handle a plain
 $\lambda$-calculus.
 But instead of directly showing the final form of abstract definitional interpreters,
 we reveal that refunctionalization plays an important role for inheriting the
