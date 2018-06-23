@@ -205,20 +205,21 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   abstracting definitional interpreters are not well studied.
 
   In this paper, we show their functional correspondence and how to syntactically 
-  transform small-step abstract abstract machines into big-step abstract  definitional
+  transform small-step abstract abstract machines into big-step abstract definitional
   interpreters.
-  The transformations include linearization, fusing, disentangling, refunctionalizing,
-  and un-CPS to direct-style with delimited control. Linearization expresses
-  non-deterministic choices by first-order data types, after which refunctionalization
-  sequentializes the evaluation order by higher-order functions.
-  All transformations properly handle the collecting semantics and the nondeterminism 
-  of abstract interpretation.
+  The transformations include linearization, lightweight fusion, disentanglement, 
+  refunctionalization, and finally to direct-style with delimited control. 
+  Linearization expresses nondeterministic choices by first-order data types, 
+  after which refunctionalization transforms the datatype representing continuations
+  into higher-order functions.
+  Following the idea that in deterministic languages, reduction contexts of reduction
+  semantics are defunctionalized continuations, we further apply this idea to AAM --
+  reduction contexts of it are refunctionalized to extended continuation-passing style.
 
-  Following the idea that in deterministic languages, evaluation contexts of reduction
-  semantics are defunctionalized continuations, we further show that in nondeterministic 
-  languages, evaluation contexts are refunctionalized to extended continuations style.
-  Remarkably, we reveal how precise call/return matching in control-flow analysis is 
-  obtained by refunctionalizing a small-step abstract abstract machine with proper caching.
+  All transformations properly handle the collecting semantics and the nondeterminism 
+  of abstract interpretation. Remarkably, we reveal how precise call/return matching in 
+  control-flow analysis can be obtained by refunctionalizing a small-step abstract abstract 
+  machine with proper caching.
 \end{abstract}
 
 % TODO: Update CCS
@@ -1635,7 +1636,7 @@ In fact, what we started is an AAM with an unbounded stack which already precise
 matches the calls and returns.
 Refunctionalization makes the interpreter be a ``big-step'' semantics artifact, 
 then the consequence is we have no places to save the context information. 
-But refunctionalization not only forces us to sequentialize the order non-deterministic 
+But refunctionalization not only forces us to sequentialize the order nondeterministic 
 evaluation through higher-order functions representing continuations, 
 but also drives us to use a new caching algorithm.  
 
@@ -1799,7 +1800,7 @@ machines and interpreters.
 \citeauthor{Reynolds:72} first shows defunctionalization as a program transformation 
 technique that can be used to transform higher-order functions to first-order functions
 when specifying a programming language by an interpreter \cite{Reynolds:72, Reynolds:HOSC98-revisited}.
-Refunctionalization is the reverse of this transformation.
+Refunctionalization is the left inverse of this transformation.
 
 Over the years, Danvy and his collaborators applied refunctionalization and defunctionalization 
 to many different abstract machines and semantics, including the CEK machines, the CLS machines,
