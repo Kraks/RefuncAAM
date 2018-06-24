@@ -551,6 +551,9 @@ The @isAtomic@ function is used as a predicate to determine if the expression is
 
 We can now faithfully describe the state transition function @step@,
 which when given a machine state, determines its successor state.
+The function @step@ is a partial function that only handles non-final states,
+which must have a successor; the final case of a state is handled by funciton
+@drive@, which will be mentioned in the next section.
 
 \begin{lstlisting}
   def step(s: State): State = s match {
@@ -570,7 +573,8 @@ which when given a machine state, determines its successor state.
   }
 \end{lstlisting}
 
-As shown and previously discussed, we examine the only two cases which the state may be.
+As shown and previously discussed, we examine the only two non-final cases which the state
+may be.
 
 \begin{itemize}
 
