@@ -664,7 +664,7 @@ it continuously grows and never shrinks.
 
 \begin{lstlisting}
   case class Store[K,V](map: Map[K, Set[V]]) {
-    def apply(addr: K): List[V] = map(addr).toList
+    def apply(addr: K): Set[V] = map(addr)
     def update(addr: K, d: Set[V]): Store[K,V] = {
       val oldd = map.getOrElse(addr, Set())
       Store[K, V](map ++ Map(addr -> (d ++ oldd)))
