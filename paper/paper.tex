@@ -462,8 +462,10 @@ target for clarity, but without losing simplicity and generality. The transforma
 we will show in the rest of this paper also work on abstract machines for plain 
 direct-style $\lambda$-calculus languages. Although we only show the core calculus language,
 it can be easily extended to support recursive bindings (such as @letrec@), conditionals, 
-primitive types, and operations on primitive types. These cases would be trivial to implement,
-so we elide them in this paper.
+primitive types, and operations on primitive types. These cases would be straightforward to
+implement without introducing new transformations as far as the concerns of this paper,
+so we elide them here.
+% TODO: appendix, direct-style, numbers and if0
 
 To begin, we present the concrete syntax of a call-by-value $\lambda$-calculus language
 in ANF.
