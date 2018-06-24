@@ -210,7 +210,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   The transformations include linearization, lightweight fusion, disentanglement, 
   refunctionalization, and finally to direct-style with delimited control. 
   Linearization expresses nondeterministic choices by first-order data types, 
-  after which refunctionalization transforms the datatype representing continuations
+  after which refunctionalization transforms the data type representing continuations
   into higher-order functions.
   Following the idea that in deterministic languages, reduction contexts of reduction
   semantics are defunctionalized continuations, we further apply this idea to nondeterministic
@@ -348,8 +348,8 @@ can be obtained.
    }
    {
      [start chain] \chainin (m-2-1);
-     \chainin (m-2-2) [join={node[above,labeled] {\begin{smallmatrix} \text{linearizing} \\ \text{+} \\ \text{fusing} \end{smallmatrix}}     }];
-     \chainin (m-2-3) [join={node[above,labeled] {\text{disentangling}}}];
+     \chainin (m-2-2) [join={node[above,labeled] {\begin{smallmatrix} \text{linearization} \\ \text{+} \\ \text{fusion} \end{smallmatrix}}     }];
+     \chainin (m-2-3) [join={node[above,labeled] {\text{disentang.}}}];
      \chainin (m-2-4) [join={node[above,labeled] {\text{refunc.}}}];
      \chainin (m-2-5) [join={node[above,labeled] {\text{monadify}}}];
    }
@@ -404,13 +404,13 @@ Those transformations are summarized here, with their associated section:
     deterministic. Notably, this introduces another layer of control that will also 
     be refunctionalized later.
 
-  \item In Section~\ref{fusing}, we then present the \textbf{lightweight fusion} transformation.
+  \item In Section~\ref{fusing}, we then present the \textbf{lightweight fusion}.
     The fusing transformation simply combines the single-step function @step@ and the 
     driving function into one, but keeps all the machine state representations.
 
   \item Section~\ref{disen} discusses \textbf{disentanglement}, which disassembles the 
     fused AAM to be several individual functions, with each function handling one data 
-    type represented by a continuation.
+    type representing continuation.
 
   \item \textbf{Refunctionalization} is shown in Section~\ref{sec:refunc} which sequentializes
     the order of abstract execution by higher-order functions. For clarity, we first present 
@@ -433,69 +433,6 @@ is able to inherit the pushdown control-flow property from its defining language
 We complete this paper by discussing related work in Section~\ref{sec:related}, followed by 
 concluding thoughts in Section~\ref{sec:conclusion}.
 
-% \subsection{Contributions}
-
-% the essence of abstracting definitional interpreter.
-
-% We summarize our contributions as follows:
-
-% \begin{itemize}
-% \item The main contribution of this paper is the filling of the gap
-%   between small-step AAM and big-step ADI by developing a series of
-%   systematic transformations.
-%   We show that the correspondence between abstract
-%   machines and interpreters exists not only in concrete semantic artifacts,
-%   but also in abstract semantic artifacts.
-%   Galois connection?
-%   \note{JD: Section number?}
-
-% \item A new understanding of pushdown control flow analysis by
-%   refunctionalization.
-%   We present an abstract interpreter obtained from refunctionalizing
-%   a small-step abstracting abstract machine.
-%   This abstract interpreter naturally exhibits the pushdown control-flow property,
-%   as the refunctionalization forces us to sequentialize the
-%   abstract execution.
-%   We also analyze its correctness, soundness, and termination.
-
-% \item Further, we show that defunctionalization and refunctionalization
-%   of abstract interpreters play important roles for the call stack of the analyzed language.
-%   Given this insight, we reveal precisely \emph{why} small-step AAM has no pushdown
-%   control-flow property (without extra efforts), as well as explain
-%   why ADI naturally extends pushdown control-flow property from its
-%   defining language.
-
-% \end{itemize}
-
-% \subsection{Outline}
-
-% \note{TR: can this be merged with contributions? (they currently lack section refs)}
-% The remainder of this paper is organized as follows.
-% We begin by describing the target language we will analyze in Section~\ref{background},
-% including a concrete CESK machine as small-step operational semantics for it.
-% We continue with a review of abstracting abstract machines (AAM) as an abstract interpretation
-% counterpart of CESK machines. Following this, Section~\ref{linear} shows a conversion from the
-% nondeterministic choices of closures to another layer of continuations,
-% therefore linearizing the abstract execution.
-% Section~\ref{fusing} then discusses fusing the driver and step functions to a single
-% function.
-% We further identify in Section~\ref{disen} the first-order data type representations of
-% continuations, and disentangle the code blocks for dispatching data types to separate
-% functions.
-% Section~\ref{refunc} then represents the refunctionalized abstract abstract machines.
-% In this section, the continuations represented by data types become higher-order
-% functions.
-% In Section~\ref{directstyle}, we transform the refunctionalized AAM to two
-% different direct styles: one implemented with monads, the other using
-% delimited control operators.
-
-% Finally, we discuss related work in Section~\ref{sec:related}, followed by concluding thoughts in Section~\ref{sec:conclusion}.
-
-% \note{TR: put this into a proper figure, add known danvy sequence
-% for concrete evaluators at the bottom (in grey or dashed lines)}
-
-%\includegraphics[width=100mm,scale=1.0]{figures/lines.png}
-
 \iffalse
 \subsection{Style}
 
@@ -504,9 +441,8 @@ We expect that readers have moderate familiarity to Scala's syntax, such as
 case classes, pattern matching and for comprehension.
 
 There are two main reasons we use a real-world language:
-1) The code does not diminish the accuracy of the material
-than formal and mathematical notations,
-which are heavily used in other static analysis or semantics papers.
+1) The code does not diminish the accuracy of the material than formal and mathematical
+notations, which are heavily used in other static analysis or semantics papers.
 The Scala code in this paper can be easily back-translated into formal notations.
 2) As a functional pearl, the code in this paper is executable with only few changes,
 which make it particularly fit for presenting syntactical transformations on abstract
@@ -717,11 +653,8 @@ store maps continuation addresses to sets of continuations.
 We then define a generic class @Store[K,V]@ that performs joining when updating elements
 in a store (below). By parameterizing @Store[K,V]@ with @[BAddr, Storable]@ and
 @[KAddr, Cont]@, we obtain @BStore@ and @KStore@, respectively.
-
-We note that both the value store and continuation store are monotonic;
-it continuously grows and never shrinks. This property guarantees that
-a fixed point of store can always be reached through Kleene's
-iteration when analyzing the program
+We note that both the value store and continuation store are uodated monotonically;
+it continuously grows and never shrinks.
 
 \begin{lstlisting}
   case class Store[K,V](map: Map[K, Set[V]]) {
@@ -747,27 +680,26 @@ of continuation addresses is also nondeterministic.
 \end{lstlisting}
 
 As a consequence, the components of states are also changed: the store is divided
-into binding stores and continuation stores; the continuation stack becomes an address.
+into binding stores and continuation stores; the continuation becomes an address
+that maps to a set of continuations in @KStore@.
 By dereferencing this address in a continuation store, we can retrieve the actual 
-transfer of control. The definition of environment @Env@ remains the same.
+transfers of control. The definition of environment @Env@ remains the same.
 
 \begin{lstlisting}
   case class State(e: Expr, env: Env, bstore: BStore, kstore: KStore, k: KAddr, time: Time)
 \end{lstlisting}
 
 \subsubsection{Allocating Addresses}
-Up to this point, we have not described allocating addresses in stores,
-nor handling the time stamp @Time@.
-In abstract interpretation, however, these are key ingredients to achieve
-analyses with different sensitivities, as well as to perform a finite
-state space analysis\cite{Gilray:2016:ACP:2951913.2951936}.
-To effectively approximate the runtime behavior, we introduce a finite
-program contours @time@ that encodes the program execution history.
-The function @tick@ is used to refresh the "time" and get a "new time".
-We use a list of expression (which are drawn from the control component)
-to encode the calling contexts history, and as we will see in Section~
-\ref{kcfainst}, by applying different @tick@ functions on the timestamp,
-we are able to obtain a family of analyses.
+Up to this point, we have not described allocating addresses in stores, nor handling
+the time stamp @Time@. In abstract interpretation, however, these are key ingredients
+to achieve analyses with different sensitivities, as well as to perform a finite
+state space analysis \cite{Gilray:2016:ACP:2951913.2951936}.
+To effectively approximate the runtime behavior, we introduce a finite program contours
+@time@ that encodes the program execution history. The function @tick@ is used to refresh
+the "time" and get a "new time". We use a list of expression (which are drawn from the
+control component) to encode the calling contexts history, and as we will see in Section~
+\ref{kcfainst}, by applying different @tick@ functions on the timestamp, we are able to
+obtain a family of analyses.
 
 \begin{lstlisting}
   type Time = List[Expr]
@@ -778,8 +710,7 @@ Binding addresses are parameterized by variable names and the creation
 time of the binding, both of which are finite.
 Continuation addresses @KAddr@ has two variants:
 1) @Halt@ which corresponds to the empty stack, and
-2) @ContAddr@ consists of the target expressions of callee, which are also
-finite.
+2) @ContAddr@ consists of the target expressions of callee, which are also finite.
 %One may ask, why not also keep track of the time in continuation addresses?
 %\todo{why target expression, allocation polyvariance}
 
@@ -797,6 +728,11 @@ used to allocate binding addresses and continuation addresses.
   def allocKont(tgtExpr: Expr): KAddr = ContAddr(tgtExpr)
   def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
 \end{lstlisting}
+
+Given the space of addresses are finite, we can conclude that there are finite number
+of environments and stores because the number of variables and closures are also finite.
+This property guarantees a finite space of reachable states, and we can always have a terminated
+analysis through Kleene's fixed-point iteration.
 
 \subsubsection{Single-Step Transition}
 
@@ -938,7 +874,7 @@ the state space is potentially infinite.
 The pushdown AAM with unbounded stack is also described by \citeauthor{van2012systematic} 
 \cite{van2012systematic}. 
 The reason we show it here is to keep the consistency of abstract semantics during 
-transformations -- since the final abstract definitional interpreters simply inherit
+transformations -- since the eventual abstract definitional interpreters simply inherit
 a precise control-flow from its defining language, we also would like to start from a
 pushdown AAM that is also able to precisely match calls and returns.
 For readers who are not familiar with pushdown analysis, we have a detailed discussion 
@@ -985,9 +921,9 @@ In the first case of pattern matching, we may have multiple choices of closure f
 For each closure in the set, a new frame is constructed and pushed onto the stack.
 The code for handling the second case (atomic expressions) is the same as the concrete CESK machines. \\
 
-\textit{Note on Computability.}
-Unfortunately, even though other components in the states are finite,
-this AAM with an unbounded stack is still not computable.
+\textit{Note on Termination.}
+Unfortunately, even though other components in the states are finite, this AAM with an unbounded
+stack still may diverge when analyzing some programs.
 This is because the unbounded stack can grow to arbitrary depth which implies that the state
 space is possibly infinite; the analysis may therefore not terminate for all programs if we
 simply enumerate reachable states. To see this, consider a program that has two mutually
@@ -1002,9 +938,12 @@ recursive functions:
                                       z))
 \end{lstlisting}
 
-Function @f1@ and @f2@ mutually invoke each other, so the stack will
-alternate pushing frames @f1@ and @f2@ onto the top of current stack.
-However, no two existing stack components are identical in the state space.
+Function @f1@ and @f2@ mutually invoke each other, so the stack will alternately pushing
+frames @f1@ and @f2@ onto the top of current stack. However, no two existing stack
+components are identical in the state space. One can decide the reachability of a state
+through Dyck state graph \cite{earl2010pushdown, earl2012introspective}, but simply
+caching the explored states (i.e. @seen@) would not always make the analyzer terminate.
+
 
 \section{Linearization} \label{linear}
 
@@ -1187,11 +1126,9 @@ follows:
 
 \section{Disentanglement} \label{disen}
 
-With fusing complete, our AAM
-appears similar to a ``big-step'' interpreter, although it still has the machine
-state representation inside.
-In the disentangling transformation, we
-identify the first-order data types which represent evaluation contexts
+With fusing complete, our AAM appears similar to a ``big-step'' interpreter, although it
+still has the machine state representation inside. In the disentanglement transformation,
+we identify the first-order data types which represent evaluation contexts
 and lift the code blocks that handle these evaluation contexts to be individual functions.
 
 Since there are two layers of continuations,
@@ -1239,16 +1176,14 @@ The shape of an interpreter in continuation-passing style has emerged.
   }
 \end{lstlisting}
 
-Function @continue@ is mainly what we have seen for the second case in
-@drive_step@, except that @ndcontinue@ is called when
-the normal continuation is empty.
+Function @continue@ is mainly what we have seen for the second case in @drive_step@,
+except that @ndcontinue@ is called when the normal continuation is empty.
 Since we are analyzing a language in ANF, the first-order data representation of
-continuations is simplified to a Scala @List@.
-An empty list @Nil@ represents the halt of a computation path, whereas
-a cons @::@ means the top frame of the list holds the binding variable and
-evaluation context.
-An analogy to this in standard CEK machines would be an abstract class (e.g., @cont@) with
-three variants: @halt@, @arg(value, cont)@, and @arg(exp, env, cont)@.
+continuations is simplified to a Scala @List@. An empty list @Nil@ represents the
+halt of a computation path, whereas a cons @::@ means the top frame of the list
+holds the binding variable and evaluation context.
+An analogy to this in standard CEK machines would be an abstract class (e.g., @cont@)
+with three variants: @halt@, @arg(value, cont)@, and @arg(exp, env, cont)@.
 
 \begin{lstlisting}
   def ndcontinue(nds: NDState, seen: Set[State]): Set[State] = {
