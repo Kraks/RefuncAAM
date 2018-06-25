@@ -309,10 +309,10 @@ One of the fundamental differences between concrete semantic artifacts and abstr
 artifacts is nondeterminism. In addition to ensuring termination, abstract semantic
 artifacts are usually equipped with a cache of reachable states, the cache is
 updated in a monotonic way and guaranteed to reach the least fixed-point eventually.
-In this functional pearl, we provide a constructive answer to the question of interderiving
-abstract semantic artifacts and relate AAM and ADI by presenting a series of syntactical
-transformations on the program from small-step abstract abstract machines to big-step 
-abstract definitional interpreters.
+In this functional pearl, we make a first step to answering the question of interderiving
+abstract semantics artifacts, and provide a constructive answer to relate AAM and ADI 
+by presenting a series of syntactical transformations on the program from small-step 
+abstract abstract machines to big-step abstract definitional interpreters.
 
 In addition, the abstract abstract machines with unbounded stack naturally correspond
 to abstract definitional interpreters. We show that after refunctionalizing an AAM with 
@@ -526,7 +526,8 @@ The Scala representations for the components of the CESK machine are as follows:
 \end{lstlisting}
 
 It is worth noting that the continuation class @Kont@ is defined as a list of
-frames, where a frame can be considered a reduction context in reduction semantics.
+frames, where a frame can be considered a representation of reduction context 
+in reduction semantics.
 An empty list represents empty call stack; otherwise, the head frame in the list
 represents the innermost context, and the reduction result of this frame will be used
 to fill the ``hole'' of its following element in the list.
