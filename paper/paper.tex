@@ -1531,16 +1531,15 @@ the initial configuration in the final cache.
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
 
 In the previous section, we have established a computable pushdown control-flow
-analysis through refunctionalization and caching. In this section,
-we revisit the pushdown control-flow problem and examine what we have done to
-overcome it. \\
+analysis through refunctionalization and caching. In this section, we revisit 
+the pushdown control-flow problem and examine what we have done to overcome it. \\
 
 \textit{The Problem with Return-flows.}
-Pushdown control-flow is a property in analysis that precisely models
-the runtime call stack of the analyzed program.
-A pushdown control-flow analysis provides an as-exact-as-runtime return-flow
-when analyzing a program, but traditional control-flow analysis collapses
-the state space into a finite space and thus causes imprecise stack modeling.
+Pushdown control-flow is a property in analysis that precisely models the runtime
+call stack of the analyzed program. A pushdown control-flow analysis provides an 
+as-exact-as-runtime return-flow when analyzing a program, but traditional 
+control-flow analysis collapses the state space into a finite space and thus 
+causes imprecise stack modeling.
 
 To see how traditional control-flow analysis suffers from spurious return-flows,
 we can consider the following example:
@@ -1553,41 +1552,38 @@ we can consider the following example:
 \end{lstlisting}
 
 In $k$-CFA algorithm or the abstract abstract machine shown in Section~\ref{aam},
-the call sites @(id 2)@ and @(id 1)@ share the same return flow,
-so the invocation of @(id 2)@ returns to both call-sites @[x (id 1)]@ and @[y (id 2)]@.
-Therefore, the returned value @2@ for variable @y@ is also propagated to
-variable @x@, causing imprecise analysis results to arise.
-This return-flow merging is inevitable, even when increasing the context-sensitivity.
-If we use the monovariant analysis (i.e., $0$-CFA), the analysis result would be such 
-that @x@ and @y@ point to value set @{1, 2}@, because the algorithm does not distinguish 
-that @z@ comes from a different call site.
-Under $1$-CFA, the algorithm is able to distinguish that variable @z@ of function
-@id@ has two different values at two call sites, so variable @y@
-would not be polluted by @1@.
-However, variable @x@ still points to value set @{1, 2}@, because two call-sites still 
+the call sites @(id 2)@ and @(id 1)@ share the same return flow, so the invocation
+of @(id 2)@ returns to both call-sites @[x (id 1)]@ and @[y (id 2)]@.  Therefore,
+the returned value @2@ for variable @y@ is also propagated to variable @x@, causing
+imprecise analysis results to arise. This return-flow merging is inevitable, even when
+increasing the context-sensitivity. Even worse, if we use the monovariant analysis (i.e.,
+$0$-CFA), the analysis result would be such that @x@ and @y@ point to value set @{1, 2}@,
+because the algorithm does not distinguish that @z@ (the argument of @id@) comes from a
+different call site. Under $1$-CFA, the algorithm is able to distinguish that variable
+@z@ has two different values at two call sites, so variable @y@ would not be polluted by
+@1@. However, variable @x@ still points to value set @{1, 2}@, because two call-sites still
 share the same continuation and $1$-CFA is still unable to separate the return-flows. \\
 
 \textit{Call/Return Matching through Refunctionalization and Caching.}
-The refunctionalized AAM we obtained has the perfect match on return-flows even though 
-we do not have a stack model. The higher-order functions representing continuations 
-already connect all the execution in order. In fact, the continuations (call stack) 
-of the analyzed language is blended into the call stack of our defining language 
-(Scala) through refunctionalization, then the call/return of the analyzed language 
+The refunctionalized AAM we obtained has the perfect match on return-flows even though
+we do not have a stack model. The higher-order functions representing continuations
+already connect all the executions in order. In fact, the continuations (call stack)
+of the analyzed language is blended into the call stack of our defining language
+(Scala) through refunctionalization, then the call/return of the analyzed language
 is naturally matched.
 
-In fact, what we started is an AAM with an unbounded stack which already precisely 
-matches the calls and returns.
-Refunctionalization makes the interpreter be a ``big-step'' semantic artifact, 
-then the consequence is we have no places to save the context information. 
-But refunctionalization not only forces us to sequentialize the order of nondeterministic 
-evaluation through higher-order functions representing continuations, but also drives us
-to use a new caching algorithm.
+In fact, what we started is an AAM with an unbounded stack which already precisely
+matches the calls and returns. Refunctionalization makes the interpreter be a ``big-step''
+semantic artifact, then the consequence is we have no places to explicitly save the context
+information. But refunctionalization not only forces us to sequentialize the order of
+nondeterministic evaluation through higher-order functions representing continuations,
+but also drives us to use a new caching algorithm.
 
-Indeed, the caching algorithm plays an important role to make the analysis computable. 
-
+Indeed, the caching algorithm plays an important role to guarantee the analysis will
+terminate eventually.
 An interesting implication of this is if we apply the caching algorithm with some 
-necessary changes to small-step abstract machines with an unbounded stack, 
-we are also able to establish a computable and precise call/return match.
+necessary changes to small-step abstract machines with an unbounded stack, we are 
+also able to establish a computable and precise call/return match.
 
 %probably Store Widening \& Abstract Garbage Collection
 \section{Back to Direct-Style} \label{directstyle}
