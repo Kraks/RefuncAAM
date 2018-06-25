@@ -208,14 +208,14 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   transform small-step abstract abstract machines into big-step abstract definitional
   interpreters.
   The transformations include linearization, lightweight fusion, disentanglement, 
-  refunctionalization, and finally to direct-style with delimited control. 
+  refunctionalization, and finally back to direct-style with delimited control operators. 
   Linearization expresses nondeterministic choices by first-order data types, 
   after which refunctionalization transforms the data type representing continuations
   into higher-order functions.
   Following the idea that in deterministic languages, reduction contexts of reduction
   semantics are defunctionalized continuations, we further apply this idea to nondeterministic
-  AAM -- reduction contexts of it are refunctionalized to extended continuation-passing style.
-
+  AAM -- its reduction contexts are refunctionalized to extended continuation-passing style.
+  
   All transformations properly handle the collecting semantics and the nondeterminism 
   of abstract interpretation. Remarkably, we reveal how precise call/return matching in 
   control-flow analysis can be obtained by refunctionalizing a small-step abstract abstract 
@@ -298,7 +298,7 @@ danvy2004refocusing, Danvy:2008:DIP:1411204.1411206, AGER2004223, ager2005functi
 Danvy:2006:RW:2171265.2171268, danvy2009towards, biernacka2009towards}.
 The concrete abstract machines implement structural operational semantics in 
 continuation-passing style, where the reduction contexts are defunctionalized continuations.
-One can derive definitional interpreters by refunctionalizing the evaluation contexts of 
+One can derive definitional interpreters by refunctionalizing the reduction contexts of 
 abstract machines, and by defunctionalizing the higher-order functions, one may obtain 
 abstract machines in the reverse direction.
 
@@ -511,8 +511,8 @@ four components:
   The address space consists of numbers (0-indexed).
   In our toy language, the only category of value is a closure, i.e., a function paired with
   an environment.
-4) \textit{Continuation} represents the program stack. In this paper, we instantiate the 
-  stack as a list of frames because the ANF simplifies the evaluation context. For direct 
+4) \textit{Continuation} represents the program's call stack. In this paper, we instantiate the 
+  stack as a list of frames because the ANF simplifies the evaluation context. For direct % TODO
   style $\lambda$-calculus, the continuations of CEK/CESK machines can be presented by
   variants of a data type.
 
@@ -527,7 +527,7 @@ The Scala representations for the components of the CESK machine are as follows:
 \end{lstlisting}
 
 It is worth noting that the continuation class @Kont@ is defined as a list of
-frames, where a frame can be considered an evaluation context in reduction semantics.
+frames, where a frame can be considered a reduction context in reduction semantics.
 We represent frames using the @Frame@ class, which stores the information of a single
 call-site, i.e., the information that can be used to resume the interrupted computation.
 A @Frame@ constitutes a variable name @x@ to be bound later, and a control component
@@ -711,10 +711,9 @@ obtain a family of analyses.
   type Time = List[Expr]
 \end{lstlisting}
 
-As previously mentioned, the space of addresses must be finite in AAM.
-Binding addresses are parameterized by variable names and the creation 
-time of the binding, both of which are finite.
-Continuation addresses @KAddr@ has two variants:
+As previously mentioned, the space of states is finite when the space of addresses is finite.
+To make this happen, binding addresses are parameterized by variable names and the creation
+time of the binding, both of which are finite. Continuation addresses @KAddr@ has two variants:
 1) @Halt@ which corresponds to the empty stack, and
 2) @ContAddr@ consists of the target expressions of callee, which are also finite.
 %One may ask, why not also keep track of the time in continuation addresses?
@@ -735,8 +734,8 @@ used to allocate binding addresses and continuation addresses.
   def allocBind(x: String, time: Time): BAddr = BAddr(x, time)
 \end{lstlisting}
 
-Given the space of addresses are finite, we can conclude that there are finite number
-of environments and stores because the number of variables and closures are also finite.
+Given that the space of addresses is finite, we can conclude that there are finite number
+of environments and stores because the numbers of variables and closures are also finite.
 This property guarantees a finite space of reachable states, and we can always have a
 terminated analysis through Kleene's fixed-point iteration.
 
@@ -959,30 +958,36 @@ transformations step by step. Our base machine for now is the AAM with unbounded
 stack, though as we will later transform the stack to higher-order functions
 representing continuations, it does not matter what kind of AAM we start from.
 This is because transforming to higher-order functions forces us to sequentialize
-the order of abstract evaluation, and neither requiring construction of a frame on stack,
-nor to allocate continuations in the store.
+the order of abstract evaluation, and neither requiring construction of a frame on
+stack, nor to allocate continuations in the store.
 Thus, our choice to start from an AAM with unbounded stack is motivated simply because
 it has an equivalent stack model to abstract definitional interpreters (our final target).
 
-In Danvy's paper \textit{Defunctionalized Interpreters for Programming
-  Languages}, he mentions that for deterministic languages, a reduction semantics
-is a structural operational semantics in continuation-passing style, where the reduction
-context is a defunctionalized continuation \cite{Danvy:2008:DIP:1411204.1411206}.
-This poses a problem, as the underlying semantics of AAM is fundamentally nondeterministic.
-But the evaluation context (i.e., the @Frame@ in our program) is \emph{not}
-nondeterministic, and the worklist @todo@ actually implicitly handles the nondeterminism.
-Thus, if we simply refunctionalize the frames to higher-order functions, 
-it does not help us to move toward abstract definitional interpreters.
+The underlying semantics of AAM is fundamentally nondeterministic: there are possibly
+multiple target closures when dereferencing an address, and we have to explore both branches
+if the conditionals exist in the language. But the reduction context (i.e., the @Frame@ in
+our program) is \emph{not} nondeterministic, and the worklist @todo@ actually implicitly
+handles the nondeterminism. Thus, if we simply refunctionalize the frames to higher-order
+functions, it does not help us to move toward abstract definitional interpreters.
 
-In order to address this problem, our first step of transformations
-is to linearize all nondeterministic choices.
-This step removes all nondeterminism from the @step@ function.
+In Danvy's paper \textit{Defunctionalized Interpreters for Programming Languages},
+he mentions that for deterministic languages, a reduction semantics is a structural
+operational semantics in continuation-passing style, where the reduction context is
+a defunctionalized continuation \cite{Danvy:2008:DIP:1411204.1411206}. Therefore
+refunctionalizing a deterministic language yields an interpreter in continuation-passing
+style; nevertheless, doing so for nondeterministic languages yields an interpreter
+with multiple layers of continuation \cite{Danvy:2006:RW:2171265.2171268}.
+
+We apply this idea to AAM and our first step of transformations is to linearize all
+nondeterministic choices. This step removes all nondeterminism from the @step@ function.
 Likewise, the @Frame@ saves the information of the caller in concrete executions.
 We then introduce another layer of control, and define a case class @NDCont@
 that saves the information at a fork point when we have multiple target closures.
 We also add a new field @ndk@ to the definition of state, which we now call @NDState@.
 For clarity of presentation in differentiating between the two continuations, we elect to call
-the first a \emph{normal continuation}, and the second a \emph{nondeterministic continuation}.
+the first a \emph{normal continuation}, and the second a \emph{meta-continuation}
+\footnote{Traditionally, they are also called \emph{success continuation} and \emph{failure
+continuation} \cite{Danvy:1990:AC:91556.91622}.}.
 
 \begin{lstlisting}
   case class NDCont(cls: List[Clos], argvs: Set[Storable], store: BStore, time: Time, frames: List[Frame])
@@ -992,11 +997,12 @@ the first a \emph{normal continuation}, and the second a \emph{nondeterministic 
   }
 \end{lstlisting}
 
+Here we also use first-order data types to explicitly represent the meta-continuation which
+controls the nondeterminism.
 Each @NDCont@ object contains a list of closures that are possible functions to be invoked,
-a set of values that will be bound to the function's formal argument,
-and the store, time, and frames at the fork point.
-In the definition of @NDState@, an auxiliary function @toState@ is added that
-converts itself to @State@.
+a set of values that will be bound to the function's formal argument, and the store, time,
+and frames at the fork point. In the definition of @NDState@, an auxiliary function @toState@
+is added that converts itself to @State@.
 
 Function @step@ now becomes of type @NDState => NDState@.
 The following code shows the first case of matching an instance of @NDState@ in
@@ -1019,17 +1025,13 @@ the @step@ function:
 By atomically evaluating @f@, we obtain a set of closures, with the transition being 
 deterministic in regards to the first element of the closure set.
 As such, we prepare a new environment, a new store, and a new frame list only for the
-first closure in that set.
-A new nondeterministic continuation @new_ndk@ is also constructed,
-which contains the rest of closures, the values of argument @ae@, the store,
-the time, and the new frame list.
-We use the store before updating, because for different closures they may form
-different binding addresses @baddr@.
-We also use the new frames, because all closures at this fork point share
-the same stack and return point.
+first closure in that set. A new meta-continuation @new_ndk@ is also constructed,
+which contains the rest of closures, the values of argument @ae@, the store, the time,
+and the new frame list. We use the store before updating, because for different closures
+they may form different binding addresses @baddr@. We also use the new frames, because
+all closures at this fork point share the same stack and return point.
 
-In the second case (shown below), we will see how @NDCont@ deals with
-nondeterminism.
+In the second case (shown below), we will see how @NDCont@ deals with nondeterminism.
 
 \begin{lstlisting}
   case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
@@ -1057,9 +1059,9 @@ the end of the computation (i.e., a halt); otherwise, we should return the value
 @ae@ to its caller which is contained in the top frame of stack.
 
 However, since we have added nondeterminism into state, an empty list of frames means
-we have reached the halt of \textit{one computation path}, and we should
-determine the next state indicated by @NDCont@.
-Thus, we have a pattern matching on @ndk@:
+we have reached the halt of \textit{one computation path}, and we should determine the
+next state indicated by @NDCont@. Thus, we have a pattern matching on @ndk@:
+
 \begin{itemize}
   \item If the closure set is an empty set,
 then we have tried all the closures of this fork point and should move to the
@@ -1070,7 +1072,7 @@ popping up the front-most element.
 environment and a new store for the body expression of the closure;
 we use the same frame list and time that are copied from the fork point rather
 than current one.
-The nondeterministic continuation @new_ndk@ is also updated by the removal of that closure.
+The meta-continuation @new_ndk@ is also updated by the removal of that closure.
 \end{itemize}
 
 \begin{lstlisting}
@@ -1134,15 +1136,14 @@ follows:
 
 With fusing complete, our AAM appears similar to a ``big-step'' interpreter, although it
 still has the machine state representation inside. In the disentanglement transformation,
-we identify the first-order data types which represent evaluation contexts
-and lift the code blocks that handle these evaluation contexts to be individual functions.
+we identify the first-order data types which represent reduction contexts
+and lift the code blocks that handle these reduction contexts to be individual functions.
 
-Since there are two layers of continuations,
-we obtain three mutually recursive functions: @drive_step@, which plays the same
-role as before; @continue@, which is called from @drive_step@ when encountering an atomic 
-expression, and handles the evaluation context (@Frame@) of the analyzed
-language; and @ndcontinue@, which dispatches nondeterministic continuations @NDCont@,
-and which is invoked from @continue@ when the normal stack is empty.
+Since there are two layers of continuations, we obtain three mutually recursive functions:
+@drive_step@, which plays the same role as before; @continue@, which is called from
+@drive_step@ when encountering an atomic expression, and handles the reduction context
+(@Frame@) of the analyzed language; and @ndcontinue@, which dispatches meta-continuations
+@NDCont@, and which is invoked from @continue@ when the normal stack is empty.
 
 \begin{lstlisting}
   def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1185,9 +1186,9 @@ The shape of an interpreter in continuation-passing style has emerged.
 Function @continue@ is mainly what we have seen for the second case in @drive_step@,
 except that @ndcontinue@ is called when the normal continuation is empty.
 Since we are analyzing a language in ANF, the first-order data representation of
-continuations is simplified to a Scala @List@. An empty list @Nil@ represents the
+continuations is simplified to a Scala @List@. An empty list @Nil@ represents the %TODO
 halt of a computation path, whereas a cons @::@ means the top frame of the list
-holds the binding variable and evaluation context.
+holds the binding variable and context.
 An analogy to this in standard CEK machines would be an abstract class (e.g., @cont@)
 with three variants: @halt@, @arg(value, cont)@, and @arg(exp, env, cont)@.
 
@@ -1236,7 +1237,7 @@ abstract definitional interpreters, the name of @drive_step@ is updated to
 \end{itemize}
 
 For clarity, we first show how to refunctionalize normal continuations and
-nondeterministic continuation without collecting semantics.
+meta-continuation without collecting semantics.
 Then, adding an appropriate caching algorithm to make sure the analysis will
 terminate at some fixed-point is a simple transformation of the program to cache-passing
 style. Finally, we examine how computable pushdown control-flow analysis is established
@@ -1293,8 +1294,7 @@ To handle the inevitable nondeterminism, we define a generic function @nd@ as fo
   }
 \end{lstlisting}
 
-%TODO: better word to replace `accumulate`
-Given a collection of elements of type @T@, an initial accumlated value of type 
+Given a collection of elements of type @T@, an initial accumlator of type 
 @Ans@, a function @k@ that works on element's type @T@ and takes a continuation 
 of type @Ans=>Ans@, and a function @m@ that works on and returns a value of type 
 @Ans@ (which is also type @Ans=>Ans@), @nd@ chooses an element in the collection 
@@ -1520,11 +1520,11 @@ Finally, the @analyze@ function (as the entrance of the analysis) does a looping
 to find the fixed-point on caches starting from an empty cache.
 If the @out@ cache of this iteration is equivalent to its @in@ cache, which means no more 
 fact was discovered during this iteration, then we have reached a fixed-point that 
-over-approximates the concrete evaluations, and thus can be returned.
-Otherwise, the next iteration with the new @out@ cache installed at the @in@ cache position 
-will be activated; in the meanwhile, an empty cache will be used as the @out@ cache.
-Note that the continuation of the initial call to @aeval@ sets up the values for the
-initial configuration in the final cache.
+over-approximates the concrete evaluations, and thus the result can be returned.
+Otherwise, the next iteration with the new @out@ cache installed at the @in@ cache
+position will be activated; in the meanwhile, an empty cache will be used as the @out@
+cache. Note that the continuation of the initial call to @aeval@ sets up the values for
+the initial configuration in the final cache.
 
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
 
@@ -1577,9 +1577,9 @@ In fact, what we started is an AAM with an unbounded stack which already precise
 matches the calls and returns.
 Refunctionalization makes the interpreter be a ``big-step'' semantic artifact, 
 then the consequence is we have no places to save the context information. 
-But refunctionalization not only forces us to sequentialize the order nondeterministic 
-evaluation through higher-order functions representing continuations, 
-but also drives us to use a new caching algorithm.  
+But refunctionalization not only forces us to sequentialize the order of nondeterministic 
+evaluation through higher-order functions representing continuations, but also drives us
+to use a new caching algorithm.
 
 Indeed, the caching algorithm plays an important role to make the analysis computable. 
 
@@ -1666,8 +1666,8 @@ in it.
 Then, for every nondeterministic choice in the abstract interpreter, we can simply call 
 @choices@ on the set of possible choices and write the program sequentially as concrete 
 interpreters, and the subsequent statements and expressions become the delimited continuation
-@f@. @choices@ also returns the latest cache to its left-hand side definition.
-The cache is still accumulated to the next call to @choices@ or @aeval@, 
+@f@. The function @choices@ also returns the latest cache to its left-hand side when invoking.
+The cache will be still accumulated to the next call to @choices@ or @aeval@, 
 given the fact that the abstract interpreter should always use the latest cache.
 
 \begin{lstlisting}
@@ -1748,19 +1748,18 @@ danvy2009towards, biernacka2009towards}. Such semantic artifacts include the CEK
 the CLS machines, the SECD machines, call-by-need evaluators, monadic evaluators, etc.
 Other applications are also found to be applicable, such as Dyck word recognizer, and 
 Dijkstra's shunting-yard algorithm and even Quicksort algorithm \cite{Danvy:2006:RW:2171265.2171268}.
-
 For deterministic languages, \citeauthor{Danvy:2008:DIP:1411204.1411206} shows a reduction semantics
 is a structural operational semantics in continuation-passing style, where the reduction contexts
 are defunctionalized (data type representing) continuations \cite{Danvy:2008:DIP:1411204.1411206}.
 Not unexpectedly, the correspondence also exists for nondeterministic languages. For example,
 \citeauthor{Danvy:2001:DW:773184.773202} show that refunctionalizing a regualr expressions matcher yields
-its counterpart with two layer of continuations \cite{Danvy:2001:DW:773184.773202}. And the multi-layer
-continuation-passing style is the underlying semantics of control operatos like @reset@ and @shift@
-\cite{Danvy:1990:AC:91556.91622}. 
+its counterpart with two layer of continuations \cite{Danvy:2001:DW:773184.773202}.
+And the multi-layer continuation-passing style is the underlying semantics of control operatos
+like @reset@ and @shift@ \cite{Danvy:1990:AC:91556.91622}. 
 
 Our work applies these ideas to the nondeterministic AAM. The additional layer of continuation controls
 the nondeterministic choice over closures. After identifying and explicitly exposing (Section~\ref{linear})
-that layer of nondeterministic continuations, the whole program can be refunctionalized to extended
+that layer of meta-continuations, the whole program can be refunctionalized to extended
 continuation-passing style, and then back to direct-style by the use of delimited control operators.
 
 Lightweight fusion as one of the transformation in our paper is also studied by 
