@@ -260,8 +260,8 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 
 Defining a language by building an interpreter for it can be traced to the very
 early days of programming languages research \cite{landin1966next, Reynolds:72}.
-Nowadays, even an undergraduate student in computer science is able to build toy 
-languages through interpreters.
+Nowadays, even an undergraduate student in computer science is able to make his own
+programming language by building an interpreter.
 But building a sound abstract interpreter remained an esoteric and difficult task 
 until very recently.
 
@@ -512,10 +512,9 @@ four components:
   In our toy language, the only category of value is a closure, i.e., a function paired with
   an environment.
 4) \textit{Continuation} represents the program's call stack. In this paper, we instantiate the 
-  stack as a list of frames because the ANF simplifies the evaluation context. For direct % TODO
-  style $\lambda$-calculus, the continuations of CEK/CESK machines can be presented by
-  variants of a data type.
+stack as a list of frames. 
 
+%For direct style $\lambda$-calculus, the continuations of CEK/CESK machines can be presented by variants of a data type.
 The Scala representations for the components of the CESK machine are as follows:
 
 \begin{lstlisting}
@@ -528,6 +527,9 @@ The Scala representations for the components of the CESK machine are as follows:
 
 It is worth noting that the continuation class @Kont@ is defined as a list of
 frames, where a frame can be considered a reduction context in reduction semantics.
+An empty list represents empty call stack; otherwise, the head frame in the list
+represents the innermost context, and the reduction result of this frame will be used
+to fill the ``hole'' of its following element in the list.
 We represent frames using the @Frame@ class, which stores the information of a single
 call-site, i.e., the information that can be used to resume the interrupted computation.
 A @Frame@ constitutes a variable name @x@ to be bound later, and a control component
@@ -1185,8 +1187,7 @@ The shape of an interpreter in continuation-passing style has emerged.
 
 Function @continue@ is mainly what we have seen for the second case in @drive_step@,
 except that @ndcontinue@ is called when the normal continuation is empty.
-Since we are analyzing a language in ANF, the first-order data representation of
-continuations is simplified to a Scala @List@. An empty list @Nil@ represents the %TODO
+It works on the list representation of context: An empty list @Nil@ represents the
 halt of a computation path, whereas a cons @::@ means the top frame of the list
 holds the binding variable and context.
 An analogy to this in standard CEK machines would be an abstract class (e.g., @cont@)
