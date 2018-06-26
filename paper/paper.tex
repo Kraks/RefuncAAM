@@ -988,7 +988,7 @@ We then introduce another layer of control, and define a case class @NDCont@
 that saves the information at a fork point when we have multiple target closures.
 We also add a new field @ndk@ to the definition of state, which we now call @NDState@.
 For clarity of presentation in differentiating between the two continuations, we elect to call
-the first a \emph{normal continuation}, and the second a \emph{meta-continuation}
+the first a \emph{continuation}, and the second a \emph{meta-continuation}
 \footnote{Traditionally, they are also called \emph{success continuation} and \emph{failure
 continuation} \cite{Danvy:1990:AC:91556.91622}.}.
 
@@ -1057,7 +1057,7 @@ In the second case (shown below), we will see how @NDCont@ deals with nondetermi
     }
 \end{lstlisting}
 
-If the normal continuation @konts@ is an empty list, then it means we have reached
+If the continuation @konts@ is an empty list, then it means we have reached
 the end of the computation (i.e., a halt); otherwise, we should return the values of 
 @ae@ to its caller which is contained in the top frame of stack.
 
@@ -1094,8 +1094,8 @@ The @drive@ function is also changed: there is no worklist anymore, as all the
 potentially unexplored states are embedded into the continuation for
 nondeterminism.
 The termination of the analysis occurs when we reach an @NDState@ in which the expression
-is atomic and both the normal continuation and nondeterminism continuation are
-empty lists. This corresponds to the case that @todo@ list is empty.
+is atomic and both the continuation and meta-continuation are empty lists. This corresponds 
+to the case that @todo@ list is empty.
 
 At this point, we have obtained a linearized abstract abstract machine. If we imagine that the
 classical AAM explores a graph of reachable states, then the linearized AAM flattens the
@@ -1187,7 +1187,7 @@ The shape of an interpreter in continuation-passing style has emerged.
 \end{lstlisting}
 
 Function @continue@ is mainly what we have seen for the second case in @drive_step@,
-except that @ndcontinue@ is called when the normal continuation is empty.
+except that @ndcontinue@ is called when the continuation @konts@ is empty.
 It works on the list representation of context: An empty list @Nil@ represents the
 halt of a computation path, whereas a cons @::@ means the top frame of the list
 holds the binding variable and context.
@@ -1238,7 +1238,7 @@ abstract definitional interpreters, the name of @drive_step@ is updated to
 @aeval@ (for \emph{abstract eval}).
 \end{itemize}
 
-For clarity, we first show how to refunctionalize normal continuations and
+For clarity, we first show how to refunctionalize continuations and
 meta-continuation without collecting semantics.
 Then, adding an appropriate caching algorithm to make sure the analysis will
 terminate at some fixed-point is a simple transformation of the program to cache-passing
@@ -1314,7 +1314,7 @@ Readers familiar with functional programming may think of @fold@ at this point; 
 it is a variant implementation of @fold@ in continuation-passing style. But here we have two
 continuations, one for the next element in the collection, and one for the eventual result.
 This is sometimes referred to as an extended continuation-passing style (ECPS)
-that function @k@ is a normal continuation and @m@ is a meta-continuation 
+that function @k@ is a continuation and @m@ is a meta-continuation 
 \cite{Danvy:1990:AC:91556.91622}. \\
 
 \textit{Evaluation without Caching.}
