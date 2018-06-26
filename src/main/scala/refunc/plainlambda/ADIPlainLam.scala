@@ -22,33 +22,28 @@ object DSAAM {
 object AAMUBPlainLam {
   import DSAAM._
 
+  def isValue(e: Expr): Boolean = e.isInstanceOf[Value]
+
   def step(s: State): List[State] = {
     val new_time = s.tick
     s match {
-      case State(Var(x), env, store, konts, time) =>
-        for (Clos(lam, lam_env) <- atomicEval(Var(x), env, store).toList) yield {
-          State(lam, lam_env, store, konts, new_time)
-        }
-        /*
-        for (v <- atomicEval(Var(x), env, store).toList) yield {
-          v match {
-            case Clos(lam, lam_env) => State(lam, lam_env, store, konts, new_time)
-            case NumV(i) => State(Num(i), env, store, konts, new_time)
-          }
-        }
-        */
       case State(App(e1, e2), env, store, konts, time) =>
         List(State(e1, env, store, Ar(e2, env)::konts, new_time))
-      case State(ae, env, store, konts, time) if isAtomic(ae)=>
+      case State(Var(x), env, store, konts, time) =>
+        for (v <- atomicEval(Var(x), env, store).toList) yield v match {
+          case Clos(lam, c_env) => State(lam, c_env, store, konts, new_time)
+          case NumV => State(NumV, env, store, konts, new_time)
+        }
+      case State(v, env, store, konts, time) if isValue(v)=>
         konts match {
-          case Nil => List()
-          case Ar(arg, arg_env)::ks if ae.isInstanceOf[Lam]=>
-            List(State(arg, arg_env, store, Fn(ae, env)::ks, new_time))
-          case Fn(Lam(x, body), lam_env)::ks =>
+          case Fn(Lam(x, body), c_env)::ks =>
             val baddr = allocBind(x, new_time)
-            val new_env = lam_env + (x -> baddr)
-            val new_store = store.update(baddr, atomicEval(ae, env, store))
+            val new_env = c_env + (x -> baddr)
+            val new_store = store.update(baddr, atomicEval(v, env, store))
             List(State(body, new_env, new_store, ks, new_time))
+          case Ar(arg, arg_env)::ks if v.isInstanceOf[Lam] =>
+            List(State(arg, arg_env, store, Fn(v, env)::ks, new_time))
+          case _ => List() //including cases of type error, or spurious flows
         }
     }
   }
