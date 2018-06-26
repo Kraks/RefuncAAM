@@ -4,6 +4,8 @@ import scala.util.continuations._
 import refunc.ast._
 
 object ANFAAM {
+  def isValue(e: Expr): Boolean = e.isInstanceOf[Value]
+
   def isAtomic(e: Expr): Boolean =
     e.isInstanceOf[Var] ||
     e.isInstanceOf[Lam] ||

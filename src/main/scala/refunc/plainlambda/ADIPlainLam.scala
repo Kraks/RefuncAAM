@@ -6,9 +6,9 @@ import refunc.ANFAAM._
 
 object DSAAM {
   trait Cont
-  //case object Mt extends Cont
   case class Ar(e: Expr, env: Env) extends Cont
   case class Fn(lam: Expr, env: Env) extends Cont
+  case class Br(thn: Expr, els: Expr, env: Env) extends Cont
 
   case class State(e: Expr, env: Env, store: BStore, konts: List[Cont], time: Time) {
     def tick: Time = (e :: time).take(k)
@@ -22,18 +22,24 @@ object DSAAM {
 object AAMUBPlainLam {
   import DSAAM._
 
-  def isValue(e: Expr): Boolean = e.isInstanceOf[Value]
-
   def step(s: State): List[State] = {
     val new_time = s.tick
     s match {
+      case State(Num(_), env, store, konts, time) =>
+        List(State(NumV, env, store, konts, new_time))
+
       case State(App(e1, e2), env, store, konts, time) =>
         List(State(e1, env, store, Ar(e2, env)::konts, new_time))
+
       case State(Var(x), env, store, konts, time) =>
         for (v <- atomicEval(Var(x), env, store).toList) yield v match {
-          case Clos(lam, c_env) => State(lam, c_env, store, konts, new_time)
           case NumV => State(NumV, env, store, konts, new_time)
+          case Clos(lam, c_env) => State(lam, c_env, store, konts, new_time)
         }
+
+      case State(If0(cnd, thn, els), env, store, konts, time) =>
+        List(State(cnd, env, store, Br(thn, els, env)::konts, new_time))
+
       case State(v, env, store, konts, time) if isValue(v)=>
         konts match {
           case Fn(Lam(x, body), c_env)::ks =>
@@ -43,7 +49,10 @@ object AAMUBPlainLam {
             List(State(body, new_env, new_store, ks, new_time))
           case Ar(arg, arg_env)::ks if v.isInstanceOf[Lam] =>
             List(State(arg, arg_env, store, Fn(v, env)::ks, new_time))
-          case _ => List() //including cases of type error, or spurious flows
+          case Br(thn, els, br_env)::ks if v == NumV =>
+            List(State(thn, br_env, store, ks, new_time),
+                 State(els, br_env, store, ks, new_time))
+          case _ => List() // including cases of type error, or spurious flows
         }
     }
   }
@@ -72,14 +81,16 @@ object ADIPlainLam {
   
   def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[Ans] = {
     val config = Config(e, env, store, time)
-    if (cache.outContains(config)) Ans(cache.outGet(config), cache)
+    if (cache.outContains(config)) 
+      Ans(cache.outGet(config), cache)
     else {
       val new_time = config.tick
       val new_cache = cache.outUpdate(config, cache.inGet(config))
       e match {
-        case ae if isAtomic(ae) =>
-          val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
+        case Num(_) =>
+          val vs = Set(VS(Set(NumV), new_time, store))
           Ans(vs, new_cache.outUpdate(config, vs))
+
         case App(f, arg) =>
           val Ans(fs, fcache) = aeval(f, env, store, new_time, new_cache)
           val (VS(fvals, ftime, fstore), new_fcache) = choices[VS](fs, fcache)
@@ -91,6 +102,18 @@ object ADIPlainLam {
           val new_store = argstore.update(baddr, argvals)
           val Ans(res, rescache) = aeval(body, new_env, new_store, argtime, new_argcache)
           Ans(res, rescache.outUpdate(config, res))
+
+        case vbl@Var(x) =>
+          val vs = Set(VS(atomicEval(vbl, env, store), new_time, store))
+          Ans(vs, new_cache.outUpdate(config, vs))
+
+        case If0(cnd, thn, els) =>
+          val Ans(cndv, cndcache) = aeval(cnd, env, store, new_time, new_cache)
+          ???
+
+        case v if isValue(v) => 
+          val vs = Set(VS(atomicEval(v, env, store), new_time, store))
+          Ans(vs, new_cache.outUpdate(config, vs))
       }
     }
   }
@@ -100,8 +123,8 @@ object ADIPlainLam {
       val Ans(vss, anscache) = reset { aeval(e, env, store, mtTime, cache) }
       val init_config = Config(e, env, store, mtTime)
       val new_cache = anscache.outUpdate(init_config, vss)
-      if (new_cache.out == cache.out) { Ans(vss, new_cache) }
-      else { iter(Cache(new_cache.out, new_cache.out)) }
+      if (new_cache.out == new_cache.in) { Ans(vss, new_cache) }
+      else { iter(Cache(new_cache.out, Store[Config, VS](Map()))) }
     }
     iter(Cache.mtCache)
   }
