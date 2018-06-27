@@ -353,6 +353,12 @@ can be obtained.
    }
    %{ [start chain] \chainin (m-1-5);
    % \chainin (m-2-4) [join={node[sloped,anchor=center,above,labeled] {\text{CPS trans.}}}]; }
+   %
+   % TODO: find out how to make the arrows visually separate
+   % {
+   %   [start chain] \chainin (m-1-5);
+   %   \chainin (m-2-4) [bend left=5, join={node[sloped,anchor=center,below,labeled] {\text{CPS}}}];
+   % }
    {
      [start chain] \chainin (m-2-1);
      \chainin (m-2-2) [join={node[above,labeled] {\begin{smallmatrix} \text{linearization} \\ \text{+} \\ \text{fusion} \end{smallmatrix}}     }];
