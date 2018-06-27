@@ -208,7 +208,8 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   transform small-step abstract abstract machines into big-step abstract definitional
   interpreters.
   The transformations include linearization, lightweight fusion, disentanglement, 
-  refunctionalization, and finally back to direct-style with delimited control operators. 
+  refunctionalization, and finally transformation from CPS back to direct-style 
+  with delimited control operators. 
   Linearization expresses nondeterministic choices by first-order data types, 
   after which refunctionalization transforms the first-order datatypes representing continuations
   into higher-order functions. 
@@ -262,10 +263,9 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 \section{Introduction}
 
 Defining a language by building an interpreter for it can be traced to the very
-early days of programming languages research \cite{landin1966next, Reynolds:72, 
-McCarthy:1960:RFS:367177.367199}.
-Nowadays, even undergraduate students in computer science are able to make their own
-programming language by building an interpreter.
+early days of programming languages research \cite{McCarthy:1960:RFS:367177.367199,landin1966next, Reynolds:72}.
+Nowadays, even undergraduate students in computer science learn how to make their own
+programming languages by building an interpreter.
 But building a sound abstract interpreter remained an esoteric and difficult task 
 until very recently.
 
@@ -315,8 +315,8 @@ thus nondeterminism is introduced. In addition to ensuring termination, abstract
 artifacts are usually equipped with a cache of reachable states, the cache is
 updated in a monotonic way and guaranteed to reach the least fixed-point eventually.
 In this functional pearl, we make a first step to answering the question of interderiving
-abstract semantics artifacts, and provide a constructive answer to relate AAM and ADI
-by presenting a series of syntactical transformations on the program from small-step 
+abstract semantics artifacts, and provide a constructive answer to relate AAM and ADI 
+by presenting a series of syntactic transformations on the program from small-step 
 abstract abstract machines to big-step abstract definitional interpreters.
 
 In addition, the abstract abstract machines with unbounded stack naturally correspond
@@ -361,7 +361,7 @@ can be obtained.
    % }
    {
      [start chain] \chainin (m-2-1);
-     \chainin (m-2-2) [join={node[above,labeled] {\begin{smallmatrix} \text{linearization} \\ \text{+} \\ \text{fusion} \end{smallmatrix}}     }];
+     \chainin (m-2-2) [join={node[above,labeled] {\begin{smallmatrix} \text{linearization} \\ \text{+} \\ \text{lightw. fusion} \end{smallmatrix}}     }];
      \chainin (m-2-3) [join={node[above,labeled] {\text{disentang.}}}];
      \chainin (m-2-4) [join={node[above,labeled] {\text{refunc.}}}];
      %\chainin (m-2-5) [join={node[above,labeled] {\text{monadify}}}];
@@ -403,12 +403,11 @@ can be obtained.
 
 We begin by reviewing some background necessary for this work in Section~\ref{background}, 
 as well as introducing some of the basic code structures used throughout the paper. 
-We then address the main contribution of this paper, which is the filling of the gap between
+We then address the main contribution of this paper: bridging the gap between
 small-step AAM and big-step ADI by applying a series of well-known systematic transformations
 drawn from concrete semantic artifacts.
-Figure \ref{fig:trans} shows the transformations.
-
-Those transformations are summarized here, with their associated section:
+Those transformations are shown in Figure~\ref{fig:trans} and summarized here, with their 
+respective associated sections:
 
 \begin{itemize}
   \item We show \textbf{linearization} in Section~\ref{linear}. By expressing the
@@ -423,8 +422,8 @@ Those transformations are summarized here, with their associated section:
     driving function into one, but keeps all the machine state representations.
 
   \item Section~\ref{disen} discusses \textbf{disentanglement}. In this part, we identify 
-    different first-order datatypes which represent different layers of continuation, and
-    disassemble their handlers to be separate higher-order functions.
+    different first-order datatypes which represent different layers of continuations, and
+    disassemble their handlers into separate higher-order functions.
 
   \item Applying \textbf{refunctionalization} \cite{DANVY2009534, Danvy:2006:RW:2171265.2171268} 
     to disentangled AAM is shown in Section~\ref{sec:refunc}. 
@@ -466,7 +465,7 @@ There are two main reasons we use a real-world language:
 notations, which are heavily used in other static analysis or semantics papers.
 The Scala code in this paper can be easily back-translated into formal notations.
 2) As a functional pearl, the code in this paper is executable with only few changes,
-which make it particularly fit for presenting syntactical transformations on abstract
+which make it particularly fit for presenting syntactic transformations on abstract
 interpreters.
 \fi
 
@@ -1846,7 +1845,7 @@ We use the delimited control operators @shift@ and @reset@ that are implemented 
 % TODO: dyck graph summarization v.s. direct-style + caching
 
 In this functional pearl, we fill the gap between small-step abstract abstract machines
-and big-step abstract definitional interpreters by applying a series of syntactical
+and big-step abstract definitional interpreters by applying a series of syntactic 
 transformations. Among these transformations, linearization turns a worklist into another
 layer of continuations; refunctionalization converts the first-order data types representing
 continuations to higher-order functions; and finally a left-inverse CPS transformation turns
@@ -1865,14 +1864,18 @@ in different denotational and operational styles.
   %% \grantnum[<url>]{<sponsorID>}{<number>} should be used to
   %% acknowledge financial support and will be used by metadata
   %% extraction tools.
+  The authors are grateful to the anonymous reviewers for their 
+  helpful comments, and they are further indebted to Olivier Danvy 
+  for numerous invaluable comments on the draft.
+
   This material is based upon work supported by the
   \grantsponsor{GS100000001}{National Science
     Foundation}{http://dx.doi.org/10.13039/100000001} under Grant
   No.~\grantnum{GS100000001}{nnnnnnn} and Grant
   No.~\grantnum{GS100000001}{mmmmmmm}.  Any opinions, findings, and
   conclusions or recommendations expressed in this material are those
-  of the author and do not necessarily reflect the views of the
-  National Science Foundation.
+  of the authors and do not necessarily reflect the views of the
+  National Science Foundation. \note{TODO: grants}
 \end{acks}
 
 %% Bibliography
