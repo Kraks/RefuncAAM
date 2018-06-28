@@ -546,15 +546,15 @@ The Scala representations for the components of the CESK machine are as follows:
 \end{lstlisting}
 
 It is worth noting that the continuation class @Kont@ is defined as a list of
-frames, where a frame can be considered a representation of reduction context 
+frames, where a frame can be considered a representation of a reduction context
 in reduction semantics.
-An empty list represents empty call stack; otherwise, the head frame in the list
+An empty list represents an empty call stack; otherwise, the head frame in the list
 represents the innermost context, and the reduction result of this frame will be used
 to fill the ``hole'' of its following element in the list.
 We represent frames using the @Frame@ class, which stores the information of a single
 call-site, i.e., the information that can be used to resume the interrupted computation.
 A @Frame@ constitutes a variable name @x@ to be bound later, and a control component
-to which the program may resume, and its environment.
+to which the program may resume, as well as its environment.
 
 \subsubsection{Single-Step Transition}
 Before describing how the machine evaluates expressions, we must first define several helper
