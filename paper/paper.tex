@@ -364,7 +364,6 @@ can be obtained.
      \chainin (m-2-2) [join={node[above,labeled] {\begin{smallmatrix} \text{linearization} \\ \text{+} \\ \text{lightw. fusion} \end{smallmatrix}}     }];
      \chainin (m-2-3) [join={node[above,labeled] {\text{disentang.}}}];
      \chainin (m-2-4) [join={node[above,labeled] {\text{refunc.}}}];
-     %\chainin (m-2-5) [join={node[above,labeled] {\text{monadify}}}];
    }
    {
      [start chain, color=gray, dashed]
@@ -373,9 +372,6 @@ can be obtained.
        [join={node[left, labeled] {\alpha}}];
      }
    }
-     %\chainin (m-2-2);
-     %\chainin (m-2-3);
-     %\chainin (m-2-4);
    {
      [start chain, color=gray, dashed]
      \chainin (m-3-5);
@@ -394,6 +390,10 @@ can be obtained.
        [join={node[above, labeled] {\text{Known as Danvy's correspondences for concrete semantic artifacts }}}];
      }
    }
+   \draw[gray,dashed,transform canvas={xshift=0.5ex}] (m-1-5.north west) -- (m-2-5.south west);
+   \draw[gray,dashed,transform canvas={xshift=3.7ex, xscale=0.90}] (m-1-5.north west) -- (m-1-5.north east);
+   \draw[gray,dashed,transform canvas={xshift=-0.2ex}] (m-1-5.north east) -- (m-2-5.south east);
+   \draw[gray,dashed,transform canvas={xshift=3.7ex, xscale=0.90}] (m-2-5.south west) -- (m-2-5.south east);
  \end{tikzpicture}
  \caption{Transformations from AAM to ADI} \label{fig:trans}
 \end{center}
