@@ -330,12 +330,12 @@ can be obtained.
    \matrix (m) [matrix of math nodes, row sep=2.5em, column sep=3.7em]
      {
          &  &  &  &
-       \begin{smallmatrix} \text{abstract} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\
+       \begin{smallmatrix} \text{monadic} \\ \text{abstract} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\
        \begin{smallmatrix} \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
        \begin{smallmatrix} \text{big-step} \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  &
        \begin{smallmatrix} \text{disentangled}  \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
        \begin{smallmatrix} \text{refunctionalized}  \\ \text{abstract} \\ \text{abstract} \\ \text{machines} \end{smallmatrix} &
-       \begin{smallmatrix} \text{monadic} \\ \text{abstract} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix}  \\
+       \begin{smallmatrix} \text{abstract} \\ \text{definitional} \\ \text{interpreters} \end{smallmatrix}  \\
        \begin{smallmatrix} \text{abstract} \\ \text{machines} \end{smallmatrix} &
          &
        %\begin{smallmatrix} \text{big-step} \\ \text{abstract} \\ \text{machines} \end{smallmatrix}  &
@@ -346,18 +346,18 @@ can be obtained.
        \begin{smallmatrix} \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\
      };
    {
-     [start chain, transform canvas={yshift=0.5ex,xshift=-0.5ex}] \chainin (m-2-4);
-     \chainin (m-1-5) [join={node[sloped,anchor=center,above,labeled] {\text{CPS left-inv.}}}];
+     [start chain, transform canvas={yshift=0.5ex}] \chainin (m-2-4);
+     \chainin (m-2-5) [join={node[sloped,anchor=center,above,labeled] {\text{CPS left-inv.}}}];
    }
    {
-     [start chain, color=gray, transform canvas={yshift=-0.5ex,xshift=0.5ex}] \chainin (m-1-5);
+     [start chain, color=gray, transform canvas={yshift=-0.5ex}] \chainin (m-2-5);
      \chainin (m-2-4) [join={node[sloped,anchor=center,below,labeled] {\text{CPS trans.}}}];
    }
    {
-     [start chain, color=gray] \chainin (m-2-5);
-     \chainin (m-1-5) [join={node[above,labeled] {\text{}}}];
+     [start chain, color=gray] \chainin (m-1-5);
      \chainin (m-2-5) [join={node[above,labeled] {\text{}}}];
-     \chainin (m-2-4) [join={node[sloped,anchor=center,below,labeled] {\text{inline monad}}}];
+     \chainin (m-1-5) [join={node[above,labeled] {\text{}}}];
+     \chainin (m-2-4) [join={node[sloped,anchor=center,above,labeled] {\text{inline monads}}}];
    }
    {
      [start chain] \chainin (m-2-1);
