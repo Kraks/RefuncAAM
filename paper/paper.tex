@@ -315,7 +315,7 @@ thus introduce nondeterminism. In addition to ensuring termination, abstract sem
 artifacts are usually equipped with a cache of reachable states; the cache is
 updated in a monotonic way and guaranteed to reach the least fixed-point eventually.
 In this functional pearl, we make a first step in answering the question of interderiving
-abstract semantics artifacts, and provide a constructive answer to relate AAMs and ADIs
+abstract semantics artifacts, and provide a constructive answer to relate AAM and ADI
 by presenting a series of syntactic transformations on the program from small-step
 abstract abstract machines to big-step abstract definitional interpreters.
 
@@ -401,8 +401,8 @@ can be obtained.
 
 \subsection{Contributions}
 
-We begin by reviewing some background necessary for this work in Section~\ref{background}, 
-as well as introducing some of the basic code structures used throughout the paper. 
+We begin by reviewing some background necessary for this work in Section~\ref{background},
+as well as by introducing some of the basic code structures used throughout the paper.
 We then address the main contribution of this paper: bridging the gap between
 small-step AAM and big-step ADI by applying a series of well-known systematic transformations
 drawn from concrete semantic artifacts.
@@ -412,8 +412,8 @@ descriptions in their respective associated sections:
 \begin{itemize}
   \item We show \textbf{linearization} in Section~\ref{linear}. By expressing the
     nondeterministic choices as a first-order data type, we linearize the execution
-    of abstract abstract machines; the transition of machine states therefore becomes 
-    deterministic. Notably, this explicitly expresses another layer of control that 
+    of abstract abstract machines; the transition of machine states therefore becomes
+    deterministic. Notably, this explicitly expresses another layer of control that
     will also be refunctionalized later.
 
   \item In Section~\ref{fusing}, we then apply a \textbf{lightweight fusion} 
@@ -443,11 +443,11 @@ descriptions in their respective associated sections:
     \textbf{direct-style} interpreter (Section~\ref{directstyle}) by using delimited control operators.
 \end{itemize}
 
-These transformations are used throughout the paper, with refunctionalization and
+These transformations are used throughout the paper, with the refunctionalization and
 defunctionalization of abstract interpreters playing important roles for the stack model of
 the analyzed language. By refunctionalization, the call structure of the analyzed language
 is blended into the call structure of the defining language. This provides another perspective to
-explain why \citeauthor{darais2017abstracting}'s abstract definitional interpreters
+explain why \citeauthor{darais2017abstracting}'s abstract definitional interpreter
 is able to inherit the pushdown control-flow property from its defining language.
 
 We discuss related work in Section~\ref{sec:related}, followed by 
