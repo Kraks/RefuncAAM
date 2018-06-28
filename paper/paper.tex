@@ -319,7 +319,7 @@ abstract semantics artifacts, and provide a constructive answer to relate AAM an
 by presenting a series of syntactic transformations on the program from small-step
 abstract abstract machines to big-step abstract definitional interpreters.
 
-In addition, those abstract abstract machines with unbounded stacks naturally correspond
+In addition, those abstract abstract machines with an unbounded stack naturally correspond
 to abstract definitional interpreters. We show that after refunctionalizing an AAM with an
 unbounded stack (and utilizing the proper caching algorithm), the pushdown control-flow analysis
 can be obtained.
@@ -1715,7 +1715,7 @@ given the fact that the abstract interpreter should always use the latest cache.
   }
 \end{lstlisting}
 
-The function @analyze@ is also changed by calling a @reset@ operator around the function 
+The function @analyze@ is also changed by calling the @reset@ operator around the function 
 call of @aeval@ to set the delimiter. The afterwards updating on cache becomes sequential.
 
 \begin{lstlisting}
@@ -1866,7 +1866,9 @@ in different denotational and operational styles.
   %% extraction tools.
   The authors are grateful to the anonymous reviewers for their 
   helpful comments, and they are further indebted to Olivier Danvy 
-  for numerous invaluable comments on the draft.
+  for numerous invaluable comments on the draft. We also thank
+  Kimball Germane and David Sherratt for their feedback, and
+  Thomas Gilray for the discussion on pushdown control-flow analysis.
 
   This material is based upon work supported by the
   \grantsponsor{GS100000001}{National Science
