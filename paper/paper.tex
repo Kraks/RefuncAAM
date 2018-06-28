@@ -346,19 +346,19 @@ can be obtained.
        \begin{smallmatrix} \text{definitional} \\ \text{interpreters} \end{smallmatrix} \\
      };
    {
-     [start chain] \chainin (m-2-4);
-     \chainin (m-1-5) [double,join={node[sloped,anchor=center,above,labeled] {\text{CPS left-inv.}}}];
-     \chainin (m-2-5) [join={node[above,labeled] {\text{}}}];
-     \chainin (m-1-5) [join={node[above,labeled] {\text{}}}];
+     [start chain, transform canvas={yshift=0.5ex,xshift=-0.5ex}] \chainin (m-2-4);
+     \chainin (m-1-5) [join={node[sloped,anchor=center,above,labeled] {\text{CPS left-inv.}}}];
    }
-   %{ [start chain] \chainin (m-1-5);
-   % \chainin (m-2-4) [join={node[sloped,anchor=center,above,labeled] {\text{CPS trans.}}}]; }
-   %
-   % TODO: find out how to make the arrows visually separate
-   % {
-   %   [start chain] \chainin (m-1-5);
-   %   \chainin (m-2-4) [bend left=5, join={node[sloped,anchor=center,below,labeled] {\text{CPS}}}];
-   % }
+   {
+     [start chain, color=gray, transform canvas={yshift=-0.5ex,xshift=0.5ex}] \chainin (m-1-5);
+     \chainin (m-2-4) [join={node[sloped,anchor=center,below,labeled] {\text{CPS trans.}}}];
+   }
+   {
+     [start chain, color=gray] \chainin (m-2-5);
+     \chainin (m-1-5) [join={node[above,labeled] {\text{}}}];
+     \chainin (m-2-5) [join={node[above,labeled] {\text{}}}];
+     \chainin (m-2-4) [join={node[sloped,anchor=center,below,labeled] {\text{inline monad}}}];
+   }
    {
      [start chain] \chainin (m-2-1);
      \chainin (m-2-2) [join={node[above,labeled] {\begin{smallmatrix} \text{linearization} \\ \text{+} \\ \text{lightw. fusion} \end{smallmatrix}}     }];
@@ -367,7 +367,7 @@ can be obtained.
      %\chainin (m-2-5) [join={node[above,labeled] {\text{monadify}}}];
    }
    {
-     [start chain, color=gray]
+     [start chain, color=gray, dashed]
      \chainin (m-3-1);
      { [start branch=A] \chainin (m-2-1)
        [join={node[left, labeled] {\alpha}}];
@@ -377,7 +377,7 @@ can be obtained.
      %\chainin (m-2-3);
      %\chainin (m-2-4);
    {
-     [start chain, color=gray]
+     [start chain, color=gray, dashed]
      \chainin (m-3-5);
      { [start branch=B] \chainin (m-2-5)
        [join={node[right, labeled] {\alpha}}];
