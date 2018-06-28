@@ -264,64 +264,64 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 
 Defining a language by building an interpreter for it can be traced to the very
 early days of programming languages research \cite{McCarthy:1960:RFS:367177.367199,landin1966next, Reynolds:72}.
-Nowadays, even undergraduate students in computer science learn how to define 
+Nowadays, even undergraduate students in computer science learn how to define
 their own programming languages by building an interpreter.
 However, building a sound abstract interpreter remained an esoteric and difficult task
 until very recently.
 
-\citeauthor{van2012systematic} proposed the Abstracting Abstract Machines (AAM) 
-methodology which provides a recipe for constructing sound abstract interpreters 
-for higher-order functional languages from concrete abstract machines 
+\citeauthor{van2012systematic} proposed the Abstracting Abstract Machines (AAM)
+methodology which provides a recipe for constructing sound abstract interpreters
+for higher-order functional languages from concrete abstract machines
 ~\cite{van2012systematic, van2010abstracting}.
-Given a concrete small-step abstract machine (e.g. the CESK machine, Krivine's 
-machine, etc.), by allocating continuations in the store and bounding both the 
-value addresses and continuation addresses to be finite, we obtain an abstract 
-interpreter with a finite state space which can be used for performing sound 
+Given a concrete small-step abstract machine (e.g. the CESK machine, Krivine's
+machine, etc.), by allocating continuations in the store and bounding both the
+value addresses and continuation addresses to be finite, we obtain an abstract
+interpreter with a finite state space which can be used for performing sound
 static analysis.
 One can further instantiate different polyvariant control-flow analyses by using
 different address allocators \cite{Gilray:2016:ACP:2951913.2951936}.
 
 Applying the same idea to big-step definitional interpreters, \citeauthor{darais2017abstracting}
-built abstract definitional interpreters (ADI) that are written in monadic style 
-\cite{darais2017abstracting}. One of the advantages of a monadic interpreter is 
+built abstract definitional interpreters (ADI) that are written in monadic style
+\cite{darais2017abstracting}. One of the advantages of a monadic interpreter is
 that it is modular and composable. By changing the underlying monads, the definition
 of the interpreter is not modified, but we can recover different semantics, including
 the concrete semantics and various abstract semantics such as context-sensitivity and
 abstract garbage collection \cite{Sergey:2013:MAI:2491956.2491979}.
 
 Broadly speaking, abstract abstract machines and abstract definitional interpreters are
-different forms of abstract interpreters. They are obtained by applying a combination 
-of abstractions to their concrete counterparts, abstract machines and definitional 
-interpreters, respectively. An interesting question, and the subject of this paper, is 
+different forms of abstract interpreters. They are obtained by applying a combination
+of abstractions to their concrete counterparts, abstract machines and definitional
+interpreters, respectively. An interesting question, and the subject of this paper, is
 how one can derive an abstract semantic artifact given the counterpart.
 
 In the concrete world, the relations among reduction semantics, abstract machines,
 definitional interpreters, and monadic interpreters have been intensively studied by
 Danvy and his collaborators \cite{Ager:2003:FCE:888251.888254, Danvy:2001:DW:773184.773202,
-danvy2004refocusing, Danvy:2008:DIP:1411204.1411206, AGER2004223, ager2005functional, 
+danvy2004refocusing, Danvy:2008:DIP:1411204.1411206, AGER2004223, ager2005functional,
 Danvy:2006:RW:2171265.2171268, danvy2009towards, biernacka2009towards}.
-The concrete abstract machines implement structural operational semantics in 
+These concrete abstract machines implement structural operational semantics in 
 continuation-passing style, where the reduction contexts are defunctionalized continuations.
-One can derive definitional interpreters by refunctionalizing the reduction contexts of 
-abstract machines, and by defunctionalizing the higher-order functions, one may obtain 
+One can derive definitional interpreters by refunctionalizing the reduction contexts of
+abstract machines, and by defunctionalizing the higher-order functions, one may obtain
 abstract machines in the reverse direction.
 
 In the domain of abstract semantic artifacts, by contrast, the relations between small-step
-abstract abstract machines and big-step abstract definitional interpreters, as well as the 
+abstract abstract machines and big-step abstract definitional interpreters, as well as the
 question of deriving one from the other, are not well studied.
 One of the fundamental differences between concrete semantic artifacts and abstract semantic
-artifacts is a sound latter one must tell you facts about all possible execution paths, and 
-thus nondeterminism is introduced. In addition to ensuring termination, abstract semantic
-artifacts are usually equipped with a cache of reachable states, the cache is
+artifacts is that a sound instance of the latter must tell you facts about all possible execution paths, and
+thus introduce nondeterminism. In addition to ensuring termination, abstract semantic
+artifacts are usually equipped with a cache of reachable states; the cache is
 updated in a monotonic way and guaranteed to reach the least fixed-point eventually.
-In this functional pearl, we make a first step to answering the question of interderiving
-abstract semantics artifacts, and provide a constructive answer to relate AAM and ADI 
-by presenting a series of syntactic transformations on the program from small-step 
+In this functional pearl, we make a first step in answering the question of interderiving
+abstract semantics artifacts, and provide a constructive answer to relate AAMs and ADIs
+by presenting a series of syntactic transformations on the program from small-step
 abstract abstract machines to big-step abstract definitional interpreters.
 
-In addition, the abstract abstract machines with unbounded stack naturally correspond
-to abstract definitional interpreters. We show that after refunctionalizing an AAM with 
-unbounded stack, and with the proper caching algorithm, the pushdown control-flow analysis 
+In addition, those abstract abstract machines with unbounded stacks naturally correspond
+to abstract definitional interpreters. We show that after refunctionalizing an AAM with an
+unbounded stack (and utilizing the proper caching algorithm), the pushdown control-flow analysis
 can be obtained.
 
 \begin{figure}
