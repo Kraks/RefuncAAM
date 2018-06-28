@@ -450,7 +450,7 @@ is blended into the call structure of the defining language. This provides anoth
 explain why \citeauthor{darais2017abstracting}'s abstract definitional interpreter
 is able to inherit the pushdown control-flow property from its defining language.
 
-We discuss related work in Section~\ref{sec:related}, followed by 
+We discuss related work in Section~\ref{sec:related}, followed by
 concluding thoughts in Section~\ref{sec:conclusion}.
 
 \iffalse
@@ -483,7 +483,7 @@ we will show in the rest of this paper also work on abstract machines for plain
 direct-style $\lambda$-calculus languages. Although we only show the core calculus language,
 it can be easily extended to support recursive bindings (such as @letrec@), conditionals, 
 primitive types, and operations on primitive types. These cases would be straightforward to
-implement without introducing new transformations as far as the concerns of this paper,
+implement without introducing new transformations related to the concerns of this paper,
 so we elide them here.
 % TODO: appendix, direct-style, numbers and if0
 
@@ -499,7 +499,7 @@ in ANF.
 \end{lstlisting}
 
 In ANF, an expression is either an atomic expression or a @let@ expression.
-A restriction exists which states that all function applications must be administrated
+A restriction exists which states that all function applications must be administered
 within a @let@ expression and then bound to a variable name under the current environment.
 Both the operator and operand of function applications are atomic expressions.
 An atomic expression $ae$ is either a variable or a literal @lambda@ term, either of which
@@ -507,7 +507,7 @@ can be evaluated in a single step. We also assume that all the variable names in
  are unique.
 
 The abstract syntax in Scala is shown as follows. We assume that the source program conforms
-to the ANF convention, and we do not enforce it in the term structure of Scala constructs.
+to the ANF convention, and as such, do not enforce it in the term structure of Scala constructs.
 
 \begin{lstlisting}
   sealed trait Expr
@@ -521,9 +521,9 @@ to the ANF convention, and we do not enforce it in the term structure of Scala c
 
 \subsubsection{Machine Components}
 
-The CESK machine is an abstract machine for describing semantics of and evaluating 
-$\lambda$-calculus \cite{felleisen1987calculus}. The CESK machine models program execution 
-as state transitions in a small-step fashion. As its name suggests, a machine state has 
+The CESK machine is an abstract machine for describing semantics of and evaluating
+$\lambda$-calculus \cite{felleisen1987calculus}. The CESK machine models program execution
+as state transitions in a small-step fashion. As its name suggests, a machine state has
 four components:
 1) \textit{Control} is the expression currently being evaluated.
 2) \textit{Environment} is a map that contains the address of a variable in the lexical scope.
