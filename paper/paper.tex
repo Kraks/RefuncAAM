@@ -264,8 +264,8 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 
 Defining a language by building an interpreter for it can be traced to the very
 early days of programming languages research \cite{McCarthy:1960:RFS:367177.367199,landin1966next, Reynolds:72}.
-Nowadays, even undergraduate students in computer science learn how to make their own
-programming languages by building an interpreter.
+Nowadays, even undergraduate students in computer science learn how to define 
+their own programming languages by building an interpreter.
 But building a sound abstract interpreter remained an esoteric and difficult task 
 until very recently.
 
@@ -406,8 +406,8 @@ as well as introducing some of the basic code structures used throughout the pap
 We then address the main contribution of this paper: bridging the gap between
 small-step AAM and big-step ADI by applying a series of well-known systematic transformations
 drawn from concrete semantic artifacts.
-Those transformations are shown in Figure~\ref{fig:trans} and summarized here, with their 
-respective associated sections:
+Those transformations are shown in Figure~\ref{fig:trans} and summarized here, with full
+descriptions in their respective associated sections:
 
 \begin{itemize}
   \item We show \textbf{linearization} in Section~\ref{linear}. By expressing the
@@ -450,7 +450,7 @@ is blended into the call structure of the defining language. This provides anoth
 explain why \citeauthor{darais2017abstracting}'s abstract definitional interpreters
 is able to inherit the pushdown control-flow property from its defining language.
 
-We complete this paper by discussing related work in Section~\ref{sec:related}, followed by 
+We discuss related work in Section~\ref{sec:related}, followed by 
 concluding thoughts in Section~\ref{sec:conclusion}.
 
 \iffalse
@@ -1757,7 +1757,7 @@ Defunctionalization and refunctionalization build connections between abstract m
 interpreters. \citeauthor{Reynolds:72} first shows defunctionalization as a program transformation 
 technique that can be used to transform higher-order functions to first-order functions when
 writing a definitional interpreter \cite{Reynolds:72, Reynolds:HOSC98-revisited}.
-Refunctionalization is a left inverse of this transformation.
+Refunctionalization~\cite{TODOrefunc} is the left inverse of this transformation.
 
 Over the years, Danvy and his collaborators applied refunctionalization and defunctionalization 
 to many different abstract machines and interpreters and build functional correspondences among
@@ -1852,9 +1852,9 @@ continuations to higher-order functions; and finally a left-inverse CPS transfor
 the abstract interpreter into a sequence of expressions with delimited control operators,
 which looks almost no different to a concrete interpreter.
 
-We show the functional correspondence not only exists between concrete semantic artifacts
-but also exists between abstract semantic artifacts. An interesting open question would
-be whether there also exists correspondences between static analyses that are formalized 
+We show that a functional correspondence exists not only between concrete semantic artifacts
+but also between abstract semantic artifacts. An interesting open question would
+be whether there also exist correspondences between static analyses that are formalized 
 in different denotational and operational styles.
 
 %% TODO: Acknowledgments
