@@ -361,21 +361,27 @@ can be obtained.
    }
    {
      [start chain] \chainin (m-2-1);
-     \chainin (m-2-2) [join={node[above,labeled] {\begin{smallmatrix} \text{linearization} \\ \text{+} \\ \text{lightw. fusion} \end{smallmatrix}}     }];
+     \chainin (m-2-2) [join={node[above,labeled] {
+       \begin{smallmatrix} \text{linearization} \\ \text{+} \\ \text{lightw. fusion} \end{smallmatrix}
+     }}];
      \chainin (m-2-3) [join={node[above,labeled] {\text{disentang.}}}];
+   }
+   {
+     [start chain, transform canvas={yshift=0.5ex}] \chainin (m-2-3);
      \chainin (m-2-4) [join={node[above,labeled] {\text{refunc.}}}];
    }
    {
-     [start chain, color=gray, dashed]
-     \chainin (m-3-1);
-     { [start branch=A] \chainin (m-2-1)
-       [join={node[left, labeled] {\alpha}}];
-     }
+     [start chain, color=gray, transform canvas={yshift=-0.5ex}] \chainin (m-2-4);
+     \chainin (m-2-3) [join={node[below,labeled] {\text{defunc.}}}];
    }
    {
-     [start chain, color=gray, dashed]
-     \chainin (m-3-5);
-     { [start branch=B] \chainin (m-2-5)
+     [start chain, color=gray, dashed] \chainin (m-3-1);
+     { [start branch=A] \chainin (m-2-1) [join={node[left, labeled] {\alpha}}]; }
+   }
+   {
+     [start chain, color=gray, dashed] \chainin (m-3-5);
+     { 
+       [start branch=B] \chainin (m-2-5)
        [join={node[right, labeled] {\alpha}}];
      }
      {
