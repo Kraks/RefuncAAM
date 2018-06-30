@@ -699,7 +699,7 @@ it continuously grows and never shrinks.
 \end{lstlisting}
 
 The co-domain of binding stores @Storable@ is the same as previously defined for CESK 
-machines. The conman of continuation stores @Cont@, on the other hand, is comprised of
+machines. The c-domain of continuation stores @Cont@, on the other hand, is comprised of
 a @Frame@ object and a continuation address @KAddr@. To mimic the run-time call stack, 
 @KAddr@ plays the role of representing the remaining stack frames.
 But since the continuation store may contain multiple continuations, the dereferencing 
@@ -1084,7 +1084,7 @@ the end of the computation (i.e., a halt); otherwise, we should return the value
 
 However, since we have added nondeterminism into state, an empty list of frames means
 we have reached the halt of \textit{one computation path}, and we should determine the
-next state indicated by @NDCont@. Thus, we have a inner pattern matching on @ndk@:
+next state indicated by @NDCont@. Thus, we have an inner pattern matching on @ndk@:
 
 \begin{itemize}
   \item If the closure set is an empty set (@Nil@ in the code since we list to represent that set),
