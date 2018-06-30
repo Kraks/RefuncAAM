@@ -1119,9 +1119,13 @@ The termination of the analysis occurs when we reach an @NDState@ in which the e
 is atomic and both the continuation and meta-continuation are empty lists. This corresponds 
 to the case that @todo@ list is empty. The set of explored states is preserved as before.
 
-At this point, we have obtained a linearized abstract abstract machine. If we imagine that the
-classical AAM explores a graph of reachable states, then the linearized AAM flattens the
-graph to a linear sequence of states.
+At this point, we have obtained a linearized abstract abstract machine. 
+As \citeauthor{10.1007/3-540-15975-4_33} and \citeauthor{danvy2006a} 
+showed, ``\textit{one programmer’s lazy-list constructors is another programmer’s success 
+and failure continuations}'' \cite{10.1007/3-540-15975-4_33, danvy2006a}; the @step@ function
+in AAM is the lazy-list constructor, and here we turn it into an explicit continuation.
+Intuitively, if we imagine that the classical AAM explores a graph of reachable states, 
+then the linearized AAM flattens the graph to a linear sequence of states.
 
 \section{Lightweight Fusion} \label{fusing}
 
@@ -1618,7 +1622,7 @@ To obtain definitional abstract interpreters, we now transform it further to dir
 
 We have multiple choices of how to proceed:
 \begin{itemize}
-  \item By representing the continuations with monads\cite{filinski1994representing}, 
+  \item By replacing the continuations with monads \cite{filinski1994representing}, 
     we obtain the abstract definitional interpreters in monadic style which are similar to what 
     \citeauthor{darais2017abstracting} describe \cite{darais2017abstracting}.
   \item By representing the extended continuation-passing style with delimited control operators
@@ -1743,7 +1747,7 @@ interpreter with pushdown control-flows and written in direct-style.
 \section{Related Work}\label{sec:related}
 
 \textit{Defunctionalization and Refunctionalization.}
-\citeauthor{Reynolds:72} first shows defunctionalization as a program transformation 
+\citeauthor{Reynolds:72} first showed defunctionalization as a program transformation 
 technique that can be used to transform higher-order functions to first-order data types and 
 its first-order dispatching function when writing definitional interpreters
 \cite{Reynolds:72, Reynolds:HOSC98-revisited}. As generalized closure conversion,
@@ -1761,7 +1765,7 @@ Such semantic artifacts include SECD machines \cite{10.1007/11431664_4, Ager:200
 CEK machines \cite{Ager:2003:FCE:888251.888254}, CLS machines  \cite{Ager:2003:FCE:888251.888254},
 Categorical Abstract Machines \cite{Ager:2003:FCE:888251.888254}, lazy abstract machines \cite{AGER2004223}, 
 monadic evaluators \cite{ager2005functional}, as well as languages with richer constructs
-\cite{Danvy:2008:DIP:1411204.1411206, danvy2009towards, biernacka2009towards}. 
+\cite{Danvy:2008:DIP:1411204.1411206, danvy2009towards, biernacka2009towards}, etc.
 
 Besides, Danvy and his collaborators observed the correspondence between evaluation contexts and continuations.
 For deterministic languages, \citeauthor{Danvy:2008:DIP:1411204.1411206} showed that reduction contexts
