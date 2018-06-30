@@ -201,8 +201,8 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   abstract interpreters that are derived from concrete small-step abstract machines.
   \citeauthor{darais2017abstracting} apply the same idea on monadic definitional interpreters, 
   and obtain monadic abstract definitional interpreters (ADI) in big-step style.
-  Yet, the relations between small-step abstracting abstract machines and big-step 
-  abstracting definitional interpreters are not well studied.
+  Yet, the relations between small-step abstract abstract machines and big-step 
+  abstract definitional interpreters are not well studied.
 
   In this paper, we show their functional correspondence and how to syntactically 
   transform small-step abstract abstract machines into big-step abstract definitional
@@ -651,7 +651,7 @@ from the final state at last.
 \subsection{Abstracting Abstract Machines} \label{aam}
 Abstracting abstract machines (AAM) is a systematic methodology that derives sound
 abstract interpreters for higher-order functional languages from concrete abstract 
-machines \cite{van2012systematic, van2010abstracting}. An abstracting abstract machine
+machines \cite{van2012systematic, van2010abstracting}. An abstract abstract machine
 implements computable abstract semantics which approximates the runtime behaviors of 
 programs.
 Since the state space of concrete execution is possibly infinite, the key insight of 
@@ -660,7 +660,7 @@ on the store, and then bound the addresses space to be finite. Since each compon
 of state is finite, the abstracted machine-state space is also finite, and therefore
 computable.
 
-In this section, we derive the abstracting abstract machine from concrete
+In this section, we derive the abstract abstract machine from concrete
 CESK machines, and also show how to instantiate useful $k$-call-sensitive 
 control-flow analysis.
 
@@ -1616,9 +1616,8 @@ To obtain definitional abstract interpreters, we now transform it further to dir
 
 We have multiple choices of how to proceed:
 \begin{itemize}
-  \item By monadifying the continuations, we obtain the abstracting
-    definitional interpreters in monadic style which are what \citeauthor{darais2017abstracting}
-    describe \cite{darais2017abstracting}.
+  \item By monadifying the continuations, we obtain the abstract definitional interpreters 
+    in monadic style which are what \citeauthor{darais2017abstracting} describe \cite{darais2017abstracting}.
   \item By representing the extended continuation-passing style with delimited control operators
     such as @shift@ and @reset@, we derive a new form of abstract interpreters in direct-style.
   \item In fact, we may also just use the same caching algorithm but with side effects such as
@@ -1791,7 +1790,7 @@ equivalence between small-step and big-step abstract machines \cite{DANVY2008100
 \textit{Pushdown Control-Flow Analysis.}
 In recent years, there are significant efforts~\cite{vardoulakis2010cfa2, earl2012introspective,
 gilray2016pushdown, johnson2015abstracting} to achieve precise call/return match based on small-step
-abstracting abstract machines.
+abstract abstract machines.
 
 CFA2 is the first solution that solves the return-flows problem~\cite{vardoulakis2010cfa2},
 but CFA2 has several drawbacks: it works only on continuation-passing style programs, and
@@ -1820,10 +1819,10 @@ meta-language. \\
 Reynold's seminal paper \emph{Definitional interpreters for higher-order programming languages} 
 \cite{Reynolds:72, Reynolds:HOSC98-revisited} shows that in some definitional interpreters, the
 defined language can inherit properties from the defining language. With this insight,
-\citeauthor{darais2017abstracting} construct abstracting definitional interpreters which
+\citeauthor{darais2017abstracting} construct abstract definitional interpreters which
 automatically inherit the pushdown control-flow property from its defining language because
 the defined language simply uses the call-stack model of the meta-language~\cite{darais2017abstracting}.
-\citeauthor{darais2017abstracting}'s abstracting definitional interpreters work on direct-style
+\citeauthor{darais2017abstracting}'s abstract definitional interpreters work on direct-style
 $\lambda$-calculus, and itself is written in monadic style. One of the advantages of monadic
 abstract interpreters is modular and composable, therefore deploying different sensitivities
 or features is just applying a different monad. Prior to that, \citeauthor{Sergey:2013:MAI:2491956.2491979}
