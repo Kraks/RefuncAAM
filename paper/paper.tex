@@ -1339,11 +1339,10 @@ there are two out calls to @drive_step@ and @ndcontinue@, here the application
 of @k@ simulates @drive_step@, and @m@ simulates @ndcontinue@.
 
 Readers familiar with functional programming may think of @fold@ at this point; indeed,
-it is a variant implementation of @fold@ in continuation-passing style. But here we have two
-continuations, one for the next element in the collection, and one for the eventual result.
-This is sometimes referred to as an extended continuation-passing style (ECPS)
-that function @k@ is a continuation and @m@ is a meta-continuation 
-\cite{Danvy:1990:AC:91556.91622}. \\
+it is a variant implementation of @fold@ in continuation-passing style. But as we mentioned 
+in Section \ref{linear}, here we have two continuations, one continuation @k@ for the next 
+element in the collection, and one meta-continuation @m@ for the eventual accumulator.
+This is sometimes referred to as an extended continuation-passing style (ECPS) \cite{Danvy:1990:AC:91556.91622}. \\
 
 \textit{Evaluation without Caching.}
 Since our first version of @aeval@ implements only the nondeterministic evaluation, 
