@@ -1388,7 +1388,7 @@ transfer evaluation to the next body value.
 
 The meta-continuation of the inner @nd@ is @clsnd@, meaning that we need to transfer 
 to the next target closure of @f@. The meta-continuation of the outer @nd@ is just 
-@continue@, as what we normally would do for CPS interpreters.
+@continue@, as what we normally would do when writing CPS interpreters.
 
 \begin{lstlisting}
   case ae if isAtomic(ae) => 
