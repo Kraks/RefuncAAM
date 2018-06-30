@@ -1747,9 +1747,10 @@ interpreter with pushdown control-flows and written in direct-style.
 technique that can be used to transform higher-order functions to first-order data types and 
 its first-order dispatching function when writing definitional interpreters
 \cite{Reynolds:72, Reynolds:HOSC98-revisited}. As generalized closure conversion,
-defunctionalization is also used in program analysis, transformation, and partial evaluation. %TODO cite
-Refunctionalization~\cite{Danvy:2006:RW:2171265.2171268, Danvy:2001:DW:773184.773202} is the 
-left inverse of defunctionalization, firstly considered by \citeauthor{Danvy:2001:DW:773184.773202}.
+defunctionalization is widely used in compilation and analysis \cite{pottier2006polymorphic, 
+Eisenberg:2014:PFT:2633357.2633361, fourtounis2014modular, 10.1007/3-540-46425-5_4, consel1993tour}.
+Refunctionalization~\cite{Danvy:2006:RW:2171265.2171268, Danvy:2001:DW:773184.773202} as a 
+left inverse of defunctionalization, was firstly considered by \citeauthor{Danvy:2001:DW:773184.773202}.
 
 \citeauthor{Ager:2003:FCE:888251.888254} revealed that defunctionalization and refunctionalization
 can be used to show the functional correspondence between interpreters and abstract machines
