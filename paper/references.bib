@@ -660,3 +660,55 @@ keywords = "Program derivation, Programming calculi, Programming languages, Abst
  address = {New York, NY, USA},
 }
 
+@InProceedings{10.1007/11431664_4,
+  author="Danvy, Olivier",
+  editor="Grelck, Clemens
+    and Huch, Frank
+    and Michaelson, Greg J.
+    and Trinder, Phil",
+  title="A Rational Deconstruction of Landin's SECD Machine",
+  booktitle="Implementation and Application of Functional Languages",
+  year="2005",
+  publisher="Springer Berlin Heidelberg",
+  address="Berlin, Heidelberg",
+  pages="52--71",
+  abstract="Landin's SECD machine was the first abstract machine for the $\lambda$-calculus viewed as a programming language. Both theoretically as a model of computation and practically as an idealized implementation, it has set the tone for the subsequent development of abstract machines for functional programming languages. However, and even though variants of the SECD machine have been presented, derived, and invented, the precise rationale for its architecture and modus operandi has remained elusive. In this article, we deconstruct the SECD machine into a $\lambda$-interpreter, i.e., an evaluation function, and we reconstruct $\lambda$-interpreters into a variety of SECD-like machines. The deconstruction and reconstructions are transformational: they are based on equational reasoning and on a combination of simple program transformations---mainly closure conversion, transformation into continuation-passing style, and defunctionalization.",
+  isbn="978-3-540-32038-8"
+}
+
+@article{DanvySECDJ,
+  title = "A Rational Deconstruction of Landin's SECD Machine with the J Operator",
+  abstract = "Landin's SECD machine was the first abstract machine for applicative expressions, i.e., functional programs. Landin's J operator was the first control operator for functional languages, and was specified by an extension of the SECD machine. We present a family of evaluation functions corresponding to this extension of the SECD machine, using a series of elementary transformations (transformation into continuation-passing style (CPS) and defunctionalization, chiefly) and their left inverses (transformation into direct style and refunctionalization). To this end, we modernize the SECD machine into a bisimilar one that operates in lockstep with the original one but that (1) does not use a data stack and (2) uses the caller-save rather than the callee-save convention for environments. We also identify that the dump component of the SECD machine is managed in a callee-save way. The caller-save counterpart of the modernized SECD machine precisely corresponds to Thielecke's double-barrelled continuations and to Felleisen's encoding of J in terms of call/cc. We then variously characterize the J operator in terms of CPS and in terms of delimited-control operators in the CPS hierarchy.As a byproduct, we also present several reduction semantics for applicative expressions with the J operator, based on Curien's original calculus of explicit substitutions. These reduction semantics mechanically correspond to the modernized versions of the SECD machine and to the best of our knowledge, they provide the first syntactic theories of applicative expressions with the J operator. The present work is concluded by a motivated wish to see Landin's name added to the list of co-discoverers of continuations. Methodologically, however, it mainly illustrates the value of Reynolds's defunctionalization and of refunctionalization as well as the expressive power of the CPS hierarchy (1) to account for the first control operator and the first abstract machine for functional languages and (2) to connect them to their successors. Our work also illustrates the value of Danvy and Nielsen's refocusing technique to connect environment-based abstract machines and syntactic theories in the form of reduction semantics for calculi of explicit substitutions. Udgivelsesdato: 2008",
+  keywords = "Programming Languages, Logic in Computer Science",
+  author = "Olivier Danvy and Kevin Millikin",
+  note = "Paper id:: 10.2168/LMCS-4(4:12)2008; arXiv:0811.3231v2 [cs.PL]",
+  year = "2008",
+  language = "English",
+  volume = "4",
+  pages = "1",
+  journal = "Logical Methods in Computer Science",
+  issn = "1860-5974",
+  publisher = "International Federation for Computational Logic",
+  number = "4:12",
+}
+
+@article{lmcs:2269,
+  TITLE = {{An Operational Foundation for Delimited Continuations in the CPS Hierarchy}},
+  AUTHOR = {Biernacka, Malgorzata and Biernacki, Dariusz and Danvy, Olivier},
+  URL = {https://lmcs.episciences.org/2269},
+  DOI = {10.2168/LMCS-1(2:5)2005},
+  JOURNAL = {{Logical Methods in Computer Science}},
+  VOLUME = {{Volume 1, Issue 2}},
+  YEAR = {2005},
+  MONTH = Nov,
+  KEYWORDS = {Computer Science - Logic in Computer Science ; Computer Science - Programming Languages ; D.1.1 ; F.3.2},
+}
+
+@inproceedings{filinski1994representing,
+  title={Representing monads},
+  author={Filinski, Andrzej},
+  booktitle={Proceedings of the 21st ACM SIGPLAN-SIGACT symposium on Principles of programming languages},
+  pages={446--457},
+  year={1994},
+  organization={ACM}
+}
