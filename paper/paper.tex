@@ -1631,9 +1631,9 @@ share the same continuation and $1$-CFA is still unable to separate the return-f
 The refunctionalized AAM we obtained has the perfect match on return-flows even though
 we do not have a stack model. The higher-order functions representing continuations
 already connect all the executions in order. In fact, the continuations (call stack)
-of the analyzed language is blended into the call stack of our defining language
-(Scala) through refunctionalization, then the call/return flow of the analyzed language
-is naturally matched.
+of the analyzed language are blended into the call stack of our defining language
+(Scala) through refunctionalization, and hence the call/return flow of the analyzed 
+language is naturally matched.
 
 In fact, what we started with is an AAM with an unbounded stack which already precisely
 matches the calls and returns. Refunctionalization makes the interpreter be a ``big-step''
