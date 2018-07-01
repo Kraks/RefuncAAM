@@ -373,11 +373,19 @@ unbounded stack (and utilizing the proper caching algorithm) leads to a pushdown
      \chainin (m-2-4) [join={node[sloped,anchor=center,above,labeled] {\text{inline monads}}}];
    }
    {
-     [start chain] \chainin (m-2-1);
+     [start chain, transform canvas={yshift=0.5ex}] \chainin (m-2-1);
      \chainin (m-2-2) [join={node[above,labeled] {
        \begin{smallmatrix} \text{linearization} \\ \text{+} \\ \text{lightw. fusion} \end{smallmatrix}
      }}];
      \chainin (m-2-3) [join={node[above,labeled] {\text{disentang.}}}];
+   }
+   {
+     [start chain, color=gray, transform canvas={yshift=-0.5ex}] \chainin (m-2-2);
+     \chainin (m-2-1) [join={node[below,labeled] {\text{List(Success)??}}}];
+   }
+   {
+     [start chain, color=gray, transform canvas={yshift=-0.5ex}] \chainin (m-2-3);
+     \chainin (m-2-2) [join={node[below,labeled] {\text{entang.}}}];
    }
    {
      [start chain, transform canvas={yshift=0.5ex}] \chainin (m-2-3);
@@ -414,7 +422,7 @@ unbounded stack (and utilizing the proper caching algorithm) leads to a pushdown
    \draw[gray,dashed,transform canvas={xshift=-0.2ex}] (m-1-5.north east) -- (m-2-5.south east);
    \draw[gray,dashed,transform canvas={xshift=3.7ex, xscale=0.90}] (m-2-5.south west) -- (m-2-5.south east);
  \end{tikzpicture}
- \caption{Transformations from AAM to ADI} \label{fig:trans}
+ \caption{Functional correspondence between and transformations from AAM to ADI} \label{fig:trans}
 \end{center}
 \end{figure}
 
