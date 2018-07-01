@@ -1636,9 +1636,9 @@ of the analyzed language are blended into the call stack of our defining languag
 language is naturally matched.
 
 In fact, what we started with is an AAM with an unbounded stack which already precisely
-matches the calls and returns. Refunctionalization makes the interpreter be a ``big-step''
-semantic artifact, then the consequence is we have no places to explicitly save the context
-information in store or stack. 
+matches the calls and returns. Refunctionalization makes the interpreter a ``big-step''
+semantic artifact; the consequence is that we have no place to explicitly save the context
+information in the store or on the stack. 
 But refunctionalization not only forces the nondeterministic control flow to be higher-order,
 but also drives us to use a different caching algorithm.
 
