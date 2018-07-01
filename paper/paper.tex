@@ -1727,7 +1727,7 @@ in it.
 Then, for every nondeterministic choice in the abstract interpreter, we can simply call 
 @choices@ on the set of possible choices and write the program sequentially as concrete 
 interpreters, and the subsequent statements and expressions become the delimited continuation
-@f@. The function @choices@ also returns the latest cache to its left-hand side when invoking.
+@f@. The function @choices@ also returns the latest cache to its left-hand side when invoked.
 The cache will be still accumulated to the next call to @choices@ or @aeval@, 
 given the fact that the abstract interpreter should always use the latest cache.
 
