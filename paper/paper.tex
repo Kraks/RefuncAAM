@@ -382,7 +382,8 @@ unbounded stack (and utilizing the proper caching algorithm) leads to a pushdown
    }
    {
      [start chain, color=gray, transform canvas={yshift=-0.5ex}] \chainin (m-2-2);
-     \chainin (m-2-1) [join={node[below,labeled] {\begin{smallmatrix} \text{splitting} \\ \text{+} \\ \text{List(Success)??} \end{smallmatrix}}}];
+     \chainin (m-2-1) [join={node[below,labeled] {\begin{smallmatrix} \text{splitting} \\ \text{+} \\ 
+     \text{replacing cont.} \\ \text{by list} \end{smallmatrix}}}];
    }
    {
      [start chain, color=gray, transform canvas={yshift=-0.5ex}] \chainin (m-2-3);
@@ -1162,7 +1163,7 @@ the @step@ function in AAM is the list constructor used in a lazy way, and here 
 into an explicit data types representing continuation.
 The inverse transformation of this step is to apply \citeauthor{10.1007/3-540-15975-4_33}'s 
 technique that converts the data types representing meta-continuations (failure continuations) 
-back to list representation, where the elements in the list are plain machine states.
+back to lazy list representation, where the elements in the list are plain machine states.
 
 \section{Lightweight Fusion} \label{fusing}
 
