@@ -267,6 +267,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 
 
 \section{Introduction}
+\vspace{-0.7ex}
 
 Implementing, and in some cases defining, a programming language by building an 
 interpreter for it can be traced to the very early days of programming languages 
@@ -286,7 +287,7 @@ Given a concrete small-step abstract machine that models a store
 in the store and draw all allocated addresses (both for regular values and 
 for continuations) from a finite set, then
 we obtain an abstract interpreter with a finite state space, which can be used for 
-performing sound static analysis and which is guaranteed to terminate.
+performing sound static analysis and is guaranteed to terminate.
 By using different address allocators \cite{Gilray:2016:ACP:2951913.2951936},
 one can further instantiate different polyvariant control-flow analyses.
 
@@ -327,11 +328,11 @@ abstract machines in the reverse direction.
 In the domain of abstract semantic artifacts, by contrast, the relations between small-step
 abstract abstract machines and big-step abstract definitional interpreters, as well as the
 question of deriving one from the other, are not well studied.
-One of the fundamental differences between concrete semantic artifacts and abstract semantic
-artifacts is that a sound instance of the latter must tell you facts about all possible execution 
-paths, and thus introduce nondeterminism. In addition to ensuring termination, abstract semantic
+One of the fundamental differences between concrete and abstract semantic
+artifacts is that a sound instance of the latter must consider facts about all possible execution 
+paths, and thus introduce a layer of nondeterminism. In addition to ensuring termination, abstract semantic
 artifacts are usually equipped with a cache of reachable states; the cache is
-iteratively updated in a monotonic way and guaranteed to reach the least fixed-point eventually.
+iteratively updated in a monotonic way, guaranteed to reach the least fixed-point eventually.
 % In this Functional Pearl, we make a first step in answering the question of interderiving
 % abstract semantics artifacts, and provide a constructive answer to relate AAM and ADI
 % by presenting a series of syntactic transformations on the program from small-step
@@ -438,37 +439,42 @@ Those transformations are shown in Figure~\ref{fig:trans} and summarized here, w
 descriptions in their respective associated sections:
 
 \begin{itemize}
-  \item We show \textbf{linearization} in Section~\ref{linear}. By expressing the
+  \item \textbf{Linearization}: By expressing the
     nondeterministic choices as a first-order data type, we linearize the execution
     of abstract abstract machines; the transition of machine states therefore becomes
-    deterministic. Notably, this explicitly expresses another layer of control that
-    will also be refunctionalized later.
+    deterministic. Notably, this makes explicit another layer of control (Section~\ref{linear}). 
+    %that will also be refunctionalized later.
 
-  \item In Section~\ref{fusing}, we then apply a \textbf{lightweight fusion} 
-    \cite{DANVY2008100, Ohori:2007:LFF:1190216.1190241} to the linearized AAM. 
-    The fusing transformation simply combines the single-step function @step@ and the 
-    driving function into one, but keeps all the machine state representations.
+  \item \textbf{Lightweight fusion}~\cite{DANVY2008100,Ohori:2007:LFF:1190216.1190241}:
+    We apply a fusion transformation to the linearized AAM, which
+    combines the single-step function @step@ and the 
+    driving function into one, but keeps all the machine state representations intact
+    (Section~\ref{fusing}).
 
-  \item Section~\ref{disen} discusses \textbf{disentanglement}. In this part, we identify 
+  \item \textbf{Disentanglement}: We identify 
     different first-order data types which represent different layers of continuations, and
-    disassemble their handlers into separate functions.
+    disassemble their handlers into separate functions 
+    (Section~\ref{disen}).
 
-  \item Applying \textbf{refunctionalization} \cite{DANVY2009534, Danvy:2006:RW:2171265.2171268} 
-    to disentangled AAM is shown in Section~\ref{sec:refunc}. 
+  \item \textbf{Refunctionalization}~\cite{DANVY2009534,Danvy:2006:RW:2171265.2171268}:
+    We apply refunctionalization to the disentangled AAM, which
     %as the left inverse of Reynolds' defunctionalization \cite{Reynold:72,Reynolds:HOSC98-revisited} 
-    Refunctionalization replaces the first-order data types representing continuations with
+    replaces the first-order data types representing continuations with
     higher-order functions, and associates dispatching logic with proper higher-order functions. 
-    We then derive an abstract interpreter written in continuation-passing style with two
+    We obtain an abstract interpreter written in continuation-passing style with two
     layers of continuations due to the nondeterminism.
-
+%
     For clarity, we first present the refunctionalized AAM without caching. 
     We then adopt a caching algorithm \cite{darais2017abstracting} to guarantee the termination 
     of abstract interpretation.
     In the end of this section, we review the pushdown control-flow analysis and examine how 
-    computable and precise call/return matching is obtained through these transformations.
+    computable and precise call/return matching is obtained through these transformations
+    (Section~\ref{sec:refunc}).
 
-  \item The last transformation we show is that of transforming the refunctionalized AAM back to a
-    \textbf{direct-style} interpreter (Section~\ref{directstyle}) by using delimited control operators.
+  \item \textbf{Direct-style transform}~\cite{DBLP:journals/scp/Danvy94}:
+    We finally transform the refunctionalized AAM back to a
+    direct-style interpreter by using delimited control operators
+    (Section~\ref{directstyle}).
 \end{itemize}
 
 These transformations are used throughout the paper, with the refunctionalization and
