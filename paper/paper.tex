@@ -1200,7 +1200,7 @@ follows:
 
 With fusing complete, our AAM appears similar to a ``big-step'' interpreter, although it
 still has the machine state representation inside. The inverse transformation of this step
-would be extracting the work-list algorithm part to an individual function.
+would be splitting the work-list algorithm apart to an individual function.
 
 \section{Disentanglement} \label{disen}
 
@@ -1576,8 +1576,8 @@ continuation of @aeval@ or @nd@.
 
 After completing the evaluation, we obtain a set of @VS@ objects and must update the @out@ cache.
 In the first case of pattern matching, this happens at the innermost continuation of @aeval@,
-since it is where we reach the end of one computation path.
-For the second case, we update the @out@ cache before calling the @continue@ continuation.
+where we reach the end of one computation path.
+For the second case, we update the @out@ cache before calling the @continue@ function.
 
 \begin{lstlisting}
   val mtCache = Cache(Store[Config, VS](Map()), Store[Config, VS](Map()))
@@ -1595,14 +1595,16 @@ For the second case, we update the @out@ cache before calling the @continue@ con
 
 % TODO: explain more on how caches work
 Finally, the @analyze@ function (as the entrance of the analysis) does a looping iteration
-to find the fixed-point on caches starting from an empty cache.
+to find the fixed-point of cache starting from an empty cache.
 If the @out@ cache of this iteration is equivalent to its @in@ cache, which means no more 
-fact was discovered during this iteration, then we have reached a fixed-point that 
-over-approximates the concrete evaluations, and thus the result can be returned.
-Otherwise, the next iteration with the new @out@ cache installed at the @in@ cache
-position will be activated; in the meanwhile, an empty cache will be used as the @out@
-cache. Note that the continuation of the initial call to @aeval@ sets up the values for
-the initial configuration in the final cache.
+fact was discovered during this iteration, then we have reached a fixed-point of cache that 
+has over-approximated the concrete evaluations, and thus the result can be returned.
+Otherwise, we install the latest @out@ cache to the @in@ cache position when initializing 
+the next iteration; in the meanwhile, an empty cache will be used as the @out@ cache. 
+Note that the initial continuation of calling @aeval@ updates the values for the initial 
+configuration in the final cache.
+
+% TODO: briefly explain how to defunc
 
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
 
@@ -1627,18 +1629,19 @@ we can consider the following example:
                                                x)))
 \end{lstlisting}
 
-In $k$-CFA algorithm or the abstract abstract machine shown in Section~\ref{aam},
+In $k$-CFA algorithm or using the abstract abstract machine shown in Section~\ref{aam},
 the call sites @(id 2)@ and @(id 1)@ share the same return flow, so the invocation
 of @(id 2)@ returns to both call-sites @[x (id 1)]@ and @[y (id 2)]@.  Therefore,
 the returned value @2@ for variable @y@ is also propagated to variable @x@, causing
 imprecise analysis results to arise. This return-flow merging is inevitable, even when
 increasing the context-sensitivity. Even worse, if we use the monovariant analysis (i.e.,
-$0$-CFA), the analysis result would be such that @x@ and @y@ point to value set @{1, 2}@,
-because the algorithm does not distinguish that @z@ (the argument of @id@) comes from a
-different call site. Under $1$-CFA, the algorithm is able to distinguish that variable
+$0$-CFA), the analysis result would be such that @x@ and @y@ point to the value set @{1, 2}@.
+Because the algorithm does not distinguish incoming values from different call sites 
+for @z@ (the argument of @id@). Under $1$-CFA, the algorithm is able to distinguish that variable
 @z@ has two different values at two call sites, so variable @y@ would not be polluted by
-@1@. However, variable @x@ still points to value set @{1, 2}@, because two call-sites still
-share the same continuation and $1$-CFA is still unable to separate the return-flows. \\
+@1@. However, variable @x@ still points to the value set @{1, 2}@, because the two call-sites 
+still share the same continuation and $1$-CFA does not increase the ability to separate the 
+return-flows. \\
 
 \textit{Call/Return Matching through Refunctionalization and Caching.}
 The refunctionalized AAM we obtained has the perfect match on return-flows even though
@@ -1648,7 +1651,7 @@ of the analyzed language are blended into the call stack of our defining languag
 (Scala) through refunctionalization, and hence the call/return flow of the analyzed 
 language is naturally matched.
 
-In fact, what we started with is an AAM with an unbounded stack which already precisely
+In fact, what we started with is an unbounded-stack AAM which already precisely
 matches the calls and returns. Refunctionalization makes the interpreter a ``big-step''
 semantic artifact; the consequence is that we have no place to explicitly save the context
 information in the store or on the stack. 
@@ -1666,8 +1669,8 @@ also able to establish a computable and precise call/return match.
 
 In the previous section, we presented a refunctionalized AAM utilizing the @nd@ operator
 in extended continuation-passing style.
-To obtain a definitional abstract interpreter in direct style, 
-we have multiple choices of how to proceed:
+To obtain a definitional abstract interpreter in direct style, we have multiple choices 
+of how to proceed:
 \begin{itemize}
   \item By replacing the continuations with monads \cite{filinski1994representing}, 
     we obtain the abstract definitional interpreters in monadic style which are similar to what 
@@ -1705,9 +1708,9 @@ continuation-passing style. \\
 %Introducing @Cache@ explicitly as the part of arguments of continuation @k@ reveals 
 %that cache should be monotonically accumulated to the rest of computation. 
 The first operator @nd@ is adapted from the previous one, but the meta-continuation
-@m@ has been eliminated here. Now the only continuation @k@ applies on tuple type @(T, Cache)@ 
-where the value of type @T@ comes from the collection, and @nd@ performs recursive invocation
-on itself over elements in the collection @ts@. 
+@m@ has been eliminated here. Now the only explicit continuation @k@ applies on tuple 
+type @(T, Cache)@ where the value of type @T@ comes from the collection, and @nd@ performs 
+recursive invocation on itself over elements in the collection @ts@. 
 
 \begin{lstlisting}
   def nd[T](ts: Iterable[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
@@ -1727,17 +1730,17 @@ The second operator @choices@ is implemented with delimited control operator
 
 The function @choices@ takes two arguments: a set of elements with type @T@, 
 and an initial accumulated value of type @Ans@.
-The @choices@ iteratively returns an element from the collection along with the 
-latest cache, and the return type is also annotated by \verb|@cps[Ans]|. 
-This annotation denotes the final returned value of @choices@ is type @Ans@.
-The @f@ is the delimited continuation captured by the @shift@ operator, which
-is formed by the statements after @choices@'s call-site.
+The @choices@ iteratively returns an element of type @T@ from the collection 
+along with the latest cache. The return type of @choices@ is annotated with \verb|@cps[Ans]|,
+which denotes that the final returned value of @choices@ is type @Ans@.
+The function @f@ is the delimited continuation captured by the @shift@ operator, which
+is formed by the computation will be executed after the @choices@'s call-site.
 
 Now we can use these two operators to redefine @aeval@. The abstract evaluator @aeval@ is
 rewritten in direct-style, so that the last argument @cont@ disappears; we also add an 
 annotation \verb|@cps[Ans]| on the return type to enable using delimited control operators 
-in it.
-Then, for every nondeterministic choice in the abstract interpreter, we can simply call 
+inside of it.
+Then, for every nondeterministic choice in the abstract interpretation, we can simply call 
 @choices@ on the set of possible choices and write the program sequentially as concrete 
 interpreters, and the subsequent statements and expressions become the delimited continuation
 @f@. The function @choices@ also returns the latest cache to its left-hand side when invoked.
