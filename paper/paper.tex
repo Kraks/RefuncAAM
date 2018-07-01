@@ -1155,7 +1155,7 @@ to the case that @todo@ list is empty. The set of explored states is preserved a
 
 At this point, we have obtained a linearized abstract abstract machine. 
 Intuitively, if we imagine that the classical AAM explores a graph of reachable states, 
-then the linearized AAM flattens the graph to a linear sequence of states.
+then the linearized AAM flattens the graph in depth-first order to a linear sequence of states.
 It has been observed that ``\textit{failure can be replaced by a list of successes}''
 \cite{10.1007/3-540-15975-4_33} and that ``\textit{one programmer’s lazy-list 
 constructor is another programmer’s success and failure continuations}'' \cite{danvy2006a}; 
@@ -1596,7 +1596,7 @@ For the second case, we update the @out@ cache before calling the @continue@ fun
 
 % TODO: explain more on how caches work
 Finally, the @analyze@ function (as the entrance of the analysis) does a looping iteration
-to find the fixed-point of cache starting from an empty cache.
+to find the least fixed-point of cache starting from an empty cache.
 If the @out@ cache of this iteration is equivalent to its @in@ cache, which means no more 
 fact was discovered during this iteration, then we have reached a fixed-point of cache that 
 has over-approximated the concrete evaluations, and thus the result can be returned.
@@ -1729,11 +1729,10 @@ The second operator @choices@ is implemented with delimited control operator
   }
 \end{lstlisting}
 
-The function @choices@ takes two arguments: a set of elements with type @T@, 
-and an initial accumulated value of type @Ans@.
-The @choices@ iteratively returns an element of type @T@ from the collection 
-along with the latest cache. The return type of @choices@ is annotated with \verb|@cps[Ans]|,
-which denotes that the final returned value of @choices@ is type @Ans@.
+The function @choices@ takes two arguments: a set of elements of type @T@, and an initial cache.
+The return type of @choices@ is @(T, Cache)@ with an annotation \verb|@cps[Ans]|, which 
+denotes that @choices@ will iteratively return an element of type @T@ from the collection
+along with the latest cache, but the final returned value of the continuation is type @Ans@.
 The function @f@ is the delimited continuation captured by the @shift@ operator, which
 is formed by the computation will be executed after the @choices@'s call-site.
 
@@ -1744,7 +1743,9 @@ inside of it.
 Then, for every nondeterministic choice in the abstract interpretation, we can simply call 
 @choices@ on the set of possible choices and write the program sequentially as concrete 
 interpreters, and the subsequent statements and expressions become the delimited continuation
-@f@. The function @choices@ also returns the latest cache to its left-hand side when invoked.
+@f@. We have two invocations of @choices@, which correspond to the two invocations of @nd@ in
+the refunctionalized form.
+The function @choices@ also returns the latest cache to its left-hand side when invoked.
 The cache will be still accumulated to the next call to @choices@ or @aeval@, 
 given the fact that the abstract interpreter should always use the latest cache.
 
@@ -1789,11 +1790,16 @@ call of @aeval@ to set the delimiter. The afterwards updating on cache becomes s
   }
 \end{lstlisting}
 
-Now we have arrived at the end of this series of transformations. Starting from a
-small-step abstract abstract machine, eventually we obtain a big-step definitional
-interpreter with pushdown control-flow, written in direct-style.
+Now we have arrived at the end of this series of transformations. 
+The inverse transformation of the last step is basically CPS transforming the function @aeval@ and @nd@.
+We may first explicitly expose the continuation at the level of @aeval@, and then convert @nd@ 
+to extended continuation-passing style, where a meta-continuation argument is added both for
+@nd@ and @nd@'s existing continuation @k@. Besides, these continuations have to be manifestly embedded
+at the call-site of @nd@, instead of implicitly provided by the @shift@ operator.
 
-%specify higher-order definitional interpreters using first-order means (cite)
+To conclude, starting from a small-step abstract abstract machine, eventually we obtain a 
+big-step definitional interpreter with pushdown control-flow, written in direct-style.
+
 %\section{Detour: Shiver's \textit{k}-CFA?}
 
 \section{Related Work}\label{sec:related}
