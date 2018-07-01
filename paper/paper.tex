@@ -197,24 +197,30 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 %% Note: \begin{abstract}...\end{abstract} environment must come
 %% before \maketitle command
 \begin{abstract}
-  Abstracting abstract machines (AAM) is a systematic methodology for constructing 
-  abstract interpreters that are derived from concrete small-step abstract machines.
-  \citeauthor{darais2017abstracting} apply the same idea on monadic definitional interpreters, 
-  and obtain monadic abstract definitional interpreters (ADI) in big-step style.
-  Yet, the relations between small-step abstract abstract machines and big-step 
-  abstract definitional interpreters are not well studied.
+  Abstracting abstract machines is a systematic methodology for constructing 
+  sound static analyses for higher-order languages, by deriving small-step \emph{abstract} 
+  abstract machines (AAM) that perform abstract interpretation from abstract machines that 
+  perform concrete evaluation.
+  \citeauthor{darais2017abstracting} apply the same underlying idea to monadic definitional interpreters, 
+  and obtain monadic \emph{abstract} definitional interpreters (ADI) that perform
+  abstract interpretation in big-step style using monads.
+  Yet, the relation between small-step abstract abstract machines and big-step 
+  abstract definitional interpreters is not well studied.
 
-  In this paper, we show their functional correspondence and how to syntactically 
-  transform small-step abstract abstract machines into big-step abstract definitional
-  interpreters.
-  The transformations include linearization, lightweight fusion, disentanglement, 
-  refunctionalization, and finally from CPS back to direct-style with delimited 
-  control operators. 
-  Linearization expresses nondeterministic choices by first-order data types, 
-  after which refunctionalization transforms the first-order data types representing continuations
+  In this paper, we explain their functional correspondence and demonstrate how to 
+  syntactically transform small-step abstract abstract machines into big-step abstract 
+  definitional interpreters.
+  Building on known semantic interderivation techniques from the concrete evaluation
+  setting, the transformations include linearization, lightweight fusion, disentanglement, 
+  refunctionalization, and the left inverse of the CPS transform.
+  Linearization expresses nondeterministic choice through first-order data types, 
+  after which refunctionalization transforms the first-order data types that represent continuations
   into higher-order functions. 
-  The refunctionalized AAM is an abstract interpreter written in continuation-passing style
-  with two layers of continuations.
+  The refunctionalized AAM is an abstract interpreter written in continuation-passing style (CPS)
+  with two layers of continuations, which can be converted back to direct style with delimited 
+  control operators. Based on the known correspondence between delimited control and monads, 
+  we demonstrate that the explicit use of monads in abstract definitional interpreters
+  is optional.
   
   %Following the idea that in deterministic languages, reduction contexts of reduction
   %semantics are defunctionalized continuations, we further apply this idea to nondeterministic
@@ -262,28 +268,31 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 
 \section{Introduction}
 
-Defining a language by building an interpreter for it can be traced to the very
-early days of programming languages research \cite{McCarthy:1960:RFS:367177.367199,landin1966next, Reynolds:72}.
-Nowadays, even undergraduate students in computer science learn how to define
+Implementing, and in some cases defining, a programming language by building an 
+interpreter for it can be traced to the very early days of programming languages 
+research~\cite{McCarthy:1960:RFS:367177.367199,landin1966next,Reynolds:72}.
+Nowadays, even undergraduate students in computer science learn how to implement
 their own programming languages by building an interpreter.
-However, building a sound abstract interpreter remained an esoteric and difficult task
-until very recently.
+However, implementing a sound static analysis by building an
+abstract interpreter~\cite{cousot1977abstract} remained an esoteric and difficult 
+task until very recently.
 
-\citeauthor{van2012systematic} proposed the Abstracting Abstract Machines (AAM)
+\Citet{van2012systematic,van2010abstracting} proposed the Abstracting Abstract Machines (AAM)
 methodology which provides a recipe for constructing sound abstract interpreters
-for higher-order functional languages from concrete abstract machines
-~\cite{van2012systematic, van2010abstracting}.
-Given a concrete small-step abstract machine (e.g. the CESK machine, Krivine's
-machine, etc.), by allocating continuations in the store and bounding both the
-value addresses and continuation addresses to be finite, we obtain an abstract
-interpreter with a finite state space which can be used for performing sound
-static analysis.
-One can further instantiate different polyvariant control-flow analyses by using
-different address allocators \cite{Gilray:2016:ACP:2951913.2951936}.
+for higher-order functional languages from concrete abstract machines.
+%~\cite{van2012systematic, van2010abstracting}.
+Given a concrete small-step abstract machine that models a store 
+(e.g. the CESK machine, Krivine's machine, etc.), if we allocate continuations 
+in the store and draw all allocated addresses (both for regular values and 
+for continuations) from a finite set, then
+we obtain an abstract interpreter with a finite state space, which can be used for 
+performing sound static analysis and which is guaranteed to terminate.
+By using different address allocators \cite{Gilray:2016:ACP:2951913.2951936},
+one can further instantiate different polyvariant control-flow analyses.
 
-Applying the same idea to monadic definitional interpreters, \citeauthor{darais2017abstracting}
-built monadic abstract definitional interpreters (ADI) in big-step style
-\cite{darais2017abstracting}. One of the advantages of a monadic interpreter is
+Applying the same idea to monadic definitional interpreters, \citet{darais2017abstracting}
+built monadic abstract definitional interpreters (ADI) in big-step style. 
+One of the advantages of a monadic interpreter is
 that it is modular and composable. By changing the underlying monads, the definition
 of the interpreter is not modified, but we can recover different semantics, including
 the concrete semantics and various abstract semantics such as context-sensitivity and
@@ -293,7 +302,11 @@ Broadly speaking, abstract abstract machines and abstract definitional interpret
 different forms of abstract interpreters. They are obtained by applying a combination
 of abstractions to their concrete counterparts, abstract machines and definitional
 interpreters, respectively. An interesting question, and the subject of this paper, is
-how one can derive an abstract semantic artifact given the counterpart.
+how one can derive one abstract semantic artifact given its counterpart.
+The main contribution of this paper is to explain the functional correspondence
+between these abstract semantic artifacts, and to demonstrate the concrete
+syntactic transformations necessary to transform an abstract abstract machine 
+into its corresponding abstract definitional interpreter.
 
 In the concrete world, the relations among reduction semantics, abstract machines,
 definitional interpreters, and monadic interpreters have been intensively studied by
@@ -401,9 +414,10 @@ can be obtained.
 \end{center}
 \end{figure}
 
-\subsection{Contributions}
 
-We begin by reviewing some background necessary for this work in Section~\ref{background},
+\paragraph{Contributions and Outline}
+
+We begin by reviewing necessary background in Section~\ref{background},
 as well as by introducing some of the basic code structures used throughout the paper.
 We then address the main contribution of this paper: bridging the gap between
 small-step AAM and big-step ADI by applying a series of well-known systematic transformations
@@ -1863,17 +1877,17 @@ We use the delimited control operators @reset@ and @shift@ that are implemented 
 % TODO: P4F v.s. direct-style + caching
 % TODO: dyck graph summarization v.s. direct-style + caching
 
-In this functional pearl, we bridge the gap between small-step abstract abstract machines
+In this Functional Pearl, we bridge the gap between small-step abstract abstract machines
 and big-step abstract definitional interpreters by applying a series of syntactic 
-transformations. Among these transformations, linearization turns a work-list into another
+transformations to transform the first into the latter. Among these transformations, linearization turns a work-list into an additional
 layer of continuations; refunctionalization converts the first-order data types representing
-continuations to higher-order functions; and finally a left-inverse CPS transformation converts
-the abstract interpreter into a sequence of expressions with delimited control operators,
-which looks almost no different from a concrete interpreter.
+continuations to higher-order functions; and finally the left-inverse of the CPS transform converts
+the CPS abstract interpreter into a direct-style abstract interpreter with delimited control operators, which looks almost identical to the corresponding concrete interpreter.
 
-We show that a functional correspondence exists not only between concrete semantic artifacts
-but also between abstract semantic artifacts. An interesting open question would
-be whether there also exist correspondences between static analyses that are formalized 
+This sequence of transformation demonstrates that a functional correspondence exists 
+not only between concrete semantic artifacts but also between abstract semantic artifacts. 
+An interesting open question would be whether there also exist correspondences between 
+static analyses that are formalized 
 in different denotational and operational styles.
 
 %% TODO: Acknowledgments
@@ -1889,14 +1903,13 @@ in different denotational and operational styles.
   Kimball Germane and David Sherratt for their feedback, and
   Thomas Gilray for the discussion on pushdown control-flow analysis.
 
-  This material is based upon work supported by the
+  This work was supported in part by the
   \grantsponsor{GS100000001}{National Science
     Foundation}{http://dx.doi.org/10.13039/100000001} under Grant
   No.~\grantnum{GS100000001}{nnnnnnn} and Grant
-  No.~\grantnum{GS100000001}{mmmmmmm}.  Any opinions, findings, and
-  conclusions or recommendations expressed in this material are those
-  of the authors and do not necessarily reflect the views of the
-  National Science Foundation. \note{TODO: grants}
+  No.~\grantnum{GS100000001}{mmmmmmm} and by the
+  \grantsponsor{GS100000001}{DOE}{XXX} under Grant
+  No.~\grantnum{GS100000001}{nnnnnnn}.  \note{TODO: grants}
 \end{acks}
 
 %% Bibliography
