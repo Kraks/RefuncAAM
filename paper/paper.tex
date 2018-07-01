@@ -305,8 +305,13 @@ interpreters, respectively. An interesting question, and the subject of this pap
 how one can derive one abstract semantic artifact given its counterpart.
 The main contribution of this paper is to explain the functional correspondence
 between these abstract semantic artifacts, and to demonstrate the concrete
-syntactic transformations necessary to transform an abstract abstract machine 
-into its corresponding abstract definitional interpreter.
+syntactic transformation steps necessary to transform an abstract abstract machine 
+into its corresponding abstract definitional interpreter. The reverse direction
+is comparatively easier, and can be obtained by following the respective inverse 
+steps in the opposite order. This contribution fills an intellectual gap in our 
+understanding of abstract semantic artifacts, and it also opens up further practical 
+avenues for constructing static analysis tools based on principled and well-understand
+techniques.
 
 In the concrete world, the relations among reduction semantics, abstract machines,
 definitional interpreters, and monadic interpreters have been intensively studied by
@@ -327,15 +332,14 @@ artifacts is that a sound instance of the latter must tell you facts about all p
 paths, and thus introduce nondeterminism. In addition to ensuring termination, abstract semantic
 artifacts are usually equipped with a cache of reachable states; the cache is
 iteratively updated in a monotonic way and guaranteed to reach the least fixed-point eventually.
-In this functional pearl, we make a first step in answering the question of interderiving
-abstract semantics artifacts, and provide a constructive answer to relate AAM and ADI
-by presenting a series of syntactic transformations on the program from small-step
-abstract abstract machines to big-step abstract definitional interpreters.
+% In this Functional Pearl, we make a first step in answering the question of interderiving
+% abstract semantics artifacts, and provide a constructive answer to relate AAM and ADI
+% by presenting a series of syntactic transformations on the program from small-step
+% abstract abstract machines to big-step abstract definitional interpreters.
 
 In addition, those abstract abstract machines with an unbounded stack naturally correspond
-to abstract definitional interpreters. We show that after refunctionalizing an AAM with an
-unbounded stack (and utilizing the proper caching algorithm), the pushdown control-flow analysis
-can be obtained.
+to abstract definitional interpreters. We show that refunctionalizing an AAM with an
+unbounded stack (and utilizing the proper caching algorithm) leads to a pushdown control-flow analysis.
 
 \begin{figure}
 \begin{center}
@@ -907,7 +911,7 @@ a given program.
 \subsection{One Step Back: Unabstracted Stack} \label{unabs}
 
 In this section, we describe a variant of AAM that allows the stack to be unbounded 
-which uses a precise model of call stack as we did in the concrete CESK machine.
+which uses a precise model of the call stack as we did in the concrete CESK machine.
 Instead of allocating continuations in the store and embedding addresses of 
 continuations in states, we intend to use a list of frames to explicitly model 
 the stack. By doing so, we recover the call structure as the same as run-times
@@ -1760,40 +1764,42 @@ interpreter with pushdown control-flows and written in direct-style.
 \section{Related Work}\label{sec:related}
 
 \textit{Defunctionalization and Refunctionalization.}
-\citeauthor{Reynolds:72} first showed defunctionalization as a program transformation 
-technique that can be used to transform higher-order functions to first-order data types and 
-its first-order dispatching function when writing definitional interpreters
-\cite{Reynolds:72, Reynolds:HOSC98-revisited}. As generalized closure conversion,
+\citet{Reynolds:72} proposed defunctionalization as a program transformation 
+technique that can be used to transform higher-order functions to first-order data types. 
+While the technique is very general, it was first presented as a key step in
+transforming higher-order definitional interpreters into their first-order 
+counterparts.
+As a form of generalized closure conversion,
 defunctionalization is widely used in compilation and analysis \cite{pottier2006polymorphic, 
 Eisenberg:2014:PFT:2633357.2633361, fourtounis2014modular, 10.1007/3-540-46425-5_4, consel1993tour}.
-Refunctionalization~\cite{Danvy:2006:RW:2171265.2171268, Danvy:2001:DW:773184.773202} as a 
-left inverse of defunctionalization, was firstly considered by \citeauthor{Danvy:2001:DW:773184.773202}.
+Refunctionalization~\cite{Danvy:2006:RW:2171265.2171268} as a 
+left inverse of defunctionalization, was introduced 
+by \citeauthor{Danvy:2006:RW:2171265.2171268,DANVY2009534}.
 
-\citeauthor{Ager:2003:FCE:888251.888254} revealed that defunctionalization and refunctionalization
+\Citet{Ager:2003:FCE:888251.888254} observed that defunctionalization and refunctionalization
 can be used to show the functional correspondence between interpreters and abstract machines
 \cite{Ager:2003:FCE:888251.888254}. A number of independently designed small-step semantic artifacts can 
 be obtained by closure-converting, CPS-transforming, and then defunctionalizing their big-step counterparts, 
 and vice versa by refunctionalizing \cite{DANVY2009534}. 
-Such semantic artifacts include SECD machines \cite{10.1007/11431664_4, Ager:2003:FCE:888251.888254, DanvySECDJ},
-CEK machines \cite{Ager:2003:FCE:888251.888254}, CLS machines  \cite{Ager:2003:FCE:888251.888254},
+Such semantic artifacts include the SECD machine \cite{10.1007/11431664_4, Ager:2003:FCE:888251.888254, DanvySECDJ},
+the CEK machine \cite{Ager:2003:FCE:888251.888254}, the CLS machine  \cite{Ager:2003:FCE:888251.888254},
 Categorical Abstract Machines \cite{Ager:2003:FCE:888251.888254}, lazy abstract machines \cite{AGER2004223}, 
 monadic evaluators \cite{ager2005functional}, as well as languages with richer constructs
 \cite{Danvy:2008:DIP:1411204.1411206, danvy2009towards, biernacka2009towards}, etc.
 
 Besides, Danvy and his collaborators observed the correspondence between evaluation contexts and continuations.
-For deterministic languages, \citeauthor{Danvy:2008:DIP:1411204.1411206} showed that reduction contexts
+For deterministic languages, \citet{Danvy:2008:DIP:1411204.1411206} showed that reduction contexts
 are defunctionalized (data type representing) continuations and reduction semantics is a structural 
-operational semantics in continuation-passing style \cite{Danvy:2008:DIP:1411204.1411206}.
+operational semantics in continuation-passing style.
 Not unexpectedly, the correspondence also exists for nondeterministic languages. For example,
-\citeauthor{Danvy:2001:DW:773184.773202} showed that refunctionalizing a regular expression matcher yields
-its counterpart with two layer of continuations \cite{Danvy:2001:DW:773184.773202}.
-And the operational semantics of control operators (e.g., @reset@ and @shift@) can be given by an 
+\citet{Danvy:2001:DW:773184.773202} showed that refunctionalizing a regular expression matcher yields
+its counterpart with two layer of continuations.
+In addition, the operational semantics of control operators (e.g., @shift@ and @reset@) can be given by an 
 abstract machine with multi-layer continuations \cite{Danvy:1990:AC:91556.91622, lmcs:2269}. 
 
-More generally, other kinds of programs, instead of merely semantic artifacts, are also found to be applicable.
-As \citeauthor{Danvy:2001:DW:773184.773202} pointed out, defunctionalization is dual to Church encoding.
-Examples include backtracking algorithms (e.g., regular expression matcher), Dyck word recognizer, and 
-Dijkstra's shunting-yard algorithm and even Quicksort algorithm \cite{Danvy:2006:RW:2171265.2171268, 
+But as mentioned above, defunctionalization and refunctionalization are more general concepts, with a wide range of uses. For example, \citet{Danvy:2001:DW:773184.773202} showed that defunctionalization is dual to Church encoding, and further case studies where known
+higher-order and first-order implementations can be related through defunctionalization
+and refunctionalization include backtracking algorithms (e.g., regular expression matcher), Dyck word recognizers, Dijkstra's shunting-yard algorithm, and even Quicksort \cite{Danvy:2006:RW:2171265.2171268, 
 DANVY2009534, Danvy:2001:DW:773184.773202}. \\
 
 %Our work applies these ideas to the nondeterministic AAM. The additional layer of continuation controls
@@ -1802,7 +1808,7 @@ DANVY2009534, Danvy:2001:DW:773184.773202}. \\
 %continuation-passing style, and then back to direct-style by the use of delimited control operators. \\
 
 \textit{Lightweight Fusion.}
-Lightweight fusion as one of the transformation in our paper is also studied by 
+Lightweight fusion as one of the transformation in our paper was presented by 
 \citeauthor{Ohori:2007:LFF:1190216.1190241} \cite{Ohori:2007:LFF:1190216.1190241}.
 As shown by \citeauthor{DANVY2008100}, lightweight fusion can be used to show the 
 equivalence between small-step and big-step abstract machines \cite{DANVY2008100}.\\
@@ -1841,35 +1847,36 @@ simple to implement and computationally inexpensive and so called Pushdown for F
 Based on the AAM we presented in Section \ref{aam}, the only changes in the code required is not
 only keeping track of the entry-point expression of the callee, but also holding the target
 environment when allocating a continuation addresses. No other pieces of code would need to be
-modified. Notably, this change only causes constant-factor increase in time complexity of
+modified. Notably, this change only causes a constant-factor increase in time complexity of
 the analysis if the store is widened.
 
-Our work establish the pushdown control-flow analysis through refunctionalization and a
-proper caching algorithm. The call/return is naturally matched by the call stack of the
-meta-language. \\
+Our work establishes the pushdown control-flow analysis through refunctionalization and a
+proper caching algorithm. The call/return flow is naturally matched by the call structure 
+of the meta-language. \\
 
 \textit{Abstracting Definitional Interpreters.}
 Reynolds' seminal paper \emph{Definitional interpreters for higher-order programming languages} 
-\cite{Reynolds:72, Reynolds:HOSC98-revisited} shows that in some definitional interpreters, the
-defined language can inherit properties from the defining language. With this insight,
-\citeauthor{darais2017abstracting} construct abstract definitional interpreters which
+\citet{Reynolds:72, Reynolds:HOSC98-revisited} showed that in definitional interpreters, the
+defined language inherits properties such as the order of evaluation from the defining
+language, unless these properties are made explicit in the 
+interpreter. With this insight,
+\citet{darais2017abstracting} constructed abstract definitional interpreters which
 automatically inherit the pushdown control-flow property from its defining language because
-the defined language simply uses the call-stack model of the meta-language~\cite{darais2017abstracting}.
+the defined language simply uses the call-stack model of the meta-language.
 \citeauthor{darais2017abstracting}'s abstract definitional interpreters work on direct-style
-$\lambda$-calculus, and itself is written in monadic style. One of the advantages of monadic
-abstract interpreters is modular and composable, therefore deploying different sensitivities
-or features is just applying a different monad. Prior to that, \citeauthor{Sergey:2013:MAI:2491956.2491979}
-show a monadic abstract interpreter for small-step semantics \cite{Sergey:2013:MAI:2491956.2491979}.
+$\lambda$-calculus, and are themselves written in monadic style. One of the advantages of monadic
+abstract interpreters is modularity. Hence, deploying different sensitivities
+or features can be achieved by just applying a different monad. Prior to that, \citet{Sergey:2013:MAI:2491956.2491979}
+presented a monadic abstract interpreter for small-step semantics.
 
-This paper is greatly inspired by~\citeauthor{darais2017abstracting}'s work \cite{darais2017abstracting}.
-The difference on the surface is that ours works for A-Normal Form $\lambda$-calculus, instead of plain 
-$\lambda$-calculus, although our work can also be easily adapted to handle a plain $\lambda$-calculus. 
-But besides directly presenting the final form of abstract definitional interpreters, we reveal that 
-refunctionalization plays an important role for inheriting the model of the stack from the meta-language. 
-The target of these transformations in this paper is abstract definitional interpreters, and we 
-additionally demonstrate abstract interpreters written in direct-style with delimited control operators. 
-We use the delimited control operators @reset@ and @shift@ that are implemented in Scala 
-\cite{rompf2009implementing}. The correspondence of delimited continuations and monads are well-known
+This paper is greatly inspired by the work of~\citet{darais2017abstracting}.
+A first surface-level difference is that our presentation uses A-Normal Form $\lambda$-calculus, instead of plain 
+$\lambda$-calculus, although our work could be easily adapted to handle plain $\lambda$-calculus as well. 
+Going through the transformation steps from AAMs to ADIs instead of only considering the final ADI result provides additional insights. In particular, it reveals that 
+refunctionalization plays an important role for inheriting the call structure (i.e., the model of the stack) from the meta-language. 
+In addition, we demonstrate that the explicit use of monads in ADIs is optional, by translating to direct-style ADIs with delimited control operators in addition to the monadic version of \citet{darais2017abstracting}. 
+We use the delimited control operators @shift@ and @reset@ \cite{Danvy:1990:AC:91556.91622} as implemented in Scala 
+\cite{rompf2009implementing}. The correspondence of delimited continuations and monads is well known
 \cite{Danvy:1990:AC:91556.91622, wadler1992essence, danvy1992representing, moggi1991notions, filinski1994representing}.
 
 \section{Conclusion}\label{sec:conclusion}
