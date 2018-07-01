@@ -569,7 +569,6 @@ four components:
 4) \textit{Continuation} represents the program's execution context. In this paper, we instantiate the 
 execution context as a call stack consisting of a list of frames. 
 
-%For direct style $\lambda$-calculus, the continuations of CEK/CESK machines can be presented by variants of a data type.
 The Scala representations for the components of the CESK machine are as follows:
 
 \begin{lstlisting}
@@ -699,7 +698,7 @@ control-flow analysis.
 
 \subsubsection{Machine Components}
 
-Similar to CESK machines, the machine state of AAM has a control, an environment, a store,
+Similar to the CESK machine, the machine state of AAM has a control, an environment, a store,
 and continuation, as well as a timestamp. However, there are several notable differences
 between AAM's store and CESK machine's store. In AAM, the store maps addresses to sets of
 values; it stores all possible values for a particular address. As such, dereferencing
@@ -757,13 +756,12 @@ Up to this point, we have described neither allocating of addresses in stores, n
 of time stamps @Time@. In abstract interpretation, however, these are key ingredients
 to realize analyses with different sensitivities, as well as to perform a finite
 state space analysis \cite{Gilray:2016:ACP:2951913.2951936}.
-To effectively approximate the run-time behavior, we introduce a finite program \emph{contour}
-\note{define}
-@time@ that encodes the program execution history. The function @tick@ is used to refresh
-the ``time'' and get a ''new time''. We use a list of expressions (which are drawn from the
-control component) to encode the calling context history, and as we will see in Section~
-\ref{kcfainst}, by applying different @tick@ functions on the timestamp, we are able to
-obtain a family of analyses.
+To effectively approximate the run-time behavior, we introduce program \emph{contours} @time@ 
+which are finite history of funciton calls till up to the current state \cite{Shivers:1991:SSC:115865.115884}.
+The function @tick@ is used to refresh the ``time'' and get a ''new time''. 
+We use a finite list of expressions (which are drawn from the control component) to encode the 
+calling context history, and as we will see in Section~\ref{kcfainst}, by applying different 
+@tick@ functions on the timestamp, we are able to obtain a family of analyses.
 
 \begin{lstlisting}
   type Time = List[Expr]
@@ -819,7 +817,7 @@ We have two cases to consider (code shown below):
   \item If the current control component is a @Let@, then the result of @App(f, ae)@ will 
     be bound to variable @x@. In this case, we retrieve the set of closures that @f@ may 
     represent. For each closure in the set, we perform nearly the same operations as in the
-    concrete CESK machines, with an important difference: the continuation is allocated on 
+    concrete CESK machine, with an important difference: the continuation is allocated on 
     the store @kstore@, so a new continuation address @new_kaddr@ must be constructed and 
     a new frame @Frame(x, e, env)@ paired with the current continuation address @kaddr@ is 
     merged into @new_kaddr@. Finally, a list of successor states is generated.
@@ -887,7 +885,7 @@ the code here actually implements call+return sensitivity.
 
 \subsubsection{Collecting Semantics}
 
-Similar to the CESK machines, to run (analyze) a program we first use the @inject@ function
+Similar to the CESK machine, to run (analyze) a program we first use the @inject@ function
 to construct the initial state given to the program. Note that the initial continuation store
 has a built-in mapping that maps the continuation address for @Halt@ to an empty set of 
 continuations. We also provide an empty program contour as our initial time.
@@ -982,7 +980,7 @@ nondeterminism happening is when dereferencing the callee @f@ from the function 
 
 In the first case of pattern matching, we may have multiple possible closures for callee @f@.
 For each closure in the set, a new frame is constructed and pushed onto the stack.
-The code for handling the second case (atomic expressions) is the same as the concrete CESK machines. \\
+The code for handling the second case (atomic expressions) is the same as the concrete CESK machine. \\
 
 \textit{Note on Termination.}
 Unfortunately, even though other components in the states are finite, this AAM with an unbounded
@@ -1155,13 +1153,16 @@ is atomic and both the continuation and meta-continuation are empty lists. This 
 to the case that @todo@ list is empty. The set of explored states is preserved as before.
 
 At this point, we have obtained a linearized abstract abstract machine. 
+Intuitively, if we imagine that the classical AAM explores a graph of reachable states, 
+then the linearized AAM flattens the graph to a linear sequence of states.
 It has been observed that ``\textit{failure can be replaced by a list of successes}''
 \cite{10.1007/3-540-15975-4_33} and that ``\textit{one programmer’s lazy-list 
 constructor is another programmer’s success and failure continuations}'' \cite{danvy2006a}; 
-the @step@ function in AAM is the lazy-list constructor, and here we turn it into an 
-explicit continuation.
-Intuitively, if we imagine that the classical AAM explores a graph of reachable states, 
-then the linearized AAM flattens the graph to a linear sequence of states.
+the @step@ function in AAM is the list constructor used in a lazy way, and here we turn it 
+into an explicit data types representing continuation.
+The inverse transformation of this step is to apply \citeauthor{10.1007/3-540-15975-4_33}'s 
+technique that converts the data types representing meta-continuations (failure continuations) 
+back to list representation, where the elements in the list are plain machine states.
 
 \section{Lightweight Fusion} \label{fusing}
 
@@ -1169,7 +1170,7 @@ Then we apply a lightweight fusion transformation that combines the @step@ and @
 functions into a single function.
 The fused function @drive_step@ is essentially formed by merging the functionality of
 @step@ into the @drive@ function.
-@drive_step@ takes an @NDState@ and a set of explored states as an argument
+@drive_step@ takes an @NDState@ and a set of explored states @seen@ as arguments
 and returns a set of reachable states once it terminates.
 
 \begin{lstlisting}
@@ -1197,12 +1198,15 @@ follows:
   def analyze(e: Expr): Set[State] = drive_step(inject(e), Set())
 \end{lstlisting}
 
+With fusing complete, our AAM appears similar to a ``big-step'' interpreter, although it
+still has the machine state representation inside. The inverse transformation of this step
+would be extracting the work-list algorithm part to an individual function.
+
 \section{Disentanglement} \label{disen}
 
-With fusing complete, our AAM appears similar to a ``big-step'' interpreter, although it
-still has the machine state representation inside. In the disentanglement transformation,
-we identify the first-order data types which represent reduction contexts
-and lift the code blocks that handle these reduction contexts to be individual functions.
+In the disentanglement transformation, we identify the first-order data types which represent 
+reduction contexts and lift the code blocks that dispatch these reduction contexts to be individual 
+functions.
 After disentanglement, we will obtain an abstract abstract machine that in defunctionalized form.
 
 Since there are two layers of continuations, we disentangle them into three mutually recursive 
@@ -1232,10 +1236,12 @@ functions:
 
 The above code shows the skeleton of @drive_step@.
 At the end of the first case of pattern matching, we invoke @drive_step@ recursively 
+on the new @NDState@.
 \footnote{The code for constructing new environments, stores, and frames is elided for 
 simplicity of presentation.}.
 The code for the second case is replaced entirely by a function call to @continue@.
-The shape of an interpreter in continuation-passing style has emerged.
+The shape of an interpreter in continuation-passing style has emerged, even though
+the @continue@ function is not higher-order for the moment.
 
 \begin{lstlisting}
   def continue(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1251,12 +1257,13 @@ The shape of an interpreter in continuation-passing style has emerged.
 \end{lstlisting}
 
 Function @continue@ is mainly what we have seen for the second case in @drive_step@,
-except that @ndcontinue@ is called when the continuation @konts@ is empty.
-It works on the list representation of context: An empty list @Nil@ represents the
+except that the dispatching logic for empty @konts@ is lifted to a separate function 
+@ndcontinue@.
+It matches on the list representation of context: An empty list @Nil@ represents the
 halt of a computation path, whereas a cons @::@ means the top frame of the list
-holds the binding variable and context.
-An analogy to this in standard CEK machines would be an abstract class (e.g., @cont@)
-with three variants: @halt@, @arg(value, cont)@, and @arg(exp, env, cont)@.
+holds the binding variable and the innermost context.
+%An analogy to this in standard CEK machines would be an abstract class (e.g., @cont@)
+%with three variants: @halt@, @arg(value, cont)@, and @arg(exp, env, cont)@.
 
 \begin{lstlisting}
   def ndcontinue(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1274,12 +1281,18 @@ with three variants: @halt@, @arg(value, cont)@, and @arg(exp, env, cont)@.
   }
 \end{lstlisting}
 
-The shape for @ndcontinue@ is similar to @continue@; after
-all, they both use a @List@ representation for continuations.
-When the closure set is empty, we recursively call @drive_step@ with the rest
-of @ndk@, since in this case the normal stack @konts@ is still empty, so
-the state will be dispatched to @ndcontinue@ again.
-Otherwise, we invoke @drive_step@ with the body expression of the next closure object.
+The shape for @ndcontinue@ is similar to @continue@; after all, they both use a 
+@List@ representation for continuations. When the closure set is empty, we recursively 
+call @drive_step@ with the rest of @ndk@, since in this case the continuation 
+@konts@ is still empty, so the state will be dispatched to @ndcontinue@ again.
+Otherwise, we invoke @drive_step@ with the a new @NDState@ where the control 
+is transferred to the body expression of the next closure object.
+
+The purpose of disentanglement is to reveal the defunctionalized form of AAM.
+Functions @continue@ and @ndcontinue@ that dispatches different data types representing 
+continuations are disentangled from @drive_step@. 
+The inverse transformation of this step would be simply inlining @ndcontinue@ into @continue@,
+and then inlining @continue@ into @drive_step@.
 
 \section{Refunctionalization} \label{sec:refunc}
 
@@ -1661,7 +1674,7 @@ we have multiple choices of how to proceed:
     \citet{darais2017abstracting} describe.
   \item By representing the extended continuation-passing style with delimited control operators
     such as @shift@ and @reset@, we derive a new form of abstract interpreters in direct-style.
-    This transformation is the left-inverse of the CPS transform \cite{DBLP:journals/scp/Danvy94,DBLP:conf/lfp/DanvyL92}.
+    This transformation is the left-inverse of the CPS transform \cite{DBLP:journals/scp/Danvy94, DBLP:conf/lfp/DanvyL92}.
   \item In fact, we may also just use the same caching algorithm but with side effects such as
     assignments and mutations to update the cache, and then achieve the same definitional 
     interpreter with pushdown control-flows. \Citet{friedman-ai} in a tutorial on abstract 
@@ -1815,10 +1828,13 @@ its counterpart with two layer of continuations.
 In addition, the operational semantics of control operators (e.g., @shift@ and @reset@) can be given by an 
 abstract machine with multi-layer continuations \cite{Danvy:1990:AC:91556.91622, lmcs:2269}. 
 
-But as mentioned above, defunctionalization and refunctionalization are more general concepts, with a wide range of uses. For example, \citet{Danvy:2001:DW:773184.773202} showed that defunctionalization is dual to Church encoding, and further case studies where known
+But as mentioned above, defunctionalization and refunctionalization are more general concepts, 
+with a wide range of uses. For example, \citet{Danvy:2001:DW:773184.773202} showed that 
+defunctionalization is dual to Church encoding, and further case studies where known
 higher-order and first-order implementations can be related through defunctionalization
-and refunctionalization include backtracking algorithms (e.g., regular expression matcher), Dyck word recognizers, Dijkstra's shunting-yard algorithm, and even Quicksort \cite{Danvy:2006:RW:2171265.2171268, 
-DANVY2009534, Danvy:2001:DW:773184.773202}. \\
+and refunctionalization include backtracking algorithms (e.g., regular expression matcher), 
+Dyck word recognizers, Dijkstra's shunting-yard algorithm, and even Quicksort 
+\cite{Danvy:2006:RW:2171265.2171268, DANVY2009534, Danvy:2001:DW:773184.773202}. \\
 
 %Our work applies these ideas to the nondeterministic AAM. The additional layer of continuation controls
 %the nondeterministic choice over closures. After identifying and explicitly exposing (Section~\ref{linear})
@@ -1888,11 +1904,14 @@ or features can be achieved by just applying a different monad. Prior to that, \
 presented a monadic abstract interpreter for small-step semantics.
 
 This paper is greatly inspired by the work of~\citet{darais2017abstracting}.
-A first surface-level difference is that our presentation uses A-Normal Form $\lambda$-calculus, instead of plain 
-$\lambda$-calculus, although our work could be easily adapted to handle plain $\lambda$-calculus as well. 
-Going through the transformation steps from AAMs to ADIs instead of only considering the final ADI result provides additional insights. In particular, it reveals that 
-refunctionalization plays an important role for inheriting the call structure (i.e., the model of the stack) from the meta-language. 
-In addition, we demonstrate that the explicit use of monads in ADIs is optional, by translating to direct-style ADIs with delimited control operators in addition to the monadic version of \citet{darais2017abstracting}. 
+A first surface-level difference is that our presentation uses A-Normal Form $\lambda$-calculus, 
+instead of plain $\lambda$-calculus, although our work could be easily adapted to handle plain 
+$\lambda$-calculus as well. Going through the transformation steps from AAMs to ADIs instead of 
+only considering the final ADI result provides additional insights. In particular, it reveals that 
+refunctionalization plays an important role for inheriting the call structure (i.e., the model of 
+the stack) from the meta-language. 
+In addition, we demonstrate that the explicit use of monads in ADIs is optional, by translating to
+direct-style ADIs with delimited control operators in addition to the monadic version of \citet{darais2017abstracting}. 
 We use the delimited control operators @shift@ and @reset@ \cite{Danvy:1990:AC:91556.91622} as implemented in Scala 
 \cite{rompf2009implementing}. The correspondence of delimited continuations and monads is well known
 \cite{Danvy:1990:AC:91556.91622, wadler1992essence, danvy1992representing, moggi1991notions, filinski1994representing}.
@@ -1904,10 +1923,12 @@ We use the delimited control operators @shift@ and @reset@ \cite{Danvy:1990:AC:9
 
 In this Functional Pearl, we bridge the gap between small-step abstract abstract machines
 and big-step abstract definitional interpreters by applying a series of syntactic 
-transformations to transform the first into the latter. Among these transformations, linearization turns a work-list into an additional
-layer of continuations; refunctionalization converts the first-order data types representing
-continuations to higher-order functions; and finally the left-inverse of the CPS transform converts
-the CPS abstract interpreter into a direct-style abstract interpreter with delimited control operators, which looks almost identical to the corresponding concrete interpreter.
+transformations to transform the first into the latter. Among these transformations, 
+linearization turns a work-list into an additional layer of continuations; refunctionalization 
+converts the first-order data types representing continuations to higher-order functions; 
+and finally the left-inverse of the CPS transformation converts the CPS abstract interpreter 
+into a direct-style abstract interpreter with delimited control operators, which looks almost 
+identical to the corresponding concrete interpreter.
 
 This sequence of transformation demonstrates that a functional correspondence exists 
 not only between concrete semantic artifacts but also between abstract semantic artifacts. 
