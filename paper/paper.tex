@@ -1510,9 +1510,9 @@ The join operation of caches is defined as joining its two store components.
   }
 \end{lstlisting}
 
-The nondeterministic operator @nd@ is also slightly rewrite to cache-passing style:
-continuation @k@ takes an additional argument of type @Cache@; the current accumulated
-cache @acc.cache@ is exposed to @k@ when applies.
+The nondeterministic operator @nd@ is also slightly rewritten to cache-passing style:
+the continuation @k@ takes an additional argument of type @Cache@; the current accumulated
+cache @acc.cache@ is exposed to @k@ when applied.
 
 \begin{lstlisting}
   def nd[T](ts: Iterable[T], acc: Ans, k: (T, Cache, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
