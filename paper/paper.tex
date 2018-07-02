@@ -1114,10 +1114,9 @@ In the second case (shown below), we will see how @NDCont@ deals with nondetermi
 
 Normally, if the continuation @konts@ is an empty list, then it means we have reached
 the end of the computation (i.e., a halt); otherwise, we should return the values of 
-@ae@ to its caller which is contained in the top frame of stack.
-
-However, since we have added nondeterminism into state, an empty list of frames means
-we have reached the halt of \textit{one computation path}, and we should determine the
+@ae@ to its caller which is contained in the top frame of the stack.
+However, since we have added a meta-continuation into the state, an empty list of frames 
+means we have reached the halt of \textit{one computation path}, and we should determine the
 next state indicated by @NDCont@. Thus, we have an inner pattern matching on @ndk@:
 
 \begin{itemize}
@@ -1252,7 +1251,7 @@ the @continue@ function is not higher-order for the moment.
       case Frame(x, e, f_env)::konts =>
         val baddr = allocBind(x, new_time); val new_env = f_env + (x -> baddr)
         val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-        drive_step(NDState(e, new_env, new_store, konts, new_time, ndk), seen)
+        drive_step(NDState(e, new_env, new_store, konts, new_time, ndk), seen) /* normal return */
     }
   }
 \end{lstlisting}
@@ -1271,12 +1270,14 @@ holds the binding variable and the innermost context.
     val NDState(ae, env, bstore, konts, time, ndk) = nds
     ndk match {
       case NDCont(Nil, _, _, _, _)::ndk =>
-        drive_step(NDState(ae, env, bstore, konts, time, ndk), seen)
+        /* transfer to the most recent fork point */
+        drive_step(NDState(ae, env, bstore, konts, time, ndk), seen) 
       case NDCont(cls, argvs, bstore, time, frames)::ndk =>
         val Clos(Lam(v, body), c_env) = cls.head
         val baddr = allocBind(v, time); val new_env = c_env + (v -> baddr)
         val new_store = bstore.update(baddr, argvs)
         val new_ndk = NDCont(cls.tail, argvs, bstore, time, frames)::ndk
+        /* resume the fork point with the next closure */
         drive_step(NDState(body, new_env, new_store, frames, time, new_ndk, seen))
     }
   }
@@ -1414,9 +1415,9 @@ then returned to the upper fork point.
           val VS(vals, time, store) = vs
           val baddr = allocBind(x, time); val new_env = env + (x -> baddr)
           val new_store = store.update(baddr, vals)
-          /* evaluate e with new env and store, then transfer to next body's value */
+          /* evaluate e with new env and store, then transfer to the next body's value */
           aeval(e, new_env, new_store, time, bdnd)
-        }, clsnd) /* transfer to next target closure of f */
+        }, clsnd) /* transfer to the next target closure of f */
       })
     },
     continue)
@@ -1833,8 +1834,8 @@ For deterministic languages, \citet{Danvy:2008:DIP:1411204.1411206} showed that 
 are defunctionalized (data type representing) continuations and reduction semantics is a structural 
 operational semantics in continuation-passing style.
 Not unexpectedly, the correspondence also exists for nondeterministic languages. For example,
-\citet{Danvy:2001:DW:773184.773202} showed that refunctionalizing a regular expression matcher yields
-its counterpart with two layer of continuations.
+\citet{Danvy:2001:DW:773184.773202} observed that refunctionalizing a regular expression matcher 
+with two stacks yields its counterpart with two layer of continuations.
 In addition, the operational semantics of control operators (e.g., @shift@ and @reset@) can be given by an 
 abstract machine with multi-layer continuations \cite{Danvy:1990:AC:91556.91622, lmcs:2269}. 
 
