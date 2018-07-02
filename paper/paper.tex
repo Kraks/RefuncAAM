@@ -1120,17 +1120,17 @@ means we have reached the halt of \textit{one computation path}, and we should d
 next state indicated by @NDCont@. Thus, we have an inner pattern matching on @ndk@:
 
 \begin{itemize}
-  \item If the closure set is an empty set (@Nil@ in the code since we list to represent that set),
+  \item If the closure set is an empty set (@Nil@ in the code since we use list to represent that set),
 then we have tried all the closures of this fork point and should move to the
 next fork point. Since the meta-continuation @nkd@ is represented by a list, and we always
 append new elements to its front, we are resuming to the most recent fork point by
 popping up the front-most element and using the tail of that list.
   \item Otherwise, we pop a closure from the set, then build a new
-environment and a new store for the body expression of the closure;
-we use the same frame list and time that are copied from the fork point rather
+environment and a new store for the body expression of that closure.
+We use the same frame list and time which are copied from the fork point rather
 than current one.
-The meta-continuation @new_ndk@ is also updated by the removal of that closure, which makes
-sure we will eventually shrink to the empty set case.
+The meta-continuation @new_ndk@ is also updated by the removal of that popped closure, which makes
+sure the closure set will eventually shrink to empty.
 \end{itemize}
 
 \begin{lstlisting}
