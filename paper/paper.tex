@@ -464,8 +464,9 @@ descriptions in their respective associated sections:
     higher-order functions, and associates dispatching logic with proper higher-order functions. 
     We obtain an abstract interpreter written in continuation-passing style with an
     additional layer of continuations due to nondeterminism.
-%
-    For clarity, we first present the refunctionalized AAM without caching. 
+
+    For clarity, we first present a vanilla version of refunctionalized AAM which simply
+    converts the stack structures to higher-order functions but keeps other parts unchanged.
     We then adopt a caching algorithm \cite{darais2017abstracting} to guarantee the termination 
     of abstract interpretation.
     In the end of this section, we review the pushdown control-flow analysis and examine how 
@@ -990,12 +991,9 @@ simply enumerate reachable states. To see this, consider a program that has two 
 recursive functions:
 
 \begin{lstlisting}
-                                  (letrec ([f1 (lambda (x)
-                                                 (let ([x1 (f2 x)]) x1))]
-                                           [f2 (lambda (y)
-                                                 (let ([y1 (f1 y)]) y1))])
-                                    (let ([z (f1 1)])
-                                      z))
+                            (letrec ([f1 (lambda (x) (let ([x1 (f2 x)]) x1))]
+                                     [f2 (lambda (y) (let ([y1 (f1 y)]) y1))])
+                               (let ([z (f1 1)]) z))
 \end{lstlisting}
 
 Function @f1@ and @f2@ mutually invoke each other, so the stack will alternately pushing
@@ -1141,14 +1139,12 @@ more cases when @konts@ is empty:
   def drive(nds: NDState, seen: Set[State]): Set[State] = {
     val s = nds.toState;  val new_seen = if (seen.contains(s)) seen else seen + s
     step(nds) match {
-      case None => new_seen
-      case Some(nnds) => drive(nnds, new_seen)
-    }
-  }
+      case None => new_seen;  case Some(nnds) => drive(nnds, new_seen)
+    } }
 \end{lstlisting}
 
 The @drive@ function is also changed: there is no work-list anymore, as all the potentially 
-unexplored states are embedded into the meta-continuation.
+unexplored states are embedded into the continuations.
 The termination of the analysis occurs when the value @None@ is returned from calling @step@.
 Otherwise, we extract the next state @nnds@ and recur on function @drive@.
 The set of explored states is preserved as before.
@@ -1244,8 +1240,7 @@ the @continue@ function is not higher-order for the moment.
         val baddr = allocBind(x, new_time);  val new_env = f_env + (x -> baddr)
         val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
         drive_step(NDState(e, new_env, new_store, konts, new_time, ndk), seen)
-    }
-  }
+    } }
 \end{lstlisting}
 
 Function @continue@ is identical to what we have seen for the second case in @drive_step@,
@@ -1268,8 +1263,7 @@ holds the innermost context.
         val new_store = bstore.update(baddr, argvs)
         val new_ndk = NDCont(cls.tail, argvs, bstore, time, frames)::ndk
         drive_step(NDState(body, new_env, new_store, frames, time, new_ndk, seen))
-    }
-  }
+    } }
 \end{lstlisting}
 
 Function @ndcontinue@ is identical to the dispatching logic in function @continue@ when @konts@ is empty.
@@ -1317,8 +1311,8 @@ we may find it calls the meta-continuation @ndcontinue@ inside of its body.
 This observation leads us to define the types of higher-order continuation and meta-continuation:
 
 \begin{lstlisting}
-  type Cont = (Config, Set[Config], MCont) => Set[Config]
-  type MCont = (Config, Set[Config]) => Set[Config]
+  type Cont  = (Config, Set[Config], MCont) => Set[Config]
+  type MCont = (Config, Set[Config])        => Set[Config]
 \end{lstlisting}
 
 The continuation @Cont@ as a higher-order function takes a configuration, a set of explored
@@ -1418,9 +1412,10 @@ transformations toward a big-step abstract definitional interpreter:
 \begin{itemize}
   \item The components of the configurations are lifted as arguments of the evaluation
     function.
-  \item Since our final target is an abstract definitional interpreter (though still
-    nondeterministic), starting from this section our abstract semantic artifact
-    returns a set of final values instead of collected configurations.
+  \item The refunctionalized AAM collects all possible configurations, but our final target is an 
+    abstract definitional interpreter that cares about final evaluation results.
+    So starting from this section our abstract semantic artifact returns a set of final 
+    values instead of collected configurations. 
   \item Configurations still play an important role in caching, where a cache
     is a mapping from configurations to sets of final values. The caching algorithm
     ensures termination of the analysis, as well as performs a sound over-approximation
@@ -1637,10 +1632,10 @@ To see how traditional control-flow analysis suffers from spurious return-flows,
 we can consider the following example:
 
 \begin{lstlisting}
-                                         (let ([id (lambda (z) z)])
-                                           (let ([x (id 1)])
-                                             (let ([y (id 2)])
-                                               x)))
+                                        (let ([id (lambda (z) z)])
+                                        (let ([x  (id 1)])
+                                        (let ([y  (id 2)])
+                                          x)))
 \end{lstlisting}
 
 In $k$-CFA algorithm or using the abstract abstract machine shown in Section~\ref{aam},
@@ -1709,7 +1704,7 @@ In this section, we present the second version that uses delimited control opera
 \subsection{Back to Direct-Style with Control Operators} \label{uncps}
 
 As previously identified, there are two layers of continuations: one for the normal stack 
-of the analyzed language, and the other for the nondeterministic choices of closures.
+structure of the analyzed language, and the other for the nondeterministic choices of closures.
 This corresponds to the extended continuation-passing style.
 But in our defining language (Scala), the delimited control operators rely on the continuation-passing 
 transformation which is only one layer.
@@ -1798,19 +1793,17 @@ call of @aeval@ to set the delimiter. The afterwards updating on cache becomes s
       val new_cache = anscache.outUpdate(Config(e, mtEnv, mtStore, mtTime), vss)
       if (new_cache.out == new_cache.in) Ans(vss, new_cache)
       else iter(Cache(new_cache.out, Store[Config, VS](Map())))
-    }
-    iter(mtCache)
-  }
+    } iter(mtCache) }
 \end{lstlisting}
 
 Now we have arrived at the end of this series of transformations. 
 The inverse transformation of the last step is basically CPS transforming the function @aeval@ and @nd@.
 We may first explicitly expose the continuation at the level of @aeval@, and then convert @nd@ 
-to continuation-passing style. Besides, these continuations have to be manifestly embedded
+to extended continuation-passing style. Besides, these continuations must be manifestly embedded
 at the call-site of @nd@, instead of implicitly provided by the @shift@ operator.
 
 To conclude, starting from a small-step abstract abstract machine, eventually we obtain a 
-big-step definitional interpreter with pushdown control-flow, written in direct-style.
+big-step abstract definitional interpreter with pushdown control-flow, written in direct-style.
 
 %\section{Detour: Shiver's \textit{k}-CFA?}
 
