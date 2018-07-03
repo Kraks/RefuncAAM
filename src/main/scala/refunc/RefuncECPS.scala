@@ -46,19 +46,15 @@ object RefuncECPS {
           val new_store = store.update(baddr, atomicEval(ae, env_, store))
           aeval(Config(e, new_env, new_store, new_time), seen, continue, m)
         }
-        def makeMCont(cls: List[Clos]): MCont = {
-          val mcont: MCont = { case (config, seen) =>
-            if (cls.isEmpty) aeval(config, seen, (c, seen, m) => m(c, seen), mcontinue)
-            else {
-              val Clos(Lam(v, body), c_env) = cls.head
-              val baddr = allocBind(v, new_time)
-              val new_env = c_env + (v -> baddr)
-              val new_store = store.update(baddr, argvs)
-              aeval(Config(body, new_env, new_store, new_time), seen, new_cont, makeMCont(cls.tail))
-            }
+        def makeMCont(cls: List[Clos]): MCont =
+          if (cls.isEmpty) mcontinue 
+          else { (config, seen) =>
+            val Clos(Lam(v, body), c_env) = cls.head
+            val baddr = allocBind(v, new_time)
+            val new_env = c_env + (v -> baddr)
+            val new_store = store.update(baddr, argvs)
+            aeval(Config(body, new_env, new_store, new_time), seen, new_cont, makeMCont(cls.tail))
           }
-          mcont
-        }
         val new_mcont: MCont = makeMCont(closures.tail)
         aeval(Config(body, new_env, new_store, new_time), new_seen, new_cont, new_mcont)
 

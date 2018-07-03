@@ -1366,8 +1366,7 @@ while the atomic evaluation uses the latest environment @env_@.
     val new_time = config.tick
     val baddr = allocBind(x, new_time);  val new_env = env + (x -> baddr)
     val new_store = store.update(baddr, atomicEval(ae, env_, store))
-    aeval(Config(e, new_env, new_store, new_time), seen, continue, m)
-  }
+    aeval(Config(e, new_env, new_store, new_time), seen, continue, m) }
 \end{lstlisting}
 
 Then to effectively construct the meta-continuation @new_mcont@, we define an auxiliary function
@@ -1378,22 +1377,18 @@ Now we can dynamically generate the meta-continuation inside of a meta-continuat
 Meanwhile, the @new_cont@ we defined above is used here, simply because different closures 
 actually share the same continuation.
 The case where the empty closures set occurs is also interesting. At this case,
-the continuation simply applies its meta-continuation @m@, and the meta-continuation of @aeval@
-is the outer meta-continuation @mcontinue@. It would be clear if we inductively think the base case 
-where the set contains only one closure, then @makeMCont@ is invoked with an empty set, 
-therefore the continuation should do nothing. %TODO: rewrite this part.
+the outer meta-continuation @mcontinue@ is returned.
+It would be clear if we inductively think the base case where the closures set contains only one 
+closure, then @makeMCont@ is invoked with an empty set, therefore should be just the 
+current meta-continuation @mcontinue@.
 
 \begin{lstlisting}
-  def makeMCont(cls: List[Clos]): MCont = {
-    val mcont: MCont = { case (config, seen) =>
-      if (cls.isEmpty) aeval(config, seen, (c, seen, m) => m(c, seen), mcontinue)
-      else {
-        val Clos(Lam(v, body), c_env) = cls.head
-        val baddr = allocBind(v, new_time);  val new_env = c_env + (v -> baddr)
-        val new_store = store.update(baddr, argvs)
-        aeval(Config(body, new_env, new_store, new_time), seen, new_cont, makeMCont(cls.tail))
-      }
-    } mcont }
+  def makeMCont(cls: List[Clos]): MCont =
+    if (cls.isEmpty) mcontinue else { (config, seen) =>
+      val Clos(Lam(v, body), c_env) = cls.head
+      val baddr = allocBind(v, new_time);  val new_env = c_env + (v -> baddr)
+      val new_store = store.update(baddr, argvs)
+      aeval(Config(body, new_env, new_store, new_time), seen, new_cont, makeMCont(cls.tail)) }
   val new_mcont: MCont = makeMCont(closures.tail)
 \end{lstlisting}
 
@@ -1406,7 +1401,7 @@ cases where @konts@ is empty and @konts@ and @ndk@ are both empty, respectively.
 
 \begin{lstlisting}
   def analyze(e: Expr): Set[Config] =
-    aeval(inject(e), Set(), { (c, seen, m) => m(c, seen) }, { (c, seen) => seen })
+    aeval(inject(e), Set(), (c, seen, m) => m(c, seen), (c, seen) => seen)
 \end{lstlisting}
 
 Now we have completely refunctionalized an abstract abstract machine; the two layers
@@ -1483,7 +1478,7 @@ The join operation of caches is defined as joining its two store components.
 
 \begin{lstlisting}
   case class Ans(vss: Set[VS], cache: Cache) {
-    def ++(ans: Ans): Ans = { Ans(vss ++ ans.vss, cache.join(ans.cache)) } }
+    def ++(ans: Ans): Ans = Ans(vss ++ ans.vss, cache.join(ans.cache)) }
 \end{lstlisting}
 
 As previously mentioned, the components of configurations are lifted as arguments to
@@ -1521,10 +1516,9 @@ for the body expression of a closure. %TODO motivation
 We present a nondeterministic operator that abstracts this pattern:
 
 \begin{lstlisting}
-  def nd[T](ts: Iterable[T], acc: Ans, f: (T, Cache, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
+  def nd[T](ts: Iterable[T], acc: Ans, f: (T, Cache, Ans => Ans) => Ans, m: Ans => Ans): Ans =
     if (ts.isEmpty) m(acc)
     else f(ts.head, acc.cache, (ans: Ans) => nd(ts.tail, acc ++ ans, f, m))
-  }
 \end{lstlisting}
 
 Given a collection of elements of type @T@, an initial accumulator of type 
