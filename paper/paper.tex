@@ -1368,7 +1368,7 @@ Then to effectively construct the meta-continuation @new_mcont@, we define an au
 Function @makeMCont@ is a recursive function where the recursive invocation happens when 
 constructing the meta-continuation based on the rest of closures set. 
 Now we can dynamically generate the meta-continuation inside of a meta-continuation.
-Meanwhile, the @new_cont@ we defined above is used here, simply because different closures 
+Meanwhile, the @new_cont@ we defined above is used here, simply because of different closures 
 actually share the same continuation.
 The case where the empty closures set occurs is also interesting. At this case,
 the outer meta-continuation @mcontinue@ is returned.
@@ -1648,7 +1648,7 @@ $0$-CFA), the analysis result would be such that @x@ and @y@ point to the value 
 Because the algorithm does not distinguish incoming values from different call sites 
 for @z@ (the argument of @id@). Under $1$-CFA, the algorithm is able to distinguish that variable
 @z@ has two different values at two call sites, so variable @y@ would not be polluted by
-@1@. However, variable @x@ still points to the value set @{1, 2}@, because the two call-sites 
+@1@. However, variable @x@ still points to the value set @{1, 2}@, as the two call-sites 
 still share the same continuation and $1$-CFA does not increase the ability to separate the 
 return-flows. \\
 
