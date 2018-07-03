@@ -1486,7 +1486,7 @@ The join operation of caches is defined as joining its two store components.
 \end{lstlisting}
 
 As previously mentioned, the components of configurations are lifted as arguments to
-@aeval@. Given the cache and simplified one-layer continuation (as we will see later), 
+@aeval@. Given the cache and the simplified one-layer continuation (as we will see later), 
 the shape of function @aeval@ now looks like:
 
 \begin{lstlisting}
@@ -1499,6 +1499,7 @@ the shape of function @aeval@ now looks like:
   }
 \end{lstlisting}
 
+%TODO: co-inductive
 Upon entering @aeval@, we first determine whether the @out@ cache contains some values 
 for the current configuration and use them immediately (if present).
 This corresponds to small-step AAM with a work-list: when we have seen a state,
@@ -1553,9 +1554,9 @@ is a @let@ expression:
           nd[VS](bdvss, Ans(Set[VS](), bdcache), { case (VS(vals, time, vssstore), bdvsscache, bdnd) =>
               val baddr = allocBind(x, time);  val new_env = env + (x -> baddr)
               val new_store = vssstore.update(baddr, vals)
-              aeval(e, new_env, new_store, time, bdvsscache, {
+              aeval(e, new_env, new_store, time, bdvsscache, { case Ans(evss, ecache) =>
                 /* evaluate e with new env and store, then transfer to the next body's value */
-                case Ans(evss, ecache) => bdnd(Ans(evss, ecache.outUpdate(config, evss)))
+                bdnd(Ans(evss, ecache.outUpdate(config, evss)))
               })
           }, clsnd) /* transfer to the next target closure of f */
         })
@@ -1608,9 +1609,7 @@ For the second case, we update the @out@ cache before calling the @continue@ fun
       })
       if (new_cache.out == new_cache.in) Ans(vss, new_cache)
       else iter(Cache(new_cache.out, Store[Config, VS](Map())))
-    }
-    iter(mtCache)
-  }
+    } iter(mtCache) }
 \end{lstlisting}
 
 % TODO: explain more on how caches work
@@ -1623,6 +1622,7 @@ Otherwise, we install the latest @out@ cache to the @in@ cache position when ini
 the next iteration; in the meanwhile, an empty cache will be used as the @out@ cache. 
 Note that the initial continuation of calling @aeval@ updates the values for the initial 
 configuration in the final cache.
+% TODO: summarize this section
 
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
 
