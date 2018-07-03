@@ -1301,12 +1301,12 @@ language be part of the control flows of the meta-language.
 
 \subsection{First Try}
 
-First of all, since there is no first-order data types representing model of stacks,
+First of all, as we are getting close to achieving abstract definitional interpreters, 
+the name of @drive_step@ is updated to @aeval@ (for \emph{abstract eval}).
+Since there will be no first-order data types representing model of stacks,
 we introduce a configuration class @Config@ as a state-like definition by eliminating
 @konts@ and @ndk@ from the definition of state. The type of return value of the abstract
 interpreter accordingly becomes @Set[Config]@.
-As we are getting close to achieving abstract definitional interpreters, 
-the name of @drive_step@ is updated to @aeval@ (for \emph{abstract eval}).
 
 \begin{lstlisting}
   case class Config(e: Expr, env: Env, store: BStore, time: Time) { ... }
@@ -1323,7 +1323,7 @@ This observation leads us to define the types of higher-order continuation and m
 
 The continuation @Cont@ as a higher-order function takes a configuration, a set of explored
 configurations, as well as a meta-continuation as its arguments. While the meta-continuation
-only takes a configuration and a set of explored configurations as arguments.
+@MCont@ only takes a configuration and a set of explored configurations as arguments.
 Now, the skeleton of function @aeval@ looks as follows:
 
 \begin{lstlisting}
@@ -1344,7 +1344,8 @@ Now, the skeleton of function @aeval@ looks as follows:
   }
 \end{lstlisting}
 
-Before jumping into the details of refunctionalizing the continuations and constructing
+The continuation and meta-continuation are added as arguments to @aeval@.
+Before jumping into the details of refunctionalizing the stack structure and constructing
 @new_cont@ and @new_mcont@, we have two important observations in the disentangled AAM
 where the continuations were represented by data types:
 1) When constructing the @new_ndk@, we observe that it explicitly uses @new_frames@ as one
@@ -1377,8 +1378,8 @@ Now we can dynamically generate the meta-continuation inside of a meta-continuat
 Meanwhile, the @new_cont@ we defined above is used here, simply because different closures 
 actually share the same continuation.
 The case where the empty closures set occurs is also interesting. At this case,
-the continuation simply applies its meta-continuation @m@, and the meta-continuation is the
-outer meta-continuation @mcontinue@. It would be clear if we inductively think the base case 
+the continuation simply applies its meta-continuation @m@, and the meta-continuation of @aeval@
+is the outer meta-continuation @mcontinue@. It would be clear if we inductively think the base case 
 where the set contains only one closure, then @makeMCont@ is invoked with an empty set, 
 therefore the continuation should do nothing. %TODO: rewrite this part.
 
@@ -1397,9 +1398,9 @@ therefore the continuation should do nothing. %TODO: rewrite this part.
 \end{lstlisting}
 
 One last very important thing is about the initial continuation and meta-continuation.
-The initial continuation is invoked when one computation path reaches its end,
+The initial continuation will be invoked when one computation path reaches its end,
 so we invoke the meta-continuation @m@ to continue exploring other paths.
-The initial meta-continuation is invoked when all computation paths reach their ends,
+The initial meta-continuation will be invoked when all computation paths reach their ends,
 so we terminate with the explored configurations @seen@. They correspond to the 
 cases where @konts@ is empty and @konts@ and @ndk@ are both empty, respectively.
 
@@ -1416,8 +1417,8 @@ representing continuations back to first-order data types representation
 
 \subsection{Simplification and Caching Fixed-Points}
 
-In this section, based on the refunctionalized AAM, we present several other transformations 
-toward a big-step abstract definitional interpreter:
+In this section, based on the refunctionalized AAM, we further present several other 
+transformations toward a big-step abstract definitional interpreter:
 
 \begin{itemize}
   \item The components of the configurations are lifted as arguments of the evaluation
@@ -1433,7 +1434,7 @@ toward a big-step abstract definitional interpreter:
     that the function @aeval@ only uses one layer of continuation.
 \end{itemize}
 
-\textit{Values.}
+\subsubsection{Values}
 To properly represent final values, we introduce the case class @VS@ which
 contains a set of storable values, a timestamp, and a store.
 
@@ -1445,9 +1446,9 @@ An instance of @VS@ represents the computational result of one path in the nonde
 evaluation. The reason that we include a store is that there might be a case in which two 
 paths have the same values but different accumulated side effects (e.g., memory allocations).
 Since the whole computation is potentially nondeterministic, the type of the final result
-values is a collection @Set[VS]@. \\
+values is a collection @Set[VS]@.
 
-\textit{Caches.}
+\subsubsection{Caches}
 % why cache? problem of set of states.
 Recall that the latent assumption of the work-list algorithm in classical AAM is that 
 if we have seen a state @s@, it means we also have seen all the successors of state @s@.
@@ -1471,13 +1472,13 @@ The @Cache@ contains two maps @in@ and @out@ which are both mappings from config
 to sets of @VS@. The @in@ cache contains mappings from the previous iteration of evaluation, 
 and the @out@ cache contains mappings after the current iteration of evaluation. 
 Once we have evaluated a term to some values, we update the @out@ cache. In the next 
-iteration, we will use the @out@ from the previous iteration as the @in@ cache for the 
-current iteration. \\
+iteration, we will use the @out@ cache from the previous iteration as the @in@ cache. 
 
-\textit{Cache-Passing Style.}
+\subsubsection{Cache-Passing Style}
+%motivation
 We can now transform our interpreter into cache-passing style. We begin by defining the 
 return type @Ans@ as a case class which contains a @VS@ set and a cache. @Ans@ also implements 
-its own accumulating operation @++@ which defines as union on @Set[VS]@ and join on caches.
+its own accumulating operation @++@ which defines as a union of @Set[VS]@s and a join of caches.
 The join operation of caches is defined as joining its two store components.
 
 \begin{lstlisting}
@@ -1501,19 +1502,19 @@ the shape of function @aeval@ now looks like:
 
 %TODO: co-inductive
 Upon entering @aeval@, we first determine whether the @out@ cache contains some values 
-for the current configuration and use them immediately (if present).
+for the current configuration and use them immediately (if present) by calling @continue@.
 This corresponds to small-step AAM with a work-list: when we have seen a state,
-we can simply discard the state and continue working through the rest of the work-list @todo@.
+we can simply discard the state and continue working through the rest of the work-list.
 
 If, however, we have not hit the @out@ cache, we retrieve the values from the @in@ cache, 
 and update the @out@ cache with values from the @in@ cache. This retrieval from the @in@ 
 cache may return an empty set of values if there is no such mapping for the configuration 
-from the previous iteration.
+from the last iteration.
 In reality, we first conservatively assume that all computations can be diverged, and if 
-not, we update its values in the cache after evaluation. In terms of partial orders and 
-lattices, it is the case that starts the Kleene iteration from the bottom of the lattice.\\
+not, we update its values in the cache after the evaluation. In terms of partial orders and 
+lattices, it is the case that starts the Kleene iteration from the bottom of the lattice.
 
-\textit{Nondeterminism Abstraction.}
+\subsubsection{Nondeterminism Abstraction}
 We observe that in the refunctionalized AAM, @makeMCont@ actually repeats the prologue
 part when matching a @let@ expression: they are both preparing a new environment and store 
 for the body expression of a closure. %TODO motivation
@@ -1536,9 +1537,9 @@ This function is also written in cache-passing style, and the current accumulate
 cache @acc.cache@ is exposed to @f@ when applied.
 
 Our function @nd@ is a variant implementation of @fold@ in continuation-passing style,
-and @f@ also has to be passed as a function that takes a continuation. \\
+and @f@ also has to be passed as a function that takes a continuation.
 
-\textit{Put Them Together.}
+\subsubsection{Put Them Together}
 Given the skeleton of @aeval@ in cache-and-continuation-passing style, we may now
 use the @nd@ operator to fill the details. The first case of match is that @e@
 is a @let@ expression:
@@ -1574,7 +1575,7 @@ so the continuation argument @bdvss@ is a set of @VS@ objects which represent va
 from multiple computation paths when evaluating this single @body@ expression.
 
 We next consider the inner application of @nd@, which evaluates over the set of body's 
-value/stores @bdvss@. For each @VS@, the timestamp and store in @VS@ will be instantiated to
+value/stores @bdvss@. For each @VS@, the time-stamp and store in @VS@ will be instantiated to
 the next application of @aeval@. The inner application of @aeval@ evaluates @e@ with the
 substituted environment and store, then returns a set of values of one computation path 
 to its continuation @bdnd@, where the continuation will accumulate the result and 
@@ -1622,6 +1623,7 @@ Otherwise, we install the latest @out@ cache to the @in@ cache position when ini
 the next iteration; in the meanwhile, an empty cache will be used as the @out@ cache. 
 Note that the initial continuation of calling @aeval@ updates the values for the initial 
 configuration in the final cache.
+
 % TODO: summarize this section
 
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
