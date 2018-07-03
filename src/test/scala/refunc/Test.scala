@@ -23,8 +23,9 @@ trait RefuncTest extends FunSuite {
   val bot = Set()
 
   def summarize(ss: Set[BStore]): BStore = { ss.foldLeft(mtStore)(_.join(_)) }
-  def summarizeState(ss: Set[ANFAAM.State]): BStore = { summarize(ss.map(_.bstore)) }
   def summarizeVSS(vss: Set[VS]): BStore = { summarize(vss.map(_.store)) }
+  def summarizeState(ss: Set[ANFAAM.State]): BStore = { summarize(ss.map(_.bstore)) }
+  def summarizeConfig(cs: Set[Config]): BStore = { summarize(cs.map(_.store)) }
   def summarizeUBState(ss: Set[SmallStepUBStack.State]): BStore = {
     summarize(ss.map(_.bstore)) 
   }
@@ -68,6 +69,9 @@ trait RefuncTest extends FunSuite {
          */
         assert(summarizeUBState(DisLinearSmallStepUBStack.analyze(prog, initenv, initstore)) ==
                summarizeVSS(RefuncCPS.analyze(prog, initenv, initstore).vss))
+
+        assert(summarizeUBState(DisLinearSmallStepUBStack.analyze(prog, initenv, initstore)) ==
+               summarizeConfig(RefuncECPS.analyze(prog, initenv, initstore)))
       
         /* The result analyzed by the refunctionalized abstract interpreter written in CPS
          * (RefuncCPS) should have the same result analyzed by the direct-style abstract 

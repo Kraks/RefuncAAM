@@ -48,7 +48,7 @@ object LinearSmallStepUBStack {
       case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) =>
         konts match {
           case Nil => ndk match {
-            case Nil => None
+            case Nil => None // Halt
             case NDCont(Nil, _, _, _, _)::ndk => 
               Some(NDState(ae, env, bstore, konts, time, ndk)) //NOTE: konts is Nil
             case NDCont(cls, argvs, bstore, time, frames)::ndk => 
@@ -71,11 +71,10 @@ object LinearSmallStepUBStack {
 
   def drive(nds: NDState, seen: Set[State]): Set[State] = {
     val s = nds.toState
+    val new_seen = if (seen.contains(s)) seen else seen + s
     step(nds) match {
-      case None => seen
-      case Some(nnds) => 
-        if (seen.contains(s)) drive(nnds, seen) 
-        else drive(nnds, seen + s)
+      case None => new_seen
+      case Some(nnds) => drive(nnds, new_seen)
     }
   }
 
