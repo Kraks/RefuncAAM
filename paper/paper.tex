@@ -469,7 +469,7 @@ descriptions in their respective associated sections:
     converts the stack structures to higher-order functions but keeps other parts unchanged.
     We then adopt a caching algorithm \cite{darais2017abstracting} to guarantee the termination 
     of abstract interpretation.
-    In the end of this section, we review the pushdown control-flow analysis and examine how 
+    At the end of this section, we review the pushdown control-flow analysis and examine how 
     computable and precise call/return matching is obtained through these transformations
     (Section~\ref{sec:refunc}).
 
@@ -558,7 +558,7 @@ to the ANF convention, and as such, do not enforce it in the term structure of S
 
 \subsubsection{Machine Components}
 
-The CESK machine is an abstract machine for describing semantics of and evaluating
+The CESK machine is an abstract machine for describing the semantics of and evaluating
 $\lambda$-calculus \cite{felleisen1987calculus}. The CESK machine models program execution
 as state transitions in a small-step fashion. As its name suggests, a machine state has
 four components:
@@ -671,7 +671,7 @@ store, and stack.
 
 The @drive@ function is then used to evaluate to a final state by iteratively applying 
 @step@ on the current state until a state is reached which the control is an atomic 
-expression and the continuation stack is empty. Naturally, we can then extract the value
+expression and the stack structure is empty. Naturally, we can then extract the value
 from the final state.
 
 \begin{lstlisting}
@@ -931,7 +931,7 @@ which uses a precise model of the call stack as we did in the concrete CESK mach
 Instead of allocating continuations in the store and embedding addresses of 
 continuations in states, we intend to use a list of frames to explicitly model 
 the stack. By doing so, we recover the call structure as the same as at run-time
-(so called pushdown control-flow analysis), but since the stack is unbounded, 
+(so-called pushdown control-flow analysis), but since the stack is unbounded, 
 the state space is potentially infinite. 
 
 The pushdown AAM with an unbounded stack is also described by \citeauthor{van2012systematic} 
@@ -985,7 +985,7 @@ The code for handling the second case (atomic expressions) is the same as the co
 \textit{Note on Termination.}
 Unfortunately, even though other components in the states are finite, this AAM with an unbounded
 stack still may diverge when analyzing some programs.
-This is because the unbounded stack can grow to arbitrary depth which implies that the state
+This is because the unbounded stack can grow to an arbitrary depth which implies that the state
 space is possibly infinite; the analysis may therefore not terminate for all programs if we
 simply enumerate reachable states. To see this, consider a program that has two mutually
 recursive functions:
@@ -997,7 +997,7 @@ recursive functions:
 \end{lstlisting}
 
 Function @f1@ and @f2@ mutually invoke each other, so the stack will alternately pushing
-frames @f1@ and @f2@ onto the top of current stack. However, no two existing stack
+frames @f1@ and @f2@ onto the top of the current stack. However, no two existing stack
 components are identical in the state space. One can decide the reachability of a state
 through Dyck state graph \cite{earl2010pushdown, earl2012introspective}, but simply
 caching the explored states (i.e. @seen@) would not always make the analyzer terminate.
@@ -1167,7 +1167,7 @@ functions into a single function.
 The fused function @drive_step@ takes an @NDState@ and a set of explored states @seen@ 
 as arguments and returns a set of reachable states once it terminates.
 It is essentially formed by merging the functionality of @step@ into the @drive@ function.
-Since each case in function @step@ are statically known, we can inline the pattern match on the
+Since each case in function @step@ is statically known, we can inline the pattern match on the
 @Option@ type and replace it with returning @new_seen@ when @None@ is matched, or calling 
 @drive_step@ recursively when @Some@ is matched.
 
@@ -1184,7 +1184,7 @@ Since each case in function @step@ are statically known, we can inline the patte
 \end{lstlisting}
 
 With this, we have a single function to perform both abstract evaluation and the collection of
-intermediate states. Given @inject(e)@ as an initial state and an empty set as the
+intermediate states. Given @inject(e)@ as the initial state and an empty set as the
 initial set of states reached, we can define the entrance function @analyze@ as follows:
 
 \begin{lstlisting}
@@ -1287,7 +1287,7 @@ This transformation can be also regarded as making the control flows of the defi
 language be part of the control flows of the meta-language.
 In this section, we first present a direct refunctionalization of the continuations.
 Next, we adopt a caching algorithm to obtain a computable analysis\cite{darais2017abstracting},
-and further prepare the interpreter for tranforming to direct-style later.
+and further prepare the interpreter for transforming to direct-style later.
 
 \subsection{First Try}
 
@@ -1295,7 +1295,7 @@ First of all, as we are getting close to achieving abstract definitional interpr
 the name of @drive_step@ is updated to @aeval@ (for \emph{abstract eval}).
 Since there will be no first-order data types representing model of stacks,
 we introduce a configuration class @Config@ as a state-like definition by eliminating
-@konts@ and @ndk@ from the definition of state. Accordingly, the abstract interpreter
+@konts@ and @ndk@ from the definition of states. Accordingly, the abstract interpreter
 now returns @Set[Config]@.
 
 \begin{lstlisting}
@@ -1417,7 +1417,7 @@ transformations toward a big-step abstract definitional interpreter:
     is a mapping from configurations to sets of final values. The caching algorithm
     ensures termination of the analysis, as well as performs a sound over-approximation
     of all possible concrete reachable paths and values.
-  \item We simplify the continuations with an nondeterministic operator @nd@ such 
+  \item We simplify the continuations with a nondeterministic operator @nd@ such 
     that the function @aeval@ only uses one layer of continuation.
 \end{itemize}
 
@@ -1497,10 +1497,10 @@ If, however, we have not hit the @out@ cache, we retrieve the values from the @i
 and update the @out@ cache with values from the @in@ cache. This retrieval from the @in@ 
 cache may return an empty set of values if there is no such mapping for this configuration 
 from the previous iteration.
-In the initial iteration, we first conservatively assume that all computations can be diverged, 
+In the initial iteration, we first conservatively assume that all computations can diverge, 
 and if not, we update its values in the cache after the evaluation. In terms of partial orders and 
 lattices, it is the case that starts the Kleene iteration from the bottom of the lattice.
-The @out@ cache of this iteration will be used as @in@ cache for the next iteration.
+The @out@ cache of this iteration will be used as the @in@ cache for the next iteration.
 
 \subsubsection{Nondeterminism Abstraction}
 We observe that in the refunctionalized AAM, @makeMCont@ is invoked with the tail part of
@@ -1528,26 +1528,25 @@ and @f@ also has to be passed as a function that takes a continuation.
 
 \subsubsection{Put Them Together}
 Given the skeleton of @aeval@ in cache-and-continuation-passing style, we may now
-use the @nd@ operator to fill the details. The first case of match is that @e@
+use the @nd@ operator to fill in the details. The first case of match is that @e@
 is a @let@ expression:
 
 \begin{lstlisting}
   case Let(x, App(f, ae), e) =>
     val closures = atomicEval(f, env, store)
     nd[Storable](closures, Ans(Set[VS](), new_cache), { case (cls, clscache, clsnd) =>
-        val Clos(Lam(v, body), c_env) = cls
-        val vbaddr = allocBind(v, new_time);  val new_cenv = c_env + (v -> vbaddr)
-        val new_store = store.update(vbaddr, atomicEval(ae, env, store))
-        aeval(body, new_cenv, new_store, new_time, clscache, { case Ans(bdvss, bdcache) =>
-          nd[VS](bdvss, Ans(Set[VS](), bdcache), { case (VS(vals, time, vssstore), bdvsscache, bdnd) =>
-              val baddr = allocBind(x, time);  val new_env = env + (x -> baddr)
-              val new_store = vssstore.update(baddr, vals)
-              aeval(e, new_env, new_store, time, bdvsscache, { case Ans(evss, ecache) =>
-                /* evaluate e with new env and store, then transfer to the next body's value */
-                bdnd(Ans(evss, ecache.outUpdate(config, evss)))
-              })
-          }, clsnd) /* transfer to the next target closure of f */
-        })
+      val Clos(Lam(v, body), c_env) = cls;   val vbaddr = allocBind(v, new_time)
+      val new_cenv = c_env + (v -> vbaddr); val new_store = store.update(vbaddr, atomicEval(ae, env, store))
+      aeval(body, new_cenv, new_store, new_time, clscache, { case Ans(bdvss, bdcache) =>
+        nd[VS](bdvss, Ans(Set[VS](), bdcache), { case (vs, bdvsscache, bdnd) =>
+          val Val(vals, time, vsstore) = vs;  val baddr = allocBind(x, time)
+          val new_env = env + (x -> baddr);  val new_store = vssstore.update(baddr, vals)
+          aeval(e, new_env, new_store, time, bdvsscache, { case Ans(evss, ecache) =>
+            /* evaluate e with new env and store, then transfer to the next body's value */
+            bdnd(Ans(evss, ecache.outUpdate(config, evss)))
+          })
+        }, clsnd) /* transfer to the next target closure of f */
+      })
     }, continue)
 \end{lstlisting}
 
@@ -1613,7 +1612,7 @@ configuration in the final cache.
 
 Now, what we have obtained is an abstract interpreter written in continuation-passing style.
 Though the top-level function @aeval@ has only one continuation, but internally it uses
-a @nd@ operator which is written with two layers of continuations. Further more, we added
+a @nd@ operator which is written with two layers of continuations. Furthermore, we added
 a cache along with the interpreter and @nd@ operator. 
 
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
@@ -1623,7 +1622,7 @@ analysis through refunctionalization and caching. In this section, we revisit
 the pushdown control-flow problem and examine what we have done to overcome it. \\
 
 \textit{The Problem with Return-flows.}
-Pushdown control-flow is a property in analysis that precisely models the run-time
+Pushdown control-flow is a property in the analysis that precisely models the run-time
 call structure of the analyzed program. A pushdown control-flow analysis provides an 
 as-exact-as-run-time return-flow when analyzing a program, but traditional 
 control-flow analysis collapses the state space into a finite space and thus 
@@ -1679,7 +1678,7 @@ also able to establish a computable and precise call/return match.
 
 In the previous section, we presented a refunctionalized AAM utilizing the @nd@ operator
 in extended continuation-passing style.
-To obtain a definitional abstract interpreter in direct style, we have multiple choices 
+To obtain a definitional abstract interpreter in direct-style, we have multiple choices 
 of how to proceed:
 \begin{itemize}
   \item By replacing the continuations with monads \cite{filinski1994representing}, 
@@ -1729,7 +1728,7 @@ recursive invocation on itself over elements in the collection @ts@.
   }
 \end{lstlisting}
 
-The second operator @choices@ is implemented with delimited control operator 
+The second operator @choices@ is implemented with the delimited control operator 
 @shift@ but simply calls our first operator @nd@ in its body.
 
 \begin{lstlisting}
@@ -1785,7 +1784,7 @@ given the fact that the abstract interpreter should always use the latest cache.
 \end{lstlisting}
 
 The function @analyze@ is also changed by calling the @reset@ operator around the function 
-call of @aeval@ to set the delimiter. The afterwards updating on cache becomes sequential.
+call of @aeval@ to set the delimiter. The afterward updating on cache becomes sequential.
 
 \begin{lstlisting}
   def analyze(e: Expr) = {
@@ -1840,7 +1839,7 @@ are defunctionalized (data type representing) continuations and reduction semant
 operational semantics in continuation-passing style.
 Not unexpectedly, the correspondence also exists for nondeterministic languages. For example,
 \citet{Danvy:2001:DW:773184.773202} observed that refunctionalizing a regular expression matcher 
-with two stacks yields its counterpart with two layer of continuations.
+with two stacks yields its counterpart with two layers of continuations.
 In addition, the operational semantics of control operators (e.g., @shift@ and @reset@) can be given by an 
 abstract machine with multi-layer continuations \cite{Danvy:1990:AC:91556.91622, lmcs:2269}. 
 
@@ -1882,7 +1881,7 @@ based on small-step abstract abstract machines~\cite{vardoulakis2010cfa2, earl20
 gilray2016pushdown, johnson2015abstracting}.
 
 CFA2 is the first solution that solves the return-flow problem~\cite{vardoulakis2010cfa2},
-but CFA2 has several limitation: it only works on continuation-passing style programs, and
+but CFA2 has several limitations: it only works on continuation-passing style programs, and
 does not support polyvariant analysis, in addition to having an exponential time complexity.
 Pushdown control-flow analysis (PDCFA) is a mechanism which maintains this precision through
 the use of a Dyke state graph representing all possible stacks contained within the unbounded-stack
