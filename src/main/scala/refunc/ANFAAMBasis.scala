@@ -37,6 +37,7 @@ object ANFAAM {
 
   abstract class Storable
   case class  Clos(v: Lam, env: Env) extends Storable
+  case class  CNumV(i: Int) extends Storable
   case object NumV extends Storable with Value
   type BStore = Store[BAddr, Storable]
 
@@ -62,7 +63,8 @@ object ANFAAM {
     State(e, env, bstore, Store[KAddr, Cont](Map(Halt -> Set())), Halt, List())
 
   def atomicEval(e: Expr, env: Env, bstore: BStore): Set[Storable] = e match {
-    case Num(_) | NumV => Set(NumV)
+    case Num(i) => Set(CNumV(i))
+    case NumV => Set(NumV)
     case Var(x) => bstore(env(x))
     case lam@Lam(x, body) => Set(Clos(lam, env))
     case _ => throw new NotImplementedError(e.toString)

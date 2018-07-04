@@ -1505,10 +1505,10 @@ not, we update its values in the cache after the evaluation. In terms of partial
 lattices, it is the case that starts the Kleene iteration from the bottom of the lattice.
 
 \subsubsection{Nondeterminism Abstraction}
-We observe that in the refunctionalized AAM, @makeMCont@ actually repeats the prologue
-part when matching a @let@ expression: they are both preparing a new environment and store 
-for the body expression of a closure. %TODO motivation
-We present a nondeterministic operator that abstracts this pattern:
+We observe that in the refunctionalized AAM, @makeMCont@ is invoked with the tail part of
+the closure set, and it actually repeats the code that creates the new environment and 
+store for the body expression of a closure.
+Based on observation, we present a nondeterministic operator that abstracts this pattern:
 
 \begin{lstlisting}
   def nd[T](ts: Iterable[T], acc: Ans, f: (T, Cache, Ans => Ans) => Ans, m: Ans => Ans): Ans =
