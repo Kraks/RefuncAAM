@@ -1498,11 +1498,12 @@ we can simply discard the state and continue working through the rest of the wor
 
 If, however, we have not hit the @out@ cache, we retrieve the values from the @in@ cache, 
 and update the @out@ cache with values from the @in@ cache. This retrieval from the @in@ 
-cache may return an empty set of values if there is no such mapping for the configuration 
-from the last iteration.
-In reality, we first conservatively assume that all computations can be diverged, and if 
-not, we update its values in the cache after the evaluation. In terms of partial orders and 
+cache may return an empty set of values if there is no such mapping for this configuration 
+from the previous iteration.
+In the initial iteration, we first conservatively assume that all computations can be diverged, 
+and if not, we update its values in the cache after the evaluation. In terms of partial orders and 
 lattices, it is the case that starts the Kleene iteration from the bottom of the lattice.
+The @out@ cache of this iteration will be used as @in@ cache for the next iteration.
 
 \subsubsection{Nondeterminism Abstraction}
 We observe that in the refunctionalized AAM, @makeMCont@ is invoked with the tail part of
@@ -1613,7 +1614,10 @@ the next iteration; in the meanwhile, an empty cache will be used as the @out@ c
 Note that the initial continuation of calling @aeval@ updates the values for the initial 
 configuration in the final cache.
 
-% TODO: summarize this section
+Now, what we have obtained is an abstract interpreter written in continuation-passing style.
+Though the top-level function @aeval@ has only one continuation, but internally it uses
+a @nd@ operator which is written with two layers of continuations. Further more, we added
+a cache along with the interpreter and @nd@ operator. 
 
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
 
