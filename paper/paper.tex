@@ -759,7 +759,7 @@ of time stamps @Time@. In abstract interpretation, however, these are key ingred
 to realize analyses with different sensitivities, as well as to perform a finite
 state space analysis \cite{Gilray:2016:ACP:2951913.2951936}.
 To effectively approximate the run-time behavior, we introduce program \emph{contours} @time@ 
-which are finite history of funciton calls till up to the current state \cite{Shivers:1991:SSC:115865.115884}.
+which are finite history of function calls till up to the current state \cite{Shivers:1991:SSC:115865.115884}.
 The function @tick@ is used to refresh the ``time'' and get a ''new time''. 
 We use a finite list of expressions (which are drawn from the control component) to encode the 
 calling context history, and as we will see in Section~\ref{kcfainst}, by applying different 
@@ -1343,7 +1343,7 @@ Before jumping into the details of refunctionalizing the stack structure and con
 @new_cont@ and @new_mcont@, we have two important observations in the disentangled AAM
 where the continuations were represented by data types:
 1) When constructing the @new_ndk@, we observe that it explicitly uses @new_frames@ as one
-argument of its top @NDCont@ object. The higer-order version of these continuations follows
+argument of its top @NDCont@ object. The higher-order version of these continuations follows
 the same pattern.
 2) In the meta-continuation dispatching function @ndcontinue@, the size of the closures set is
 decreasing every time while the other parts of meta-continuation are kept. This means in 
@@ -1852,7 +1852,7 @@ with a wide range of uses. For example, \citet{Danvy:2001:DW:773184.773202} show
 defunctionalization is dual to Church encoding, and further case studies where known
 higher-order and first-order implementations can be related through defunctionalization
 and refunctionalization include backtracking algorithms (e.g., regular expression matcher), 
-Dyck word recognizers, Dijkstra's shunting-yard algorithm, and even Quicksort 
+Dyck word recognizer, Dijkstra's shunting-yard algorithm, and even Quicksort 
 \cite{Danvy:2006:RW:2171265.2171268, DANVY2009534, Danvy:2001:DW:773184.773202}. \\
 
 %Our work applies these ideas to the nondeterministic AAM. The additional layer of continuation controls
@@ -1919,7 +1919,7 @@ the defined language simply uses the call-stack model of the meta-language.
 \citeauthor{darais2017abstracting}'s abstract definitional interpreters work on direct-style
 $\lambda$-calculus, and are themselves written in monadic style. One of the advantages of monadic
 abstract interpreters is modularity. Hence, deploying different sensitivities
-or features can be achieved by just applying a different monad. Prior to that, \citet{Sergey:2013:MAI:2491956.2491979}
+or features can be achieved by just applying different monads. Prior to that, \citet{Sergey:2013:MAI:2491956.2491979}
 presented a monadic abstract interpreter for small-step semantics.
 
 This paper is greatly inspired by the work of~\citet{darais2017abstracting}.
