@@ -1056,8 +1056,7 @@ controls the nondeterminism.
 Each @NDCont@ object contains a list of closures that are possible functions to be invoked,
 a set of values that will be bound to the target function's formal argument, and the store, time,
 and frames at the fork point. In the definition of @NDState@, an auxiliary function @toState@
-is added to convert itself to type @State@.
-
+is added to convert itself to type @State@.  
 Function @step@ now becomes of type @NDState => Option[NDState]@. Returning a @None@ value means
 reaching the halt.
 
@@ -1085,11 +1084,11 @@ the @step@ function:
 By atomically evaluating @f@, we obtain a set of closures, with the transition being 
 deterministic in regards to the first element of the closure set.
 As such, we prepare a new environment, a new store, and a new frame list only for the
-first closure in that set. A new meta-continuation @new_ndk@ is also constructed,
-which contains the rest of closures, the values of argument @ae@, the store, the time,
-and the new frame list. We use the store before updating, because for different closures
-they may form different binding addresses @baddr@. We also use the new frames, because
-all the closures at this fork point share the same stack structure and return point.
+first closure in that set. A new meta-continuation @new_ndk@ is constructed,
+which contains the rest of closures, the values of evaluating @ae@, the store, the time,
+and the new frame list. We use the store before updating, because different 
+closures may form different binding addresses @baddr@. We also use the \textit{new} frames,
+because all the closures at this fork point share the same stack structure and return point.
 
 In the second case (shown below), we will see how @NDCont@ deals with nondeterminism.
 
@@ -1115,22 +1114,22 @@ In the second case (shown below), we will see how @NDCont@ deals with nondetermi
     }
 \end{lstlisting}
 
-If the continuation @konts@ is empty, then it means we have reached an end of the computation;
+If the continuation @konts@ is empty, then the machine has reached an end of the computation;
 otherwise, we should return the values of @ae@ to its caller which is contained in the top
 frame of the stack. However, since a meta-continuation @ndk@ is introduced, we need to dispatch
 more cases when @konts@ is empty:
 
 \begin{itemize}
-  \item If @ndk@ is also empty, then we have reached the end of all computations. Besides,
-    the control component @ae@ now is an atomic value, therefore @None@ is returned.
-  \item If the target closure set of the front-most @NDCont@ is empty (@Nil@ in the code),
+  \item If the meta-continuation @ndk@ is also empty, then the machine has reached the end of \textit{all} 
+    computations. Besides, the control component @ae@ now is an atomic value, therefore @None@ is returned.
+  \item If the target closures set of the front-most @NDCont@ is empty (@Nil@ in the code),
     then we have computed all the closures at this fork point and should move to the next fork 
-    point. Since the meta-continuation @nkd@ is represented by a list, and we always
-    append new elements to its front, we resume to the most recent fork point by
-    popping up the front-most element and using the tail of that list.
-  \item Otherwise, we pop a closure from the set, then build a new environment and store for 
-    the body expression of that closure. We use the same frame list and time which are copied 
-    from the fork point rather than current one.
+    point. Since the meta-continuation @nkd@ is represented by a list, and we always append new 
+    elements to its front, we resume to the most recent fork point by popping up the front-most 
+    element and using the tail of that list.
+  \item Otherwise, we pop a closure from the set, and build a new environment and store for 
+    evaluating the body expression of that closure. We use the same frame list and time which 
+    are copied from the fork point rather than current one.
     The meta-continuation @new_ndk@ is updated by the removal of that popped closure, which makes
     sure the closure set will eventually shrink to empty.
 \end{itemize}
@@ -1167,10 +1166,10 @@ Then we apply a lightweight fusion transformation that combines the @step@ and @
 functions into a single function.
 The fused function @drive_step@ takes an @NDState@ and a set of explored states @seen@ 
 as arguments and returns a set of reachable states once it terminates.
-It is is essentially formed by merging the functionality of @step@ into the @drive@ function.
-Since each case in function @step@ are statically known, we inline the pattern match on the
-@Option@ type and replace it with @new_seen@ or a recursive call to @drive_step@ for @None@
-or @Some@, respectively.
+It is essentially formed by merging the functionality of @step@ into the @drive@ function.
+Since each case in function @step@ are statically known, we can inline the pattern match on the
+@Option@ type and replace it with returning @new_seen@ when @None@ is matched, or calling 
+@drive_step@ recursively when @Some@ is matched.
 
 \begin{lstlisting}
   def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1205,11 +1204,11 @@ After disentanglement, we will obtain an abstract abstract machine in defunction
 
 Since there are two layers of continuations, we disentangle them into three mutually recursive 
 functions:
-@drive_step@, which plays the same role as before; 
-@continue@, which is invoked from @drive_step@ when encountering an atomic expression, 
+1) @drive_step@, which plays the same role as before; 
+2) @continue@, which is invoked from @drive_step@ when encountering an atomic expression, 
   and dispatches the reduction context of the analyzed language; and 
-@ndcontinue@, which is invoked from @continue@ when the normal stack is empty,
-  and dispatches the meta-continuations @NDCont@.
+3) @ndcontinue@, which is invoked from @continue@ when the normal stack is empty,
+  and dispatches the meta-continuation @NDCont@.
 
 \begin{lstlisting}
   def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
@@ -1268,14 +1267,8 @@ holds the innermost context.
 
 Function @ndcontinue@ is identical to the dispatching logic in function @continue@ when @konts@ is empty.
 When @ndk@ is empty, the current explored states @seen@ is returned; the analysis then terminates.
-\iffalse
-The shape for @ndcontinue@ is similar to @continue@; after all, they both use a 
-@List@ representation for continuations. When the closure set is empty, we recursively 
-call @drive_step@ with the rest of @ndk@, since in this case the continuation 
-@konts@ is still empty, so the state will be dispatched to @ndcontinue@ again.
-Otherwise, we invoke @drive_step@ with the a new @NDState@ where the control 
-is transferred to the body expression of the next closure object.
-\fi
+Otherwise, a new @NDState@ is constructed depending on the status of the closures set.
+% first call to drive_step can be replaced with continue. ae is atomic, konts is empty.
 
 The purpose of disentanglement is to reveal the defunctionalized form of AAM.
 Functions @continue@ and @ndcontinue@ that dispatches different data types representing 
@@ -1292,6 +1285,9 @@ After this transformation, we will obtain an abstract interpreter written in ext
 continuation-passing style\cite{Danvy:1990:AC:91556.91622}.
 This transformation can be also regarded as making the control flows of the defined 
 language be part of the control flows of the meta-language.
+In this section, we first present a direct refunctionalization of the continuations.
+Next, we adopt a caching algorithm to obtain a computable analysis\cite{darais2017abstracting},
+and further prepare the interpreter for tranforming to direct-style later.
 
 \subsection{First Try}
 
@@ -1299,16 +1295,17 @@ First of all, as we are getting close to achieving abstract definitional interpr
 the name of @drive_step@ is updated to @aeval@ (for \emph{abstract eval}).
 Since there will be no first-order data types representing model of stacks,
 we introduce a configuration class @Config@ as a state-like definition by eliminating
-@konts@ and @ndk@ from the definition of state. The type of return value of the abstract
-interpreter accordingly becomes @Set[Config]@.
+@konts@ and @ndk@ from the definition of state. Accordingly, the abstract interpreter
+now returns @Set[Config]@.
 
 \begin{lstlisting}
   case class Config(e: Expr, env: Env, store: BStore, time: Time) { ... }
 \end{lstlisting}
 
 By looking at the definition of the first-order function @continue@ from the last section,
-we may find it calls the meta-continuation @ndcontinue@ inside of its body. 
-This observation leads us to define the types of higher-order continuation and meta-continuation:
+we may find it calls the meta-continuation @ndcontinue@ inside of its body.
+This observation leads us to define the types of higher-order functions representing 
+continuation and meta-continuation:
 
 \begin{lstlisting}
   type Cont  = (Config, Set[Config], MCont) => Set[Config]
