@@ -1,9 +1,9 @@
-package refunc
+package refunc.experimental
 
 import scala.util.continuations._
 import refunc.ast._
 
-import ANFAAM._
+import refunc.ANFAAM._
 
 /* Exprimental implementations */
 
