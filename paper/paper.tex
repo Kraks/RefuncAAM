@@ -1360,8 +1360,9 @@ while the atomic evaluation uses the latest environment @env_@.
     aeval(Config(e, new_env, new_store, new_time), seen, continue, m) }
 \end{lstlisting}
 
-Then to effectively construct the meta-continuation @new_mcont@, we define an auxiliary function
-@makeMCont@, which takes a list of closures as arguments and returns the meta-continuation. 
+Then to address the circularity of the meta-continuations, we define an auxiliary function
+@makeMCont@ to construct @new_mcont@, which takes a list of closures as the argument and returns 
+the meta-continuation. 
 Function @makeMCont@ is a recursive function where the recursive invocation happens when 
 constructing the meta-continuation based on the rest of closures set. 
 Now we can dynamically generate the meta-continuation inside of a meta-continuation.
