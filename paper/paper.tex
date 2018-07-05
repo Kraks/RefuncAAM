@@ -596,7 +596,7 @@ Before describing how the machine evaluates expressions, we must first define se
 functions. As mentioned in Section~\ref{anfsyntax}, atomic expressions are either a variable
 or a literal @lambda@ term. As such, the atomic expression evaluator @atomicEval@ handles
 these two cases and evaluates atomic expressions to closures in a straightforward way.
-The @alloc@ function generates a fresh address, and always allocates a unique integer
+The @alloc@ function generates a fresh address, and always allocates an unique integer
 in the domain of @store@.
 The @isAtomic@ function is used as a predicate to determine if the expression is atomic.
 
@@ -1221,7 +1221,7 @@ functions:
   }
 \end{lstlisting}
 
-The above code shows the skeleton of @drive_step@.
+The above code shows the skeleton of the @drive_step@.
 At the end of the first case of pattern matching, we invoke @drive_step@ recursively 
 on the new @NDState@.
 \footnote{The code for constructing new environments, stores, and frames is elided for 
@@ -1464,7 +1464,7 @@ The iteration terminates when the @out@ cache is identical to the @in@ cache.
 
 We can now transform our abstract interpreter into cache-passing style. We begin by defining the 
 return type @Ans@ as a case class which contains a @VS@ set and a cache. @Ans@ also implements 
-its own accumulating operation @++@ which defines as a union of @Set[VS]@s and a join of caches.
+its own accumulating operation @++@ which defines as an union of @Set[VS]@s and a join of caches.
 The join operation of caches is defined as joining its two store components.
 
 \begin{lstlisting}
@@ -1516,7 +1516,7 @@ Based on observation, we present a nondeterministic operator that abstracts this
 Given a collection of elements of type @T@, an initial accumulator of type @Ans@,
 a function @k@ that works on elements of type @T@, @nd@ chooses an element in
 the collection and applies @k@ to it iteratively, and accumulates the value that
-returned from @k@ when recuring on the rest of the collection. Eventually, @nd@
+returned from @k@ when recurring on the rest of the collection. Eventually, @nd@
 returns the accumulated value @acc@ when there is no element in the collection.
 The latest accumulated cache @acc.cache@ is exposed to @k@ when applied.
 
@@ -1593,10 +1593,10 @@ the next iteration; in the meanwhile, an empty cache will be used as the @out@ c
 
 Now, as we can see, by using the @nd@ operator which abstracts over the meta-continuation,
 the evaluation function can be simplified to one layer continuation-passing style.
-The use two layers of continuations are unchained to two functions that each of them has one
+The use of two layers of continuations are unchained to two functions that each of them has one
 continuation.
-Now the continuation of @aeval@ plays the same role as the one in a concrete CPS interpreter.
-Furthermore, we added a cache along with the abstract interpreter and @nd@ operator. 
+The only continuation of @aeval@ plays the same role as the one in a concrete CPS interpreter.
+Furthermore, we added a cache along with the abstract interpreter and the @nd@ operator. 
 
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
 
@@ -1709,7 +1709,7 @@ we simply remove the application of @continue@. Now the abstract evaluator @aeva
 \end{lstlisting}
 
 The case where @e@ is a @let@ expression is not that obvious. As previously identified, 
-function @nd@ works on a unknown number of nondeterministic choices, and it takes a 
+function @nd@ works on an unknown number of nondeterministic choices, and it takes a 
 function @k@ that works for every element in the collection. Here we present another
 function @choices@ that uses delimited control operator @shift@ to capture that ``@k@''
 when the program is direct-style and pass it to @nd@.
@@ -1748,7 +1748,7 @@ Now we can use this function to sequentialize the @let@ case.
     Ans(evss, ecache.outUpdate(config, evss))
 \end{lstlisting}
 
-For every nondeterministic choice in the abstract interpretation, we can simply call 
+For every nondeterministic fork-point in the abstract interpretation, we can simply call 
 @choices@ on the set of possible choices and write the program sequentially as concrete 
 interpreters, and the subsequent statements and expressions after the call-site become 
 the delimited continuation @f@. We have two invocations of @choices@, which correspond 
