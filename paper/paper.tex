@@ -825,7 +825,7 @@ We have two cases to consider (code shown below):
     merged into @new_kaddr@. Finally, a list of successor states is generated.
 
   \item In the second case, an atomic expression @ae@ sits on the control position of the
-    state. Here, the value of @ae@ is being returned to its caller.
+    state. Here, the values of @ae@ is being returned to its caller.
     In order to accomplish this, we dereference the continuation address @kaddr@ and obtain 
     a set of continuations @conts@. For each continuation in the set, we construct an 
     environment based on the environment @env_f@ of the frame, and bind @x@ to a newly 
@@ -1517,7 +1517,7 @@ Based on observation, we present a nondeterministic operator that abstracts this
 
 Given a collection of elements of type @T@, an initial accumulator of type @Ans@,
 a function @k@ that works on elements of type @T@, @nd@ chooses an element in
-the collection and applies @k@ to it iteratively, and accumulates the value that
+the collection and applies @k@ to it iteratively, and accumulates the values that
 returned from @k@ when recurring on the rest of the collection. Eventually, @nd@
 returns the accumulated value @acc@ when there is no element in the collection.
 The latest accumulated cache @acc.cache@ is exposed to @k@ when applied.
