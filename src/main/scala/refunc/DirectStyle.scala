@@ -18,8 +18,11 @@ object DirectStyleDC {
   def choices[T](ts: Iterable[T], cache: Cache): (T, Cache) @cps[Ans] = shift { 
     f: (((T, Cache)) => Ans) => nd(ts, Ans(Set[VS](), cache), f)
   }
-  
+
+  var trace: List[Expr] = List()
+
   def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[Ans] = {
+    trace = e::trace
     val config = Config(e, env, store, time)
     if (cache.outContains(config)) Ans(cache.outGet(config), cache)
     else {
@@ -65,6 +68,7 @@ object DirectStyleDC {
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
+      trace = List()
       val Ans(vss, anscache) = reset { aeval(e, env, store, mtTime, cache) }
       assert(anscache.outContains(Config(e, env, store, mtTime)))
       if (anscache.out == anscache.in) { Ans(vss, anscache) }
@@ -78,7 +82,9 @@ object DirectStyleSideEff {
   /* Using side effect to update new_cache */
   import RefuncCPS._
 
+  var trace: List[Expr] = List()
   def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans = {
+    trace = e::trace
     val config = Config(e, env, store, time)
     if (cache.outContains(config)) {
       return Ans(cache.outGet(config), cache)
@@ -132,6 +138,7 @@ object DirectStyleSideEff {
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
+      trace = List()
       val Ans(vss, anscache) = aeval(e, env, store, mtTime, cache)
       assert(anscache.outContains(Config(e, env, store, mtTime)))
       if (anscache.out == anscache.in) { Ans(vss, anscache) }

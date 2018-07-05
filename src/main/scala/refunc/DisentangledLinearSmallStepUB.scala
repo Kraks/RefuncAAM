@@ -17,7 +17,10 @@ object DisLinearSmallStepUBStack {
   def inject(e: Expr, env: Env = Map(), bstore: Store[BAddr, Storable] = Store[BAddr, Storable](Map())): NDState =
     NDState(e, env, bstore, List(), List(), List())
 
+  var trace: List[Expr] = List()
+
   def drive_step(nds: NDState, seen: Set[State]): Set[State] = {
+    trace = nds.e::trace
     val s = nds.toState
     val new_time = nds.tick
     val new_seen = if (seen.contains(s)) seen else seen + s
@@ -83,7 +86,13 @@ object DisLinearSmallStepUBStack {
     }
   }
 
-  def analyze(e: Expr): Set[State] = drive_step(inject(e), Set())
+  def analyze(e: Expr): Set[State] = {
+    trace = List()
+    drive_step(inject(e), Set())
+  }
 
-  def analyze(e: Expr, env: Env, bstore: BStore): Set[State] = drive_step(inject(e, env, bstore), Set())
+  def analyze(e: Expr, env: Env, bstore: BStore): Set[State] = {
+    trace = List()
+    drive_step(inject(e, env, bstore), Set())
+  }
 }

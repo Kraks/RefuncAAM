@@ -8,11 +8,11 @@ import ANFAAM._
  * Description:
  * 
  * class RefuncTest provides some auxiliary functions;
- * class TDProgTest contains test cases that programs are terminated and deterministic;
- * class TNDProgTest contains test cases that programs are terminated but non-deterministic;
- * class NDProgTest contains test cases that programs are non-terminated;
+ * class TDProgTest contains test cases that programs are terminating and deterministic;
+ * class TNDProgTest contains test cases that programs are terminating but non-deterministic;
+ * class NDProgTest contains test cases that programs are non-terminating;
  * class NTTNDProgTest contains test cases that programs are non-deterministic, but some branches
- * are terminated, while some other branches are not.
+ * are terminating, while some other branches are not.
  *
  * For convenience, we test non-deterministic cases through passing an initial store that maps
  * an address to multiple target closures.
@@ -54,6 +54,7 @@ trait RefuncTest extends FunSuite {
          * disentangled counterpart (DisLinearSmallStepUBStack). */
         assert(FusedLinearSmallStepUBStack.analyze(prog, initenv, initstore) ==
                DisLinearSmallStepUBStack.analyze(prog, initenv, initstore))
+        //assert(LinearSmallStepUBStack.trace == DisLinearSmallStepUBStack.trace)
         
         /* Since the disentangled linearized small-step AAM with unbounded stack 
          * (DisLinearSmallStepUBStack) returns a set of state, while the refunctionalized 
@@ -69,21 +70,25 @@ trait RefuncTest extends FunSuite {
          */
         assert(summarizeUBState(DisLinearSmallStepUBStack.analyze(prog, initenv, initstore)) ==
                summarizeVSS(RefuncCPS.analyze(prog, initenv, initstore).vss))
+        assert(DisLinearSmallStepUBStack.trace == RefuncCPS.trace)
 
         assert(summarizeUBState(DisLinearSmallStepUBStack.analyze(prog, initenv, initstore)) ==
                summarizeConfig(RefuncECPS.analyze(prog, initenv, initstore)))
+        assert(DisLinearSmallStepUBStack.trace == RefuncECPS.trace)
       
         /* The result analyzed by the refunctionalized abstract interpreter written in CPS
          * (RefuncCPS) should have the same result analyzed by the direct-style abstract 
          * interpreter using delimited continuations (DirectStyleDC). */
         assert(RefuncCPS.analyze(prog, initenv, initstore) ==
                DirectStyleDC.analyze(prog, initenv, initstore))
+        assert(RefuncCPS.trace == DirectStyleDC.trace)
 
         /* The result analyzed by the direct-style abstract interpreter using delimited 
          * continuations (DirectStyleDC) should have the same result analyzed by the abstract 
          * interpreter written with side effects (DirectStyleSideEff). */
         assert(DirectStyleDC.analyze(prog, initenv, initstore) ==
                DirectStyleSideEff.analyze(prog, initenv, initstore))
+        //assert(DirectStyleDC.trace == DirectStyleSideEff.trace) //TODO:Update the order of DSSideEff
 
         /* The summarized store analyzed by the small-step AAM with P4F allocator (SmallStepP4F)
          * should be the same with the one analyzed by refunctionalized abstract interpreter 
@@ -103,7 +108,7 @@ trait RefuncTest extends FunSuite {
         assert(summarizeState(SmallStepP4F.analyze(prog, initenv, initstore)) ==
                summarizeVSS(DirectStyleSideEff.analyze(prog, initenv, initstore).vss))
 
-        /* Since here we test terminated programs, so RefuncCPS without caching should have
+        /* Since here we test terminating programs, so RefuncCPS without caching should have
          * the same result against to RefuncCPS with caching. */
         assert(RefuncCPS.analyze(prog, initenv, initstore).vss ==
                RefuncCPSNoCache.analyze(prog, initenv, initstore))
@@ -116,10 +121,10 @@ trait RefuncTest extends FunSuite {
 }
 
 /** 
- *  Test terminated deterministic programs.
+ *  Test terminating deterministic programs.
  */
 class TDProgTest extends RefuncTest {
-  override val description = "terminated deterministic"
+  override val description = "terminating deterministic"
 
   /**
    * test case 1
@@ -142,10 +147,10 @@ class TDProgTest extends RefuncTest {
 }
 
 /** 
- *  Test terminated non-deterministic programs.
+ *  Test terminating non-deterministic programs.
  */
 class TNDProgTest extends RefuncTest {
-  override val description = "terminated non-deterministic"
+  override val description = "terminating non-deterministic"
 
   /**
    * test case 1
@@ -216,20 +221,20 @@ class TNDProgTest extends RefuncTest {
 }
 
 /** 
- *  Test non-terminated programs.
+ *  Test non-terminating programs.
  */
 class NDProgTest extends RefuncTest {
-  override val description = "non-terminated"
+  override val description = "non-terminating"
   
   override def runTest(id: Int, prog: Expr, initenv: Env, initstore: BStore) {
     for (k <- 0 to K) {
       test(s"Testing $description case $id under k=$k") {
-        /* The expecting ValueStore is ⊥, since the program is non-terminated and 
+        /* The expecting ValueStore is ⊥, since the program is non-terminating and 
          * no value is produced. 
          *
          * Other intermediate forms of abstract interpreters in our transformations (LinearSmallStepUBStack, 
          * FusedLinearSmallStepUBStack and DisLinearSmallStepUBStack) lack proper caching mechanisms, 
-         * running them with non-terminated programs would cause the abstract interpreter to diverge.
+         * running them with non-terminating programs would cause the abstract interpreter to diverge.
          * So we don't test them here. */
         assert(RefuncCPS.analyze(prog, initenv, initstore).vss == bot)
         assert(DirectStyleDC.analyze(prog, initenv, initstore).vss == bot)
@@ -311,24 +316,24 @@ class NDProgTest extends RefuncTest {
 }
 
 /**
- * Test mixing terminated/non-terminated and non-deterministic programs.
+ * Test mixing terminating/non-terminating and non-deterministic programs.
  */
 class NTTNDProgTest extends RefuncTest {
-  override val description = "mixing terminated/non-terminated and non-deterministic"
+  override val description = "mixing terminating/non-terminating and non-deterministic"
 
   override def runTest(id: Int, prog: Expr, initenv: Env, initstore: BStore) {
     for (k <- 0 to K) {
       ANFAAM.k = k
       test(s"Testing $description case $id under k=$k") {
         val p4fstore = summarizeState(SmallStepP4F.analyze(prog, initenv, initstore))
-        /* For a non-deterministic program that some branches are non-terminated, but the others
-         * are terminated, here we state the refunctionalized abstract interpreter (RefuncCPS)
+        /* For a non-deterministic program that some branches are non-terminating, but the others
+         * are terminating, here we state the refunctionalized abstract interpreter (RefuncCPS)
          * and direct-style abstract interpreter using delimited continuations (DirectStyleDC)
          * produce correct result (against with P4F) for the partial branches. 
          *
          * Other intermediate forms of abstract interpreters in our transformations (LinearSmallStepUBStack, 
          * FusedLinearSmallStepUBStack and DisLinearSmallStepUBStack) lack proper caching mechanisms, 
-         * running them with non-terminated programs would cause the abstract interpreter to diverge.
+         * running them with non-terminating programs would cause the abstract interpreter to diverge.
          * So we don't test them here. */
         assert(summarizeVSS(RefuncCPS.analyze(prog, initenv, initstore).vss) == p4fstore)
         assert(summarizeVSS(DirectStyleDC.analyze(prog, initenv, initstore).vss) == p4fstore)

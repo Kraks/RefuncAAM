@@ -12,7 +12,10 @@ object RefuncCPS {
     else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
   }
   
+  var trace: List[Expr] = List()
+
   def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
+    trace = e::trace
     val config = Config(e, env, store, time)
     if (cache.outContains(config)) continue(Ans(cache.outGet(config), cache))
     else {
@@ -67,6 +70,7 @@ object RefuncCPS {
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
+      trace = List()
       val Ans(vss, anscache) = aeval(e, env, store, mtTime, cache, ans => ans)
       assert(anscache.outContains(Config(e, env, store, mtTime)))
       if (anscache.out == anscache.in) { Ans(vss, anscache) }

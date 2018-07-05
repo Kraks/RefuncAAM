@@ -14,7 +14,10 @@ object RefuncECPS {
   type Cont = (Config, Set[Config], MCont) => Set[Config]
   type MCont = (Config, Set[Config]) => Set[Config]
 
+  var trace: List[Expr] = List()
+
   def aeval(config: Config, seen: Set[Config], continue: Cont, mcontinue: MCont): Set[Config] = {
+    trace = config.e::trace
     val Config(e, env, store, time) = config
     val new_time = config.tick
     val new_seen = if (seen.contains(config)) seen else seen + config
@@ -63,9 +66,13 @@ object RefuncECPS {
     }
   }
 
-  def analyze(e: Expr): Set[Config] = 
+  def analyze(e: Expr): Set[Config] = {
+    trace = List()
     aeval(inject(e), Set(), { (c, seen, m) => m(c, seen) }, { (c, seen) => seen })
+  }
 
-  def analyze(e: Expr, env: Env, bstore: BStore): Set[Config] = 
+  def analyze(e: Expr, env: Env, bstore: BStore): Set[Config] = {
+    trace = List()
     aeval(inject(e, env, bstore), Set(), { (c, seen, m) => m(c, seen) }, { (c, seen) => seen })
+  }
 }

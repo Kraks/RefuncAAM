@@ -17,7 +17,10 @@ object LinearSmallStepUBStack {
   def inject(e: Expr, env: Env = Map(), bstore: Store[BAddr, Storable] = Store[BAddr, Storable](Map())): NDState =
     NDState(e, env, bstore, List(), List(), List())
 
+  var trace: List[Expr] = List()
+
   def step(nds: NDState): Option[NDState] = {
+    trace = nds.e::trace
     val new_time = nds.tick
     nds match {
       case NDState(Let(x, ae, e), env, bstore, konts, time, ndk) if isAtomic(ae) =>
@@ -78,8 +81,14 @@ object LinearSmallStepUBStack {
     }
   }
 
-  def analyze(e: Expr): Set[State] = drive(inject(e), Set())
+  def analyze(e: Expr): Set[State] = {
+    trace = List()
+    drive(inject(e), Set())
+  }
 
-  def analyze(e: Expr, env: Env, bstore: BStore): Set[State] = drive(inject(e, env, bstore), Set())
+  def analyze(e: Expr, env: Env, bstore: BStore): Set[State] = {
+    trace = List()
+    drive(inject(e, env, bstore), Set())
+  }
 }
 
