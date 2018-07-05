@@ -7,9 +7,9 @@ import ANFAAM._
 object RefuncCPS {
   type Cont = Ans => Ans
 
-  def nd[T](ts: Iterable[T], acc: Ans, k: (T, Cache, Ans => Ans) => Ans, m: Ans => Ans): Ans = {
-    if (ts.isEmpty) m(acc)
-    else k(ts.head, acc.cache, (ans: Ans) => nd(ts.tail, acc ++ ans, k, m))
+  def nd[T](ts: Iterable[T], acc: Ans, k: (T, Cache) => Ans): Ans = {
+    if (ts.isEmpty) acc
+    else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
   }
   
   def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
@@ -40,23 +40,23 @@ object RefuncCPS {
         case Let(x, App(f, ae), e) =>
           val closures = atomicEval(f, env, store)
           nd[Storable](closures, Ans(Set[VS](), new_cache), { 
-            case (Clos(Lam(v, body), c_env), clscache, clsnd) =>
+            case (Clos(Lam(v, body), c_env), clscache) =>
               val vbaddr = allocBind(v, new_time)
               val new_cenv = c_env + (v -> vbaddr)
               val new_store = store.update(vbaddr, atomicEval(ae, env, store))
-              aeval(body, new_cenv, new_store, new_time, clscache, { case Ans(bdvss, bdcache) =>
-                nd[VS](bdvss, Ans(Set[VS](), bdcache), { 
-                  case (VS(vals, time, vssstore), bdvsscache, bdnd) =>
-                    val baddr = allocBind(x, time)
-                    val new_env = env + (x -> baddr)
-                    val new_store = vssstore.update(baddr, vals)
-                    aeval(e, new_env, new_store, time, bdvsscache, { 
-                      case Ans(evss, ecache) => bdnd(Ans(evss, ecache.outUpdate(config, evss)))
-                    })
-                }, clsnd)
+              aeval(body, new_cenv, new_store, new_time, clscache, { 
+                case Ans(bdvss, bdcache) =>
+                  nd[VS](bdvss, Ans(Set[VS](), bdcache), { 
+                    case (VS(vals, time, vssstore), bdvsscache) =>
+                      val baddr = allocBind(x, time)
+                      val new_env = env + (x -> baddr)
+                      val new_store = vssstore.update(baddr, vals)
+                      aeval(e, new_env, new_store, time, bdvsscache, { 
+                        case Ans(evss, ecache) => continue(Ans(evss, ecache.outUpdate(config, evss)))
+                      })
+                  })
               })
-          }, 
-          continue)
+          })
     
         case ae if isAtomic(ae) =>
           val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
@@ -67,13 +67,10 @@ object RefuncCPS {
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
-      val Ans(vss, new_cache) = aeval(e, env, store, mtTime, cache, {
-        case Ans(vss, cache) => 
-          val init_config = Config(e, env, store, mtTime)
-          Ans(vss, cache.outUpdate(init_config, vss))
-      })
-      if (new_cache.out == new_cache.in) { Ans(vss, new_cache) }
-      else { iter(Cache(new_cache.out, Store[Config, VS](Map()))) }
+      val Ans(vss, anscache) = aeval(e, env, store, mtTime, cache, ans => ans)
+      assert(anscache.outContains(Config(e, env, store, mtTime)))
+      if (anscache.out == anscache.in) { Ans(vss, anscache) }
+      else { iter(Cache(anscache.out, Store[Config, VS](Map()))) }
     }
     iter(Cache.mtCache)
   }

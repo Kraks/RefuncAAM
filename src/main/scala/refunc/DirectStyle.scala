@@ -66,10 +66,9 @@ object DirectStyleDC {
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
       val Ans(vss, anscache) = reset { aeval(e, env, store, mtTime, cache) }
-      val init_config = Config(e, env, store, mtTime)
-      val new_cache = anscache.outUpdate(init_config, vss)
-      if (new_cache.out == new_cache.in) { Ans(vss, new_cache) }
-      else { iter(Cache(new_cache.out, Store[Config, VS](Map()))) }
+      assert(anscache.outContains(Config(e, env, store, mtTime)))
+      if (anscache.out == anscache.in) { Ans(vss, anscache) }
+      else { iter(Cache(anscache.out, Store[Config, VS](Map()))) }
     }
     iter(Cache.mtCache)
   }
@@ -133,10 +132,10 @@ object DirectStyleSideEff {
 
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
     def iter(cache: Cache): Ans = {
-      val Ans(vss, new_cache) = aeval(e, env, store, mtTime, cache)
-      val updated_cache = new_cache.outUpdate(Config(e, env, store, mtTime), vss)
-      if (updated_cache.out == new_cache.in) { Ans(vss, updated_cache) }
-      else { iter(Cache(updated_cache.out, Store[Config, VS](Map()))) }
+      val Ans(vss, anscache) = aeval(e, env, store, mtTime, cache)
+      assert(anscache.outContains(Config(e, env, store, mtTime)))
+      if (anscache.out == anscache.in) { Ans(vss, anscache) }
+      else { iter(Cache(anscache.out, Store[Config, VS](Map()))) }
     }
     iter(Cache.mtCache)
   }
