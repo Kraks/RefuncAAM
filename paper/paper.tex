@@ -1413,13 +1413,15 @@ transformations toward a big-step abstract definitional interpreter:
     abstract definitional interpreter that cares about final evaluation results.
     So starting from this section our abstract semantic artifact returns a set of final 
     values instead of collected configurations. 
-  \item Configurations still play an important role in caching, where a cache
+  \item The configurations still play an important role in caching, where a cache
     is a mapping from configurations to sets of final values. The caching algorithm
     ensures termination of the analysis, as well as performs a sound over-approximation
     of all possible values and reachable paths.
-  \item We simplify the continuations with a nondeterministic operator @nd@ such 
-    that the function @aeval@ only uses one layer of continuation.
+  \item The function @aeval@ is simplified by introducing and using a nondeterministic 
+    operator @nd@ which makes @aeval@ only uses one layer of continuation.
 \end{itemize}
+
+We will begin by discussing these changes separately, and finally see how they work together.
 
 \subsubsection{Values}
 To properly represent final values, we introduce the case class @VS@ which
@@ -1688,11 +1690,11 @@ In this section, we present the second version that uses delimited control opera
 
 We first transform the function @aeval@ to direct-style by removing the additional 
 continuation argument @continue@ and sequentializing the expressions in @aeval@.
-To enable using delimited control operators inside of @aeval@ we also add an 
+To enable using delimited control operators inside of @aeval@, we also add an 
 annotation \verb|@cps[Ans]| on the return type, which tells the compiler to CPS
 transform this function.
 Back to direct-style on the case where @e@ appears as an atomic expression is straightforward: 
-we simply remove the application of @continue@. Now the abstract evaluator @aeval@ looks as follows:
+we simply unwrap the application of @continue@. Now the abstract evaluator @aeval@ looks as follows:
 
 \begin{lstlisting}
   def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache): Ans @cps[Ans] = {
@@ -1712,7 +1714,7 @@ The case where @e@ is a @let@ expression is not that obvious. As previously iden
 function @nd@ works on an unknown number of nondeterministic choices, and it takes a 
 function @k@ that works for every element in the collection. Here we present another
 function @choices@ that uses delimited control operator @shift@ to capture that ``@k@''
-when the program is direct-style and pass it to @nd@.
+when the program is written in direct-style and pass it to @nd@.
 
 \begin{lstlisting}
   def nd[T](ts: Iterable[T], acc: Ans, k: ((T, Cache)) => Ans): Ans = {
@@ -1731,8 +1733,8 @@ function is type @Ans@.
 The function @f@ is the delimited continuation captured by the @shift@ operator, which
 is formed by the computation will be executed after the @choices@'s call-site.
 Once the function @f@ (which is the function @k@ in @nd@) is invoked and returned, 
-it returns to its call-site where @nd@ will be invoked on the rest elements of the collection.
-Now we can use this function to sequentialize the @let@ case.
+it returns to its call-site where @nd@ will be invoked on the remaining elements of the collection.
+Now we can use this function to sequentialize expressions in the @let@ case.
 
 \begin{lstlisting}
   case Let(x, App(f, ae), e) =>
@@ -1751,14 +1753,14 @@ Now we can use this function to sequentialize the @let@ case.
 For every nondeterministic fork-point in the abstract interpretation, we can simply call 
 @choices@ on the set of possible choices and write the program sequentially as concrete 
 interpreters, and the subsequent statements and expressions after the call-site become 
-the delimited continuation @f@. We have two invocations of @choices@, which correspond 
-to the two invocations of @nd@ in the refunctionalized form in the last section.
+the delimited continuation @f@. We have two applications of @choices@, which correspond 
+to the two applications of @nd@ in the refunctionalized form in the last section.
 The function @choices@ also returns the latest cache to its left-hand side when invoked.
-The cache will be still accumulated to the next call to @choices@ or @aeval@, 
+The cache will be still accumulated to the following calls of @choices@ or @aeval@, 
 given the fact that the abstract interpreter should always use the latest cache.
 
 The function @analyze@ is also changed by calling the @reset@ operator around the function 
-call of @aeval@ to set the delimiter.
+application of @aeval@ to set the delimiter.
 
 \begin{lstlisting}
   def analyze(e: Expr) = { 
