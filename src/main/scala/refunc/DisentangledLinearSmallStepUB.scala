@@ -73,7 +73,7 @@ object DisLinearSmallStepUBStack {
     ndk match {
       case Nil => seen
       case NDCont(Nil, _, _, _, _)::ndk => 
-        continue(NDState(ae, env, bstore, konts, time, ndk), seen)
+        ndcontinue(NDState(ae, env, bstore, konts, time, ndk), seen)
       case NDCont(cls, argvs, bstore, time, frames)::ndk => 
         val Clos(Lam(v, body), c_env) = cls.head
         val baddr = allocBind(v, time)

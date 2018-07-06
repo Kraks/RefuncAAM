@@ -1,8 +1,9 @@
 package refunc
 
-import org.scalatest._
-import refunc.ast._
 import ANFAAM._
+import refunc.ast._
+import org.scalatest._
+import refunc.experimental._
 
 /**
  * Description:
