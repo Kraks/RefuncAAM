@@ -996,8 +996,8 @@ recursive functions:
                                (let ([z (f1 1)]) z))
 \end{lstlisting}
 
-Function @f1@ and @f2@ mutually invoke each other, so the stack will alternately push
-frames @f1@ and @f2@ onto the top of the current stack. However, no two existing stack
+Function @f1@ and @f2@ mutually invoke each other, so the frames of @f1@ and @f@ will be
+alternately pushed onto the top of the current stack. However, no two existing stack
 components are identical in the state space. One can decide the reachability of a state
 through Dyck state graph \cite{earl2010pushdown, earl2012introspective}, but simply
 caching the explored states (i.e. @seen@) would not always make the analyzer terminate.
@@ -1736,7 +1736,9 @@ The return type of @choices@ is @(T, Cache)@ with an annotation \verb|@cps[Ans]|
 denotes that @choices@ will iteratively return an element of type @T@ from the collection
 along with the latest cache once @f@ is invoked, but the final returned value of the
 function is type @Ans@.
-The function @f@ is the delimited continuation captured by the @shift@ operator (formed by the computation), and will be executed after the @choices@'s call-site.
+The function @f@ is the delimited continuation captured by the @shift@ operator.
+Whenever we call @choices@, the subsequent computations that will be executed after its call-site
+constitute the delimited continuation @f@.
 Once the function @f@ (which is the function @k@ in @nd@) is invoked and returned,
 it returns to its call site where @nd@ will be invoked on the remaining elements of the collection.
 Now we can use this function to sequentialize expressions in the @let@ case:
