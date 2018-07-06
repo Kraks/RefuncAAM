@@ -6,11 +6,11 @@ Link: https://github.com/Kraks/refunc
 
 ## Abstract
 
-Abstracting abstract machines (AAM) is a systematic methodology for constructing abstract interpreters that are derived from concrete small-step abstract machines. Recent progress applies the same idea on definitional interpreters, and obtains big-step abstract definitional interpreters (ADI) written in monadic style. Yet, the relations between small-step abstracting abstract machines and big-step abstracting definitional interpreters are not well studied.
+Abstracting abstract machines is a systematic methodology for constructing sound static analyses for higher-order languages, by deriving small-step abstract abstract machines that perform abstract interpretation from abstract machines that perform concrete evaluation. Darais et al. apply the same underlying idea to monadic definitional interpreters, and obtain monadic abstract definitional interpreters that perform abstract interpretation in big-step style using monads. Yet, the relation between small-step abstract abstract machines and big-step abstract definitional interpreters is not well studied.
 
-In this paper, we show their functional correspondence and how to syntactically transform small-step abstract abstract machines into big-step abstract definitional interpreters. The transformations include linearization, fusing, disentangling, refunctionalizing, and un-CPS to direct-style with delimited controls. Linearization expresses non-deterministic choices by first-order data types, after which refunctionalization sequentializes the evaluation order by higher-order functions. All transformations properly handle the collecting semantics and the nondeterminism of abstract interpretation.
+In this paper, we explain their functional correspondence and demonstrate how to syntactically transform small-step abstract abstract machines into big-step abstract definitional interpreters. Building on known semantic interderivation techniques from the concrete evaluation setting, the transformations include linearization, lightweight fusion, disentanglement, refunctionalization, and the left inverse of the CPS transform. Linearization expresses nondeterministic choice through first-order data types, after which refunctionalization transforms the first-order data types that represent continuations into higher-order functions. The refunctionalized AAM is an abstract interpreter written in continuation-passing style (CPS) with two layers of continuations, which can be converted back to direct style with delimited control operators. Based on the known correspondence between delimited control and monads, we demonstrate that the explicit use of monads in abstract definitional interpreters is optional.
 
-Following the idea that in deterministic languages, evaluation contexts of reduction semantics are defunctionalized continuations, we further show that in nondeterministic languages, evaluation contexts are refunctionalized to extended continuations style. Remarkably, we reveal how precise call/return matching in control-flow analysis is obtained by refunctionalizing a small-step abstract abstract machine with proper caching.
+All transformations properly handle the collecting semantics and nondeterminism of abstract interpretation. Remarkably, we reveal how precise call/return matching in control-flow analysis can be obtained by refunctionalizing a small-step abstract abstract machine with proper caching.
 
 ## Getting Started
 
@@ -70,15 +70,13 @@ The disentangled AAM is implemented in `src/main/scala/refunc/DisentangledLinear
 
 #### Section 6
 
-The implementation of refunctionalized AAM is object `RefuncCPS` in `src/main/scala/refunc/RefuncCPS.scala`. In the paper, we also show a simplified version without caching, which is implemented in `src/main/scala/refunc/RefuncCPSNoCache.scala`.
+The vanilla implementation of refunctionalized AAM is object `RefuncECPS` in `src/main/scala/refunc/RefuncECPS.scala`, which only transforms the first-order data types representing continuations to higher-order functions. Section 6.2 describes a simplified refunctionalized AAM that utilizes caching and `nd` operator is implemented in `src/main/scala/refunc/RefuncCPS.scala`.
 
 Additionally, as a reference of sound pushdown control-flow analysis, AAM with P4F allocator is implemented in `src/main/scala/refunc/SmallStepP4F.scala`. We use this to further test the pushdown control-flow property of our refunctionalized AAM.
 
 #### Section 7
 
 By representing the extended continuation-passing style with delimited control operators, we implement a direct-style abstract interpreter in object `DirectStyleDC` of file `src/main/scala/refunc/DirectStyle.scala`.
-
-As we mentioned in Section 7, direct-style abstract interpreter using side effects and `for` comprehension is also feasible. We show this experimental implementation in object `DirectStyleSideEff` (also in file `DirectStyle.scala`).
 
 ### Tests
 
