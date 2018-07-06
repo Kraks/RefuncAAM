@@ -278,7 +278,7 @@ However, implementing a sound static analysis by building an
 abstract interpreter~\cite{cousot1977abstract} remained an esoteric and difficult 
 task until very recently.
 
-\Citet{van2012systematic,van2010abstracting} proposed the Abstracting Abstract Machines (AAM)
+\Citet{van2012systematic,van2010abstracting} proposed the Abstracting abstract machines (AAM)
 methodology which provides a recipe for constructing sound abstract interpreters
 for higher-order functional languages from concrete abstract machines.
 %~\cite{van2012systematic, van2010abstracting}.
@@ -559,7 +559,7 @@ to the ANF convention, and as such, do not enforce it in the term structure of S
 \subsubsection{Machine Components}
 
 The CESK machine is an abstract machine for describing the semantics of and evaluating
-$\lambda$-calculus \cite{felleisen1987calculus}. The CESK machine models program execution
+a $\lambda$-calculus \cite{felleisen1987calculus}. The CESK machine models program execution
 as state transitions in a small-step fashion. As its name suggests, a machine state has
 four components:
 1) \textit{Control} is the expression currently being evaluated.
@@ -596,7 +596,7 @@ Before describing how the machine evaluates expressions, we must first define se
 functions. As mentioned in Section~\ref{anfsyntax}, atomic expressions are either a variable
 or a literal @lambda@ term. As such, the atomic expression evaluator @atomicEval@ handles
 these two cases and evaluates atomic expressions to closures in a straightforward way.
-The @alloc@ function generates a fresh address, and always allocates an unique integer
+The @alloc@ function generates a fresh address, and always allocates a unique integer
 in the domain of @store@.
 The @isAtomic@ function is used as a predicate to determine if the expression is atomic.
 
@@ -613,7 +613,7 @@ We can now faithfully describe the state transition function @step@,
 which when given a machine state, determines its successor state.
 The function @step@ is a partial function that only handles non-final states,
 which must have a successor; the final case of a state is handled by function
-@drive@, which will be mentioned in Section~\ref{sec:drive}.
+@drive@, which will be explained in Section~\ref{sec:drive}.
 
 \begin{lstlisting}
   def step(s: State): State = s match {
@@ -634,7 +634,7 @@ which must have a successor; the final case of a state is handled by function
 \end{lstlisting}
 
 As shown and previously discussed, we examine the only two non-final cases which the state
-may be.
+may be:
 
 \begin{itemize}
 
@@ -694,15 +694,15 @@ on the store, and then bound the addresses space to be finite. Since each compon
 of the machine state is finite, the abstracted machine-state space is also finite, 
 and therefore computable.
 
-In this section, we derive the abstract abstract machine from the concrete
+In this section, we derive the respective abstract abstract machine from the concrete
 CESK machine, and also show how to instantiate useful $k$-call-sensitive 
 control-flow analysis.
 
 \subsubsection{Machine Components}
 
-Similar to the CESK machine, the machine state of AAM has a control, an environment, a store,
+Similar to the CESK machine, the machine state of an A\textsuperscript{2}M has a control, an environment, a store,
 and continuation, as well as a timestamp. However, there are several notable differences
-between AAM's store and CESK machine's store. In AAM, the store maps addresses to sets of
+between an A\textsuperscript{2}M's store and the CESK machine's store. In AAM, the store maps addresses to sets of
 values; it stores all possible values for a particular address. As such, dereferencing
 addresses becomes nondeterministic. Also, the store performs \emph{joining}, rather than
 overwriting, when updating elements. Furthermore, the continuations are likewise allocated
@@ -887,7 +887,7 @@ the code here actually implements call+return sensitivity.
 
 \subsubsection{Collecting Semantics}
 
-Similar to the CESK machine, to run (analyze) a program we first use the @inject@ function
+Similar to the CESK machine, to run (analyze) a program, we first use the @inject@ function
 to construct the initial state given to the program. Note that the initial continuation store
 has a built-in mapping that maps the continuation address for @Halt@ to an empty set of 
 continuations. We also provide an empty program contour as our initial time.
@@ -899,7 +899,7 @@ continuations. We also provide an empty program contour as our initial time.
 \end{lstlisting}
 
 However, in contrast to the concrete CESK machine, the @drive@ function performs 
-collecting semantics instead of the valuation semantics. That is, for the purpose of
+collecting semantics instead of valuation semantics. That is, for the purpose of
 analyzing programs, the function @drive@ collects all the intermediate machine states 
 as the program is abstractly executing. The following code shows a variant of the 
 work-list algorithm to find the fixed-point of the set of states.
@@ -926,21 +926,21 @@ a given program.
 
 \subsection{One Step Back: Unabstracted Stack} \label{unabs}
 
-In this section, we describe a variant of AAM that allows the stack to be unbounded 
-which uses a precise model of the call stack as we did in the concrete CESK machine.
+In this section, we describe a variant of AAM that allows the stack to be unbounded,
+which uses a precise model of the call stack as in the concrete CESK machine.
 Instead of allocating continuations in the store and embedding addresses of 
 continuations in states, we intend to use a list of frames to explicitly model 
 the stack. By doing so, we recover the call structure as the same as at run-time
 (so-called pushdown control-flow analysis), but since the stack is unbounded, 
 the state space is potentially infinite. 
 
-The pushdown A\textsuperscript{2}M with an unbounded stack is also described by \citeauthor{van2012systematic} 
+The pushdown AAM with an unbounded stack is also described by \citeauthor{van2012systematic} 
 \cite{van2012systematic}. 
-The reason we show it here is to keep the consistency of abstract semantics during 
+We show it here is to maintain consistency of abstract semantics during
 transformations -- since the eventual abstract definitional interpreters simply inherit
-a precise control-flow from its defining language, we also would like to start from a
+a precise control-flow from their defining language, we also would like to start from a
 pushdown A\textsuperscript{2}M that is also able to precisely match calls and returns.
-For readers who are not familiar with pushdown analysis, we have a detailed discussion 
+For readers who are not familiar with pushdown analysis, we provide a detailed discussion
 in Section~\ref{pdcfarevisit}.
 
 In the definition of @State@, the continuation store and continuation address disappear;
@@ -951,9 +951,9 @@ the halt. The other components remain unchanged as in the Section \ref{aam}.
   case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
 \end{lstlisting}
 
-The state transition function @step@ shown below is still nondeterministic, but the only 
-nondeterminism happening is when dereferencing the callee @f@ from the function application 
-@App(f, ae)@.
+The state transition function @step@ shown below is still
+nondeterministic, but only when dereferencing the callee @f@ from the
+function application @App(f, ae)@.
 
 \begin{lstlisting}
   def step(s: State): List[State] = {
@@ -983,8 +983,8 @@ For each closure in the set, a new frame is constructed and pushed onto the stac
 The code for handling the second case (atomic expressions) is the same as the concrete CESK machine. \\
 
 \textit{Note on Termination.}
-Unfortunately, even though other components in the states are finite, this A\textsuperscript{2}M with an unbounded
-stack still may diverge when analyzing some programs.
+Unfortunately, even though other components in the states are finite, this version of AAM with an unbounded
+stack may still diverge when analyzing some programs.
 This is because the unbounded stack can grow to an arbitrary depth which implies that the state
 space is possibly infinite; the analysis may therefore not terminate for all programs if we
 simply enumerate reachable states. To see this, consider a program that has two mutually
@@ -996,7 +996,7 @@ recursive functions:
                                (let ([z (f1 1)]) z))
 \end{lstlisting}
 
-Function @f1@ and @f2@ mutually invoke each other, so the stack will alternately pushing
+Function @f1@ and @f2@ mutually invoke each other, so the stack will alternately push
 frames @f1@ and @f2@ onto the top of the current stack. However, no two existing stack
 components are identical in the state space. One can decide the reachability of a state
 through Dyck state graph \cite{earl2010pushdown, earl2012introspective}, but simply
@@ -1008,10 +1008,10 @@ caching the explored states (i.e. @seen@) would not always make the analyzer ter
 In the previous section, we show that by keeping an unabstracted stack in the state
 space, we can recover the precise call/return match. Now we begin describing the
 transformations step by step. Our base machine is the A\textsuperscript{2}M with an unbounded
-stack, as we will later transform the stack structure to higher-order functions
+stack; as we will later transform the stack structure to higher-order functions
 representing continuations, it does not matter what kind of A\textsuperscript{2}M we start from.
 This is because it would not be possible to construct a new frame on the stack, nor
-to allocate continuations in the store after Refunctionalization.
+to allocate continuations in the store after refunctionalization.
 Thus, our choice to start from an unbounded-stack A\textsuperscript{2}M is motivated simply because
 it has an equivalent stack model to abstract definitional interpreters (our final target).
 
@@ -1025,14 +1025,14 @@ functions, it does not help us to move toward abstract definitional interpreters
 In his paper \textit{Defunctionalized Interpreters for Programming Languages},
 Danvy observes that for deterministic languages, a reduction semantics can be seen as 
 a structural operational semantics in continuation-passing style, where the reduction context is
-a defunctionalized continuation \cite{Danvy:2008:DIP:1411204.1411206}. Therefore
+a defunctionalized continuation \cite{Danvy:2008:DIP:1411204.1411206}. Therefore,
 refunctionalizing such a reduction semantics for a deterministic language yields 
 an interpreter in continuation-passing style. 
 Nevertheless, doing so for nondeterministic languages yields an interpreter
 with multiple layers of continuation \cite{Danvy:2006:RW:2171265.2171268, DANVY2009534},
 where the additional layer of continuation represents the nondeterministic choices.
 
-We apply this idea to AAM and our first step of transformations is to linearize all
+We apply this idea to AAM, and thus our first transformation step is to linearize all
 nondeterministic choices. This step removes all nondeterminism from the @step@ function.
 Likewise, the @Frame@ saves the information of the caller in concrete executions.
 We then introduce another layer of control, and define a case class @NDCont@
@@ -1057,7 +1057,7 @@ Each @NDCont@ object contains a list of closures that are possible functions to 
 a set of values that will be bound to the target function's formal argument, and the store, time,
 and frames at the fork point. In the definition of @NDState@, an auxiliary function @toState@
 is added to convert itself to type @State@.  
-Function @step@ now becomes of type @NDState => Option[NDState]@. Returning a @None@ value means
+@step@ now becomes of type @NDState => Option[NDState]@. Returning a @None@ value means
 reaching the halt.
 
 \begin{lstlisting}
@@ -1114,24 +1114,24 @@ In the second case (shown below), we will see how @NDCont@ deals with nondetermi
     }
 \end{lstlisting}
 
-If the continuation @konts@ is empty, then the machine has reached an end of the computation;
-otherwise, we should return the values of @ae@ to its caller which is contained in the top
+If the continuation @konts@ is empty, then the machine has reached an end of the computation.
+Otherwise, we should return the values of @ae@ to its caller which is contained in the top
 frame of the stack. However, since a meta-continuation @ndk@ is introduced, we need to dispatch
 more cases when @konts@ is empty:
 
 \begin{itemize}
   \item If the meta-continuation @ndk@ is also empty, then the machine has reached the end of \textit{all} 
-    computations. Besides, the control component @ae@ now is an atomic value, therefore @None@ is returned.
+    computations. Besides, the control component @ae@ now is an atomic value: @None@ is returned.
   \item If the target closures set of the front-most @NDCont@ is empty (@Nil@ in the code),
     then we have computed all the closures at this fork point and should move to the next fork 
     point. Since the meta-continuation @nkd@ is represented by a list, and we always append new 
-    elements to its front, we resume to the most recent fork point by popping up the front-most 
+    elements to its front, we resume to the most recent fork point by popping the front-most 
     element and using the tail of that list.
   \item Otherwise, we pop a closure from the set, and build a new environment and store for 
     evaluating the body expression of that closure. We use the same frame list and time which 
     are copied from the fork point rather than current one.
-    The meta-continuation @new_ndk@ is updated by the removal of that popped closure, which makes
-    sure the closure set will eventually shrink to empty.
+    The meta-continuation @new_ndk@ is updated by the removal of that popped closure, which guarantees
+    the closure set will eventually shrink to empty.
 \end{itemize}
 
 \begin{lstlisting}
@@ -1145,12 +1145,12 @@ more cases when @konts@ is empty:
 The @drive@ function is also changed: there is no work-list anymore, as all the potentially 
 unexplored states are embedded into the continuations.
 The termination of the analysis occurs when the value @None@ is returned from calling @step@.
-Otherwise, we extract the next state @nnds@ and recur on function @drive@.
+Otherwise, we extract the next state @nnds@ and recurse on function @drive@.
 The set of explored states is preserved as before.
 
 At this point, we have obtained a linearized abstract abstract machine. 
 Intuitively, if we imagine that the classical AAM explores a graph of reachable states, 
-then the linearized A\textsuperscript{2}M flattens the graph in depth-first order to a linear sequence of states.
+then the linearized version of AAM flattens the graph in depth-first order to a linear sequence of states.
 It has been observed that ``\textit{failure can be replaced by a list of successes}''
 \cite{10.1007/3-540-15975-4_33} and that ``\textit{one programmer’s lazy-list 
 constructor is another programmer’s success and failure continuations}'' \cite{danvy2006a}; 
@@ -1162,13 +1162,13 @@ back to lazy list representation, where the elements in the list are plain machi
 
 \section{Lightweight Fusion} \label{fusing}
 
-Then we apply a lightweight fusion transformation that combines the @step@ and @drive@
+We next apply a lightweight fusion transformation that combines the @step@ and @drive@
 functions into a single function.
 The fused function @drive_step@ takes an @NDState@ and a set of explored states @seen@ 
 as arguments and returns a set of reachable states once it terminates.
 It is essentially formed by merging the functionality of @step@ into the @drive@ function.
-Since each case in function @step@ is statically known, we can inline the pattern match on the
-@Option@ type and replace it with returning @new_seen@ when @None@ is matched, or calling 
+Since each case in function @step@ is statically known, we can inline the pattern matching on the
+@Option@ type and replace it with returning @new_seen@ when @None@ is matched, or by calling 
 @drive_step@ recursively when @Some@ is matched.
 
 \begin{lstlisting}
@@ -1245,7 +1245,7 @@ the @continue@ function is not higher-order for the moment.
 Function @continue@ is identical to what we have seen for the second case in @drive_step@,
 except that the dispatching logic for empty @konts@ is lifted to a separate function 
 @ndcontinue@.
-It matches on the list representation of context: An empty list @Nil@ represents the
+It matches on the list representation of context: an empty list @Nil@ represents the
 halt of a computation path, whereas a cons @::@ means the top frame of the list
 holds the innermost context.
 
@@ -1265,13 +1265,13 @@ holds the innermost context.
     } }
 \end{lstlisting}
 
-Function @ndcontinue@ is identical to the dispatching logic in function @continue@ when @konts@ is empty.
-When @ndk@ is empty, the current explored states @seen@ is returned; the analysis then terminates.
+Function @ndcontinue@ is identical to the dispatching logic in @continue@ when @konts@ is empty.
+When @ndk@ is empty, the current set of explored states @seen@ is returned, after which the analysis terminates.
 Otherwise, a new @NDState@ is constructed depending on the status of the closures set.
 % first call to drive_step can be replaced with continue. ae is atomic, konts is empty.
 
-The purpose of disentanglement is to reveal the defunctionalized form of AAM.
-Functions @continue@ and @ndcontinue@ that dispatches different data types representing 
+The purpose of disentanglement is to reveal the defunctionalized form of our A\textsuperscript{2}M.
+Functions @continue@ and @ndcontinue@ that dispatch different data types representing 
 continuations are disentangled from @drive_step@. 
 The inverse transformation of this step would be simply inlining @ndcontinue@ into @continue@,
 and then inlining @continue@ into @drive_step@.
@@ -1282,12 +1282,12 @@ Refunctionalization transforms first-order data types representing evaluation co
 to higher-order functions, and associates the dispatching logic of continuations with
 proper higher-order functions.
 After this transformation, we will obtain an abstract interpreter written in extended
-continuation-passing style\cite{Danvy:1990:AC:91556.91622}.
+continuation-passing style~\cite{Danvy:1990:AC:91556.91622}.
 This transformation can be also regarded as making the control flows of the defined 
 language be part of the control flows of the meta-language.
 In this section, we first present a direct refunctionalization of the continuations.
-Next, we adopt a caching algorithm to obtain a computable analysis\cite{darais2017abstracting},
-and further prepare the interpreter for transforming to direct-style later.
+Next, we adopt a caching algorithm to obtain a computable analysis~\cite{darais2017abstracting},
+and further prepare the interpreter for transformation to direct-style at a later point.
 
 \subsection{First Try}
 
@@ -1304,16 +1304,16 @@ now returns @Set[Config]@.
 
 By looking at the definition of the first-order function @continue@ from the last section,
 we may find it calls the meta-continuation @ndcontinue@ inside of its body.
-This observation leads us to define the types of higher-order functions representing 
-continuation and meta-continuation:
+This observation leads us to define the types of higher-order functions representing
+continuations and meta-continuations:
 
 \begin{lstlisting}
   type Cont  = (Config, Set[Config], MCont) => Set[Config]
   type MCont = (Config, Set[Config])        => Set[Config]
 \end{lstlisting}
 
-The continuation @Cont@ as a higher-order function takes a configuration, a set of explored
-configurations, as well as a meta-continuation as its arguments. While the meta-continuation
+The continuation @Cont@ is a higher-order function which takes a configuration, a set of explored
+configurations, as well as a meta-continuation as its arguments, while the meta-continuation
 @MCont@ only takes a configuration and a set of explored configurations as arguments.
 Now, the skeleton of function @aeval@ looks as follows:
 
@@ -1344,13 +1344,14 @@ argument of its top @NDCont@ object. The higher-order version of these continuat
 the same pattern.
 2) In the meta-continuation dispatching function @ndcontinue@, the size of the closures set is
 decreasing every time while the other parts of meta-continuation are kept. This means in 
-the higher-order version, we also need an ``ability'' to update the top frame of meta-continuation
+the higher-order version, we also need an ability to update the top frame of meta-continuation
 and keep the rest as the same.
 
 Let us first look into @new_cont@. The body of @new_cont@ is similar to the first-order dispatching
-function @continue@. The invocation of @aeval@ uses the latest meta-continuation @m@ instead of the outer
-one, @mcontinue@. Note that the new environment @new_env@ is updated based on the outer environment;
-while the atomic evaluation uses the latest environment @env_@.
+function @continue@. The invocation of @aeval@ uses the latest
+meta-continuation @m@ instead of the outer @mcontinue@. Note that the
+new environment @new_env@ is updated based on the outer environment;
+the atomic evaluation uses the latest environment @env_@.
 
 \begin{lstlisting}
   val new_cont: Cont = { case (config @ Config(ae, env_, store, time), seen, m) =>
@@ -1360,9 +1361,8 @@ while the atomic evaluation uses the latest environment @env_@.
     aeval(Config(e, new_env, new_store, new_time), seen, continue, m) }
 \end{lstlisting}
 
-Then to address the circularity of the meta-continuations, we define an auxiliary function
-@makeMCont@ to construct @new_mcont@, which takes a list of closures as the argument and returns 
-the meta-continuation. 
+To address the circularity of the meta-continuations, we define an auxiliary function
+@makeMCont@ to construct @new_mcont@, which takes a list of closures as the argument and returns the meta-continuation.
 Function @makeMCont@ is a recursive function where the recursive invocation happens when 
 constructing the meta-continuation based on the rest of closures set. 
 Now we can dynamically generate the meta-continuation inside of a meta-continuation.
@@ -1370,8 +1370,8 @@ Meanwhile, the @new_cont@ we defined above is used here, simply because of diffe
 actually share the same continuation.
 The case where the empty closures set occurs is also interesting. At this case,
 the outer meta-continuation @mcontinue@ is returned.
-It would be clear if we inductively think the base case where the closures set contains only one 
-closure, then @makeMCont@ is invoked with an empty set, therefore should be just the 
+This becomes clear thinking inductively; our base case is such that the closures set contains only one 
+closure. @makeMCont@ is thus invoked with an empty set, and should therefore be just the
 current meta-continuation @mcontinue@.
 
 \begin{lstlisting}
@@ -1384,7 +1384,7 @@ current meta-continuation @mcontinue@.
   val new_mcont: MCont = makeMCont(closures.tail)
 \end{lstlisting}
 
-One last very important thing is about the initial continuation and meta-continuation.
+We present one final, though very important, note regarding the initial continuation and meta-continuation.
 The initial continuation will be invoked when one computation path reaches its end,
 so we invoke the meta-continuation @m@ to continue exploring other paths.
 The initial meta-continuation will be invoked when all computation paths reach their ends,
@@ -1396,23 +1396,24 @@ cases where @konts@ is empty and @konts@ and @ndk@ are both empty, respectively.
     aeval(inject(e), Set(), (c, seen, m) => m(c, seen), (c, seen) => seen)
 \end{lstlisting}
 
-Now we have completely refunctionalized an abstract abstract machine; the two layers
-of continuations are represented by higher-order functions. The inverse transformation 
-of this step is known as \textit{de}functionalization, that converts the higher-order
-representing continuations back to first-order data types representation 
-\cite{Danvy:2001:DW:773184.773202, Danvy:2008:DIP:1411204.1411206}.
+We have now completely refunctionalized an abstract abstract machine; the two layers
+of continuations are represented by higher-order functions. The inverse transformation
+of this step is known as \textit{de}functionalization, which converts the higher-order functions
+representing continuations back to first-order data
+types~\cite{Danvy:2001:DW:773184.773202, Danvy:2008:DIP:1411204.1411206}.
 
 \subsection{Simplification and Caching Fixed-Points}
 
-In this section, based on the refunctionalized A\textsuperscript{2}M, we further present several other 
-transformations toward a big-step abstract definitional interpreter:
+In this section, based on the refunctionalized A\textsuperscript{2}M, we
+further present several other transformations toward a big-step abstract
+definitional interpreter:
 
 \begin{itemize}
   \item The components of the configuration are lifted as arguments of the evaluation
     function.
-  \item The refunctionalized A\textsuperscript{2}M collects all possible configurations, but our final target is an 
+  \item The refunctionalized AAM collects all possible configurations, but our final target is an 
     abstract definitional interpreter that cares about final evaluation results.
-    So starting from this section our abstract semantic artifact returns a set of final 
+    As such, starting from this section, our abstract semantic artifact returns a set of final 
     values instead of collected configurations. 
   \item The configurations still play an important role in caching, where a cache
     is a mapping from configurations to sets of final values. The caching algorithm
@@ -1422,7 +1423,7 @@ transformations toward a big-step abstract definitional interpreter:
     operator @nd@ which makes @aeval@ only uses one layer of continuation.
 \end{itemize}
 
-We will begin by discussing these changes separately, and finally see how they work together.
+We begin discussing these changes separately, and finally see how they work together.
 
 \subsubsection{Values}
 To properly represent final values, we introduce the case class @VS@ which
@@ -1442,7 +1443,7 @@ values is a collection @Set[VS]@.
 % why cache? problem of set of states.
 Recall that the latent assumption of the work-list algorithm in classical AAM is that 
 if we have seen a state @s@, it means we also have seen all the successors of state @s@.
-The caching algorithm we adopt here replays the same assumption but in a big-step 
+The caching algorithm we adopt here replays the same assumption, but in a big-step 
 manner: if we have seen the configuration @c@, then it means we also have seen the 
 values that are evaluated from the configuration @c@.
 Here we will apply the fixed-point caching algorithm as described from
@@ -1476,8 +1477,8 @@ The join operation of caches is defined as joining its two store components.
 \end{lstlisting}
 
 As previously mentioned, the components of configurations are lifted as arguments to
-@aeval@. Given the cache and the simplified one-layer continuation (as we will see later), 
-the shape of function @aeval@ now looks like:
+@aeval@. Given the cache and the simplified one-layer continuation (as we will see later),
+the shape of function @aeval@ now looks as follows:
 
 \begin{lstlisting}
   type Cont = Ans => Ans
@@ -1491,7 +1492,8 @@ the shape of function @aeval@ now looks like:
 
 %TODO: co-inductive
 Upon entering @aeval@, we first determine whether the @out@ cache contains some values 
-for the current configuration and use them immediately (if present) by calling @continue@.
+for the current configuration, and (if present) use them immediately by
+calling @continue@.
 This corresponds to small-step AAM with a work-list: when we have seen a state,
 we can simply discard the state and continue working through the rest of the work-list.
 
@@ -1506,28 +1508,29 @@ The @out@ cache of this iteration will be used as the @in@ cache for the next it
 
 \subsubsection{Nondeterminism Abstraction}
 
-We observe that in the refunctionalized A\textsuperscript{2}M, @makeMCont@ is invoked with the tail part of
-the closure set, and it actually repeats the code that creates the new environment and 
+We observe that in the refunctionalized AAM, @makeMCont@ is invoked with the tail part of
+the closure set, and actually repeats the code that creates the new environment and
 store for the body expression of a closure.
-Based on observation, we present a nondeterministic operator that abstracts this pattern:
+Based on this observation, we present a nondeterministic operator that abstracts this pattern:
 
 \begin{lstlisting}
   def nd[T](ts: Iterable[T], acc: Ans, k: (T, Cache) => Ans): Ans =
     if (ts.isEmpty) acc else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
 \end{lstlisting}
 
-Given a collection of elements of type @T@, an initial accumulator of type @Ans@,
-a function @k@ that works on elements of type @T@, @nd@ chooses an element in
+Given a collection of elements of type @T@, an initial accumulator of
+type @Ans@, and a function @k@ that works on elements of type @T@, @nd@
+chooses an element in
 the collection and applies @k@ to it iteratively, and accumulates the values that
 returned from @k@ when recurring on the rest of the collection. Eventually, @nd@
 returns the accumulated value @acc@ when there is no element in the collection.
 The latest accumulated cache @acc.cache@ is exposed to @k@ when applied.
 
-\subsubsection{Put Them Together}
+\subsubsection{Putting Them Together}
 
 With the skeleton of cache-and-continuation-passing style @aeval@ in mind, we may now
-use the @nd@ operator to fill in the details. The first case of match is that @e@
-is a @let@ expression:
+use the @nd@ operator to fill in the details. The first case of our
+match is that @e@ is a @let@ expression:
 
 \begin{lstlisting}
   case Let(x, App(f, ae), e) =>
@@ -1544,16 +1547,16 @@ is a @let@ expression:
           }) }) }) })
 \end{lstlisting}
 
-We invoke @nd@ twice and perform a nesting two-step, depth-first evaluation over 
+We invoke @nd@ twice and perform a nesting, two-step, depth-first evaluation over 
 possible values of @App(f, ae)@. 
 The outer application of @nd@ evaluates over the set of possible target closures of
 @f@. For each such closure, we go into its body with a new environment and a new store.
-Remember that the function @aeval@ returns a set of @VS@ objects to its continuation,
-so the continuation argument @bdvss@ represents a set of values from multiple computation 
+Recall that the function @aeval@ returns a set of @VS@ objects to its continuation,
+so the continuation argument @bdvss@ represents a set of values from multiple computation
 paths when evaluating this single @body@ expression.
 
-We next consider the inner application of @nd@, which evaluates over the set of body's 
-value/stores @bdvss@. For each @VS@, the time-stamp and the store in @VS@ will be 
+We next consider the inner application of @nd@, which evaluates over the set of the function body's 
+values/stores @bdvss@. For each @VS@, the timestamp and the store in @VS@ will be 
 instantiated to the next application of @aeval@. The environment @new_env@ is built on
 the outer environment variable @env@, which is the environment of this @let@ expression.
 The inner application of @aeval@ evaluates @e@ with the substituted environment and store,
@@ -1568,11 +1571,11 @@ is passed with the latest cache from the most recent continuation of @aeval@ or 
     continue(Ans(vs, new_cache.outUpdate(config, vs)))
 \end{lstlisting}
 
-If the argument expression @e@ is atomic, which is the second case of match, we simply 
+If the argument expression @e@ is atomic, which is the second case of match, we simply
 construct a new instance of @VS@ and pass it to the @continue@ function.
 
-Once the evaluation is completed at each case, we obtain a set of @VS@ objects and must 
-update the @out@ cache. In the first case of pattern matching, this happens at the 
+Once the evaluation is completed at each case, we obtain a set of @VS@ objects and must
+update the @out@ cache. In the first case of pattern matching, this happens at the
 innermost continuation of @aeval@, where we reach the end of one computation path.
 For the second case, we update the @out@ cache before calling the @continue@ function.
 
@@ -1587,24 +1590,25 @@ For the second case, we update the @out@ cache before calling the @continue@ fun
 \end{lstlisting}
 
 Finally, the @analyze@ function (as the entrance of the analysis) does a looping iteration
-to find the least fixed-point of cache starting from an empty cache.
-If the @out@ cache of this iteration is equivalent to its @in@ cache, which means no more 
-fact was discovered during this iteration, then we have reached a fixed-point of cache that 
+to find the least fixed-point of the cache, starting from an empty cache.
+If the @out@ cache of this iteration is equivalent to its @in@ cache, which means no further
+information was discovered during this iteration, then we have reached a fixed-point of cache that 
 has over-approximated the concrete evaluations, and thus the result can be returned.
 Otherwise, we install the latest @out@ cache to the @in@ cache position when initializing 
-the next iteration; in the meanwhile, an empty cache will be used as the @out@ cache. 
+the next iteration; in the meantime, an empty cache will be used as the @out@ cache. 
 
 Now, as we can see, by using the @nd@ operator which abstracts over the meta-continuation,
-the evaluation function can be simplified to one layer continuation-passing style.
-The use of two layers of continuations are unchained to two functions that each of them has one
-continuation.
-The only continuation of @aeval@ plays the same role as the one in a concrete CPS interpreter.
-Furthermore, we added a cache along with the abstract interpreter and the @nd@ operator. 
+the evaluation function can be simplified to a single-layer continuation-passing style.
+The use of two layers of continuations are unchained to two functions,
+in that each of them has one continuation.
+The only continuation of @aeval@ plays the same role as the one in a
+concrete CPS interpreter.
+Furthermore, we add a cache along with the abstract interpreter and the @nd@ operator.
 
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
 
 In the previous section, we have established a computable pushdown control-flow
-analysis through refunctionalization and caching. In this section, we revisit 
+analysis through refunctionalization and caching. In this section, we revisit
 the pushdown control-flow problem and examine what we have done to overcome it. \\
 
 \textit{The Problem with Return-flows.}
