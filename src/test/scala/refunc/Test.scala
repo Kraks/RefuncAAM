@@ -67,16 +67,26 @@ trait RefuncTest extends FunSuite {
          * interpreter against with AAM with P4F allocator.
          * 
          * The summarized store analyzed by DisLinearSmallStepUBStack machine should be
-         * the same with the one analyzed by RefuncCPS abstract interpreter.
+         * the same with the one analyzed by RefuncCPS abstract interpreter, as well as their
+         * traces.
          */
         assert(summarizeUBState(DisLinearSmallStepUBStack.analyze(prog, initenv, initstore)) ==
                summarizeVSS(RefuncCPS.analyze(prog, initenv, initstore).vss))
         assert(DisLinearSmallStepUBStack.trace == RefuncCPS.trace)
 
+        /* The summarized store analyzed by DisLinearSmallStepUBStack machine should be
+         * the same with the one analyzed by RefuncECPS abstract interpreter, as well as their
+         * traces.
+         */
         assert(summarizeUBState(DisLinearSmallStepUBStack.analyze(prog, initenv, initstore)) ==
                summarizeConfig(RefuncECPS.analyze(prog, initenv, initstore)))
         assert(DisLinearSmallStepUBStack.trace == RefuncECPS.trace)
 
+        /* The summarized store analyzed by RefuncECPS abstract interpreter should be
+         * the same with the one analyzed by RefuncCPSNoCache abstract interpreter, as well as their
+         * traces. Since in this part, we only test terminating programs, so RefuncCPS without caches
+         * works fine.
+         */
         assert(summarizeConfig(RefuncECPS.analyze(prog, initenv, initstore)) ==
                summarizeConfig(RefuncCPSNoCache.analyze(prog, initenv, initstore)))
         assert(RefuncCPSNoCache.trace == RefuncECPS.trace)
