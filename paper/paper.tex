@@ -12,23 +12,25 @@
 %% Journal information
 %% Supplied to authors by publisher for camera-ready submission;
 %% use defaults for review submission.
+\setcopyright{acmlicensed} %TODO
+\acmPrice{}
+\acmDOI{10.1145/3236800}
+\acmYear{2018}
+\copyrightyear{2018}
 \acmJournal{PACMPL}
 \acmVolume{2}
-\acmNumber{ICFP} % CONF = POPL or ICFP or OOPSLA
-\acmArticle{1}
-\acmYear{2018}
+\acmNumber{ICFP}
+\acmArticle{105}
 \acmMonth{9}
-\acmDOI{10.1145/nnnnnnn.nnnnnnn}
-\startPage{1}
 
+\startPage{1}
 %% Copyright information
 %% Supplied to authors (based on authors' rights management selection;
 %% see authors.acm.org) by publisher for camera-ready submission;
 %% use 'none' for review submission.
-% TODO: Which one?
 %\setcopyright{none}
 %\setcopyright{acmcopyright}
-\setcopyright{acmlicensed}
+%\setcopyright{acmlicensed} 
 %\setcopyright{rightsretained}
 %\copyrightyear{2018}           %% If different from \acmYear
 
@@ -200,8 +202,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   Abstracting abstract machines is a systematic methodology for constructing
   sound static analyses for higher-order languages, by deriving small-step \emph{abstract}
   abstract machines (A\textsuperscript{2}Ms) that perform abstract interpretation from abstract machines that
-  perform concrete evaluation.
-  \citeauthor{darais2017abstracting} apply the same underlying idea to monadic definitional interpreters,
+  perform concrete evaluation. Darais et al. apply the same underlying idea to monadic definitional interpreters,
   and obtain monadic \emph{abstract} definitional interpreters (ADIs) that perform
   abstract interpretation in big-step style using monads.
   Yet, the relation between small-step abstract abstract machines and big-step
@@ -232,31 +233,31 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   machine with proper caching.
 \end{abstract}
 
-% TODO: Update CCS
 %% 2012 ACM Computing Classification System (CSS) concepts
 %% Generate at 'http://dl.acm.org/ccs/ccs.cfm'.
 \begin{CCSXML}
 <ccs2012>
-  <concept>
-    <concept_id>10011007.10011006.10011008</concept_id>
-    <concept_desc>Software and its engineering~General programming languages</concept_desc>
-    <concept_significance>500</concept_significance>
-  </concept>
-  <concept>
-    <concept_id>10003456.10003457.10003521.10003525</concept_id>
-    <concept_desc>Social and professional topics~History of programming languages</concept_desc>
-    <concept_significance>300</concept_significance>
-  </concept>
+<concept>
+<concept_id>10003752.10003753.10010622</concept_id>
+<concept_desc>Theory of computation~Abstract machines</concept_desc>
+<concept_significance>500</concept_significance>
+</concept>
+<concept>
+<concept_id>10011007.10011006.10011008.10011009.10011012</concept_id>
+<concept_desc>Software and its engineering~Functional languages</concept_desc>
+<concept_significance>500</concept_significance>
+</concept>
 </ccs2012>
 \end{CCSXML}
-\ccsdesc[500]{Software and its engineering~General programming languages}
-\ccsdesc[300]{Social and professional topics~History of programming languages}
+
+\ccsdesc[500]{Theory of computation~Abstract machines}
+\ccsdesc[500]{Software and its engineering~Functional languages}
 %% End of generated code
 
 
 %% Keywords
 %% comma separated list
-\keywords{refunctionalization, abstract machines, abstract interpretation}  %% \keywords are mandatory in final camera-ready submission
+\keywords{refunctionalization, abstract machines, control-flow analysis, Scala}  %% \keywords are mandatory in final camera-ready submission
 
 
 %% \maketitle
