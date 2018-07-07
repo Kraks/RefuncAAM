@@ -80,64 +80,63 @@ object RefuncCPS {
   }
 }
 
+object RefuncCPSNoCache {
+  type Ans = Set[Config]
+  type Cont = (Config, Ans) => Ans
 
+  def inject(e: Expr, env: Env = Map(), 
+             store: Store[BAddr, Storable] = Store[BAddr, Storable](Map())): Config =
+    Config(e, env, store, List())
 
-/* Experimental implementation with breadth first evaluation */
-object RefuncCPSBF {
-  type Cont = (Set[VS], Cache) => (Set[VS], Cache)
-
-  def nd[T](ts: Set[T], acc: Set[VS], cache: Cache, 
-            f: (T, Set[VS], Cache, Cont) => (Set[VS], Cache), g: Cont): (Set[VS], Cache) = {
-    if (ts.isEmpty) g(acc, cache)
-    else f(ts.head, acc, cache, (vss: Set[VS], cache: Cache) => nd(ts.tail, vss, cache, f, g))
+  def nd[T](ts: Iterable[T], acc: Ans, k: (T, Ans) => Ans): Ans = {
+    if (ts.isEmpty) acc
+    else nd(ts.tail, acc ++ k(ts.head, acc), k)
   }
-
-  def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): (Set[VS], Cache) = {
-    val config = Config(e, env, store, time)
-    if (cache.outContains(config)) {
-      return continue(cache.outGet(config), cache)
-    }
-
-    val new_cache = cache.outUpdate(config, cache.inGet(config))
+  
+  def aeval(config: Config, seen: Ans, continue: Cont): Ans = {
+    trace = config.e::trace
+    val Config(e, env, store, time) = config
     val new_time = config.tick
+    val new_seen = if (seen.contains(config)) seen else seen + config
     e match {
+      case Let(x, ae, e) if isAtomic(ae) =>
+        val baddr = allocBind(x, new_time)
+        val new_env = env + (x -> baddr)
+        val new_store = store.update(baddr, atomicEval(ae, env, store))
+        aeval(Config(e, new_env, new_store, new_time), new_seen, continue)
+
+      case Letrec(bds, body) => 
+        val new_env = bds.foldLeft(env)((accenv: Env, bd: B) =>
+          accenv + (bd.x -> allocBind(bd.x, new_time)))
+        val new_store = bds.foldLeft(store)((accbst: BStore, bd: B) => 
+          accbst.update(allocBind(bd.x, new_time), atomicEval(bd.e, new_env, accbst)))
+        aeval(Config(body, new_env, new_store, new_time), new_seen, continue)
+
       case Let(x, App(f, ae), e) =>
-        val closures = atomicEval(f, env, store).asInstanceOf[Set[Clos]]
-        nd(closures, Set[VS](), new_cache, (clos: Clos, acc: Set[VS], cache: Cache, ndk: Cont) => {
-          val Clos(Lam(v, body), c_env) = clos
+        val closures = atomicEval(f, env, store).toList.asInstanceOf[List[Clos]]
+        nd[Storable](closures, new_seen, { case (Clos(Lam(v, body), c_env), seen) =>
           val baddr = allocBind(v, new_time)
           val new_env = c_env + (v -> baddr)
-          val new_store = store.update(baddr, atomicEval(ae, env, store))
-          aeval(body, new_env, new_store, new_time, cache, (bodyvss: Set[VS], cache: Cache) => { 
-            ndk(bodyvss++acc, cache) 
+          val argvs = atomicEval(ae, env, store)
+          val new_store = store.update(baddr, argvs)
+          aeval(Config(body, new_env, new_store, new_time), seen, {
+            case (config@Config(ae, env_, store, time), seen) =>
+              val new_time = config.tick
+              val baddr = allocBind(x, new_time)
+              val new_env = env + (x -> baddr)
+              val new_store = store.update(baddr, atomicEval(ae, env_, store))
+              aeval(Config(e, new_env, new_store, new_time), seen, continue)
           })
-        }, (result_vss: Set[VS], cache: Cache) => {
-          nd(result_vss, Set[VS](), cache, (vs: VS, acc: Set[VS], cache: Cache, ndk: Cont) => {
-            val VS(vals, time, store) = vs
-            val baddr = allocBind(x, time)
-            val new_env = env + (x -> baddr)
-            val new_store = store.update(baddr, vals)
-            aeval(e, new_env, new_store, time, cache, (evss: Set[VS], cache: Cache) => { 
-              ndk(evss++acc, cache) 
-            })
-          },
-          (ans: Set[VS], cache: Cache) => continue(ans, cache.outUpdate(config, ans)))
         })
-  
+
       case ae if isAtomic(ae) =>
-        val vs = Set(VS(atomicEval(ae, env, store), new_time, store))
-        continue(vs, new_cache.outUpdate(config, vs))
+        continue(config, new_seen)
     }
   }
+  var trace: List[Expr] = List()
 
-
-  def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) = {
-    def iter(cache: Cache): (Set[VS], Cache) = {
-      val (vss, new_cache) = aeval(e, env, store, mtTime, cache, (vss, cache) => (vss, cache.outUpdate(Config(e, env, store, mtTime), vss)))
-      if (new_cache.out == cache.out) { (vss, new_cache) }
-      else { iter(Cache(new_cache.out, new_cache.out)) }
-    }
-    iter(Cache.mtCache)
+  def analyze(e: Expr, env: Env, bstore: BStore): Set[Config] = {
+    trace = List()
+    aeval(inject(e, env, bstore), Set(), { (c, seen) => seen })
   }
 }
-

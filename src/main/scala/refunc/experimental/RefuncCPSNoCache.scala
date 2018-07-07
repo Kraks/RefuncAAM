@@ -5,7 +5,7 @@ import refunc.ast._
 
 import refunc.ANFAAM._
 
-object RefuncCPSNoCache {
+object RefuncCPSVSNoCache {
   type Ans = Set[VS]
   type Cont = Ans => Ans
 
@@ -58,8 +58,6 @@ object RefuncCPSNoCache {
   def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore) =
     aeval(e, env, store, mtTime, (vss => vss))
 }
-
-
 
 /* Experimental implementation with breadth first evaluation */
 object RefuncCPSNoCacheBF {

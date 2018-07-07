@@ -76,6 +76,10 @@ trait RefuncTest extends FunSuite {
         assert(summarizeUBState(DisLinearSmallStepUBStack.analyze(prog, initenv, initstore)) ==
                summarizeConfig(RefuncECPS.analyze(prog, initenv, initstore)))
         assert(DisLinearSmallStepUBStack.trace == RefuncECPS.trace)
+
+        assert(summarizeConfig(RefuncECPS.analyze(prog, initenv, initstore)) ==
+               summarizeConfig(RefuncCPSNoCache.analyze(prog, initenv, initstore)))
+        assert(RefuncCPSNoCache.trace == RefuncECPS.trace)
       
         /* The result analyzed by the refunctionalized abstract interpreter written in CPS
          * (RefuncCPS) should have the same result analyzed by the direct-style abstract 
@@ -112,7 +116,7 @@ trait RefuncTest extends FunSuite {
         /* Since here we test terminating programs, so RefuncCPS without caching should have
          * the same result against to RefuncCPS with caching. */
         assert(RefuncCPS.analyze(prog, initenv, initstore).vss ==
-               RefuncCPSNoCache.analyze(prog, initenv, initstore))
+               RefuncCPSVSNoCache.analyze(prog, initenv, initstore))
       }
     }
   }

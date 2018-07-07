@@ -7,7 +7,7 @@
 %% For single-blind review submission, w/ CCS and ACM Reference
 %\documentclass[acmsmall,review]{acmart}\settopmatter{printfolios=true}
 %% For final camera-ready submission, w/ required CCS and ACM Reference
-\documentclass[acmsmall, review]{acmart}\settopmatter{}
+\documentclass[acmsmall, screen]{acmart}\settopmatter{}
 
 %% Journal information
 %% Supplied to authors by publisher for camera-ready submission;
@@ -283,7 +283,7 @@ methodology which provides a recipe for constructing sound abstract interpreters
 for higher-order functional languages from concrete abstract machines.
 %~\cite{van2012systematic, van2010abstracting}.
 Given a concrete small-step abstract machine that models a store
-(e.g. the CESK machine, Krivine's machine, etc.), if we allocate continuations
+(e.g., the CESK machine, Krivine's machine, etc.), if we allocate continuations
 in the store and draw all allocated addresses (both for regular values and
 for continuations) from a finite set, then
 we obtain an abstract interpreter with a finite state space, which can be used for
@@ -416,7 +416,7 @@ unbounded stack (and utilizing the proper caching algorithm) leads to a pushdown
      [start chain, color=gray] \chainin (m-3-1);
      {
        [start branch=C] \chainin (m-3-5)
-       [join={node[above, labeled] {\text{Known as Danvy's correspondences for concrete semantic artifacts }}}];
+       [join={node[above, labeled] {\text{Functional correspondences for concrete semantic artifacts}}}];
      }
    }
    \draw[gray,dashed,transform canvas={xshift=0.5ex}] (m-1-5.north west) -- (m-2-5.south west);
@@ -1000,7 +1000,7 @@ Function @f1@ and @f2@ mutually invoke each other, so the frames of @f1@ and @f@
 alternately pushed onto the top of the current stack. However, no two existing stack
 components are identical in the state space. One can decide the reachability of a state
 through Dyck state graph \cite{earl2010pushdown, earl2012introspective}, but simply
-caching the explored states (i.e. @seen@) would not always make the analyzer terminate.
+caching the explored states (i.e., @seen@) would not always make the analyzer terminate.
 
 
 \section{Linearization} \label{linear}
@@ -1098,7 +1098,7 @@ In the second case (shown below), we will see how @NDCont@ deals with nondetermi
       case Nil => ndk match {
         case Nil => None /* Halt */
         case NDCont(Nil, _, _, _, _)::ndk =>
-          Some(NDState(ae, env, bstore, konts, time, ndk)) /* transfer to the most recent fork point */
+          Some(NDState(ae, env, bstore, konts, time, ndk)) /* transfer to the front-most fork point */
         case NDCont(cls, argvs, bstore, time, frames)::ndk =>
           val Clos(Lam(v, body), c_env) = cls.head
           val baddr = allocBind(v, time);  val new_env = c_env + (v -> baddr)
@@ -1125,7 +1125,7 @@ more cases when @konts@ is empty:
   \item If the target closures set of the front-most @NDCont@ is empty (@Nil@ in the code),
     then we have computed all the closures at this fork point and should move to the next fork
     point. Since the meta-continuation @nkd@ is represented by a list, and we always append new
-    elements to its front, we resume to the most recent fork point by popping the front-most
+    elements to its front, we resume to the next fork point by popping the front-most
     element and using the tail of that list.
   \item Otherwise, we pop a closure from the set, and build a new environment and store for
     evaluating the body expression of that closure. We use the same frame list and time which
