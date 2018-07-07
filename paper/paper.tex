@@ -1889,9 +1889,10 @@ Reynolds' seminal paper \emph{Definitional interpreters for higher-order program
 \cite{Reynolds:72, Reynolds:HOSC98-revisited} showed that in definitional interpreters, the
 defined language inherits properties such as the order of evaluation from the defining
 language, unless these properties are made explicit in the interpreter. With this insight,
-\citet{darais2017abstracting} constructed abstract definitional interpreters which
-automatically inherit the pushdown control-flow property from its defining language because
-the defined language simply uses the call-stack model of the meta-language.
+\citeauthor{darais2017abstracting} constructed abstract definitional interpreters
+~\cite{darais2017abstracting, darais2017thesis} which automatically inherit the pushdown 
+control-flow property from its defining language because the defined language simply uses 
+the call-stack model of the meta-language.
 \citeauthor{darais2017abstracting}'s abstract definitional interpreters work on direct-style
 $\lambda$-calculus, and are themselves written in monadic style. One of the advantages of monadic
 abstract interpreters is modularity. Hence, deploying different sensitivities
