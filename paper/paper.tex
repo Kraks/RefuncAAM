@@ -576,8 +576,7 @@ The Scala representations for the components of the CESK machine are as follows:
 
 \begin{lstlisting}
   type Addr = Int;     type Env = Map[String, Addr];    type Store = Map[Addr, Storable]
-  abstract class Storable
-  case class Clos(v: Lam, env: Env) extends Storable
+  abstract class Storable;            case class Clos(v: Lam, env: Env) extends Storable
   case class Frame(x: String, e: Expr, env: Env);       type Kont = List[Frame]
   case class State(e: Expr, env: Env, store: Store, k: Kont)
 \end{lstlisting}
@@ -1644,22 +1643,22 @@ still share the same continuation and $1$-CFA does not increase the ability to s
 return-flows. \\
 
 \textit{Call/Return Matching through Refunctionalization and Caching.}
-The refunctionalized AAM we obtained has the perfect match on return-flows even though
+The refunctionalized AAM with caching has the perfect match on return-flows even though
 we do not have a stack model. The higher-order functions representing continuations
-already connect all the executions in order. In fact, the continuations (call stack)
-of the analyzed language are blended into the call stack of our defining language
-(Scala) through refunctionalization, and hence the call/return flow of the analyzed
-language is naturally matched.
+already connect all the executions in order.
 
-In fact, we started with an unbounded-stack AAM which already precisely
-matches the calls and returns. Refunctionalization makes the interpreter a ``big-step''
-semantic artifact; the consequence is that we have no place to explicitly save the context
+In fact, we started with an unbounded-stack AAM which already precisely matches the calls and returns
+by explicitly using the data types to model the stack.
+However, in the refunctionalized AAM, the higher-order functions representing continuations of the analyzed 
+language are blended into the call stack of our defining language (Scala) through 
+refunctionalization, and hence the call/return flow of the analyzed language is naturally matched.
+This is why we say the pushdown property of the analysis is inherited from the defining language \cite{darais2017abstracting}.
+Another consequence of refunctionalization is that we have no place to explicitly save the context
 information in the store or on the stack.
-However, refunctionalization not only forces the nondeterministic control flows to be higher-order,
-but also drives us to use a different caching algorithm.
 
-Indeed, the caching algorithm plays an important role in guaranteeing
-the analysis will eventually terminate.
+Meanwhile, refunctionalization not only forces the nondeterministic control flows to be higher-order,
+but also drives us to use a different caching algorithm.
+Indeed, the caching algorithm plays an important role in guaranteeing the analysis will eventually terminate.
 An interesting implication of this is if we apply the caching algorithm with some
 necessary changes to small-step abstract machines with an unbounded stack, we are
 also able to establish a computable and precise call/return match.
