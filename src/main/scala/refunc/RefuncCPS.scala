@@ -135,8 +135,8 @@ object RefuncCPSNoCache {
   }
   var trace: List[Expr] = List()
 
-  def analyze(e: Expr, env: Env, bstore: BStore): Set[Config] = {
+  def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore): Set[Config] = {
     trace = List()
-    aeval(inject(e, env, bstore), Set(), { (c, seen) => seen })
+    aeval(inject(e, env, store), Set(), { (c, seen) => seen })
   }
 }

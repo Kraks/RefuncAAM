@@ -86,13 +86,8 @@ object DisLinearSmallStepUBStack {
     }
   }
 
-  def analyze(e: Expr): Set[State] = {
+  def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore): Set[State] = {
     trace = List()
-    drive_step(inject(e), Set())
-  }
-
-  def analyze(e: Expr, env: Env, bstore: BStore): Set[State] = {
-    trace = List()
-    drive_step(inject(e, env, bstore), Set())
+    drive_step(inject(e, env, store), Set())
   }
 }

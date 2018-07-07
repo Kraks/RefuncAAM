@@ -46,7 +46,7 @@ The abstract syntax are specified in file `src/main/scala/refunc/ast/Expr.scala`
 
 #### Section 2.2
 
-In the transformation diagram, the starting point at the bottom left corner is concrete _abstract machines_. `src/main/scala/refunc/CESK.scala` contains a concrete CESK machine implementation (object `CESK`), and also a refunctionalized definitional interpreter in continuation-passing style (object `RefuncCESK`).
+In the transformation diagram, the starting point at the bottom left corner is concrete _abstract machines_. `src/main/scala/refunc/concrete/CESK.scala` contains a concrete CESK machine implementation (object `CESK`), and also a refunctionalized definitional interpreter in continuation-passing style (object `RefuncCESK`).
 
 #### Section 2.3
 

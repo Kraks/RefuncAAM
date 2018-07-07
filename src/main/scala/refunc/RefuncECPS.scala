@@ -66,13 +66,8 @@ object RefuncECPS {
     }
   }
 
-  def analyze(e: Expr): Set[Config] = {
+  def analyze(e: Expr, env: Env = mtEnv, store: BStore = mtStore): Set[Config] = {
     trace = List()
-    aeval(inject(e), Set(), { (c, seen, m) => m(c, seen) }, { (c, seen) => seen })
-  }
-
-  def analyze(e: Expr, env: Env, bstore: BStore): Set[Config] = {
-    trace = List()
-    aeval(inject(e, env, bstore), Set(), { (c, seen, m) => m(c, seen) }, { (c, seen) => seen })
+    aeval(inject(e, env, store), Set(), { (c, seen, m) => m(c, seen) }, { (c, seen) => seen })
   }
 }
