@@ -209,7 +209,7 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
   abstract definitional interpreters is not well studied.
 
   In this paper, we explain their functional correspondence and demonstrate how to
-  syntactically transform small-step abstract abstract machines into big-step abstract
+  systematically transform small-step abstract abstract machines into big-step abstract
   definitional interpreters.
   Building on known semantic interderivation techniques from the concrete evaluation
   setting, the transformations include linearization, lightweight fusion, disentanglement,
@@ -285,7 +285,7 @@ However, implementing a sound static analysis by building an
 abstract interpreter~\cite{cousot1977abstract} remained an esoteric and difficult
 task until very recently.
 
-\Citet{van2012systematic,van2010abstracting} proposed the Abstracting abstract machines (AAM)
+\Citet{van2012systematic,van2010abstracting} proposed the abstracting abstract machines (AAM)
 methodology which provides a recipe for constructing sound abstract interpreters
 for higher-order functional languages from concrete abstract machines.
 %~\cite{van2012systematic, van2010abstracting}.
@@ -299,7 +299,7 @@ By using different address allocators \cite{Gilray:2016:ACP:2951913.2951936},
 one can further instantiate different polyvariant control-flow analyses.
 
 Applying the same idea to monadic definitional interpreters, \citet{darais2017abstracting}
-built monadic abstract definitional interpreters (ADIs) in big-step style.
+showed how to build monadic abstract definitional interpreters (ADIs) in big-step style.
 One of the advantages of a monadic interpreter is
 that it is modular and composable. By changing the underlying monads, the definition
 of the interpreter is not modified, but we can recover different semantics, including
@@ -310,7 +310,7 @@ Broadly speaking, abstract abstract machines and abstract definitional interpret
 different forms of abstract interpreters. They are obtained by applying a combination
 of abstractions to their concrete counterparts: abstract machines and definitional
 interpreters, respectively. An interesting question, and the subject of this paper, is
-how one can derive one abstract semantic artifact given its counterpart.
+how one can derive one abstract semantic artifact given the other.
 The main contribution of this paper is to explain the functional correspondence
 between these abstract semantic artifacts, and to demonstrate the concrete
 syntactic transformation steps necessary to transform an abstract abstract machine
@@ -543,14 +543,14 @@ in ANF.
 \end{lstlisting}
 
 In ANF, an expression is either an atomic expression or a @let@ expression.
-A restriction exists which states that all function applications must be administered
+A restriction exists which states that all function applications (and only those) must be administered
 within a @let@ expression and then bound to a variable name under the current environment.
 Both the operator and operand of function applications are atomic expressions.
 An atomic expression $ae$ is either a variable or a literal @lambda@ term, either of which
 can be evaluated in a single step. We also assume that all the variable names in the program
  are unique.
 
-The abstract syntax in Scala is shown as follows. We assume that the source program conforms
+The abstract syntax is represented in Scala as follows. We assume that the source program conforms
 to the ANF convention, and as such, do not enforce it in the term structure of Scala constructs.
 
 \begin{lstlisting}
@@ -692,7 +692,7 @@ from the final state.
 Abstracting abstract machines (AAM) is a systematic methodology that derives sound
 abstract interpreters for higher-order functional languages from concrete abstract
 machines \cite{van2012systematic, van2010abstracting}. An abstract abstract machine
-implements computable abstract semantics which approximates the run-time behaviors of
+implements a computable abstract semantics which approximates the run-time behaviors of
 programs.
 Since the state space of concrete execution is possibly infinite, the key insight of the
 AAM approach when analyzing programs is to allocate both variable bindings and continuations
@@ -706,8 +706,8 @@ control-flow analysis.
 
 \subsubsection{Machine Components}
 
-Similar to the CESK machine, the machine state of an AAM has a control, an environment, a store,
-and continuation, as well as a timestamp. However, there are several notable differences
+Similar to the concrete CESK machine, the machine state of the derived AAM has a control component, an environment, a store,
+a continuation, as well as a timestamp. However, there are several notable differences
 between an AAM's store and the CESK machine's store. In AAM, the store maps addresses to sets of
 values; it stores all possible values for a particular address. As such, dereferencing
 addresses becomes nondeterministic. Also, the store performs \emph{joining}, rather than
@@ -1986,13 +1986,14 @@ denotational and operational styles.
   Kimball Germane and David Sherratt for their feedback, and
   Thomas Gilray for the discussion on pushdown control-flow analysis.
 
-  This work was supported in part by the
-  \grantsponsor{GS100000001}{National Science
-    Foundation}{http://dx.doi.org/10.13039/100000001} under Grant
-  No.~\grantnum{GS100000001}{nnnnnnn} and Grant
-  No.~\grantnum{GS100000001}{mmmmmmm} and by the
-  \grantsponsor{GS100000001}{DOE}{XXX} under Grant
-  No.~\grantnum{GS100000001}{nnnnnnn}.  \note{TODO: grants}
+  This work was supported in part by 
+  NSF awards 1553471 and 1564207, and DOE award DE-SC0018050.
+  % \grantsponsor{GS100000001}{National Science
+  %   Foundation}{http://dx.doi.org/10.13039/100000001} under Grant
+  % No.~\grantnum{GS100000001}{nnnnnnn} and Grant
+  % No.~\grantnum{GS100000001}{mmmmmmm} and by the
+  % \grantsponsor{GS100000001}{DOE}{XXX} under Grant
+  % No.~\grantnum{GS100000001}{nnnnnnn}.  \note{TODO: grants}
 \end{acks}
 
 %% Bibliography
