@@ -245,13 +245,19 @@ edge[every join]#1(\tikzchaincurrent)\fi}}}
 <concept>
 <concept_id>10011007.10011006.10011008.10011009.10011012</concept_id>
 <concept_desc>Software and its engineering~Functional languages</concept_desc>
-<concept_significance>500</concept_significance>
+<concept_significance>300</concept_significance>
+</concept>
+<concept>
+<concept_id>10011007.10011006.10011041.10010943</concept_id>
+<concept_desc>Software and its engineering~Interpreters</concept_desc>
+<concept_significance>300</concept_significance>
 </concept>
 </ccs2012>
 \end{CCSXML}
 
 \ccsdesc[500]{Theory of computation~Abstract machines}
-\ccsdesc[500]{Software and its engineering~Functional languages}
+\ccsdesc[300]{Software and its engineering~Functional languages}
+\ccsdesc[300]{Software and its engineering~Interpreters}
 %% End of generated code
 
 
@@ -856,9 +862,7 @@ We have two cases to consider (code shown below):
           val new_env = env_f + (x -> baddr)
           val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
           State(e, new_env, new_store, kstore, f_kaddr, new_time)
-        }
-    }
-  }
+        } } }
 \end{lstlisting}
 
 \subsubsection{$k$-Call-Sensitive Instantiation} \label{kcfainst}
@@ -973,9 +977,7 @@ function application @App(f, ae)@.
             val baddr = allocBind(x, new_time);  val new_env = env_f + (x -> baddr)
             val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
             List(State(e, new_env, new_store, konts, new_time))
-        }
-    }
-  }
+        } } }
 \end{lstlisting}
 
 In the first case of pattern matching, we may have multiple possible closures for callee @f@.
@@ -1179,8 +1181,7 @@ Since each case in function @step@ is statically known, we can inline the patter
       case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndkonts) => ...
         drive_step(NDState(body, new_env, new_store, new_frames, new_time, new_ndk), new_seen)
       case NDState(ae, env, bstore, konts, time, ndkonts) if isAtomic(ae) => ...
-    }
-  }
+    } }
 \end{lstlisting}
 
 With this, we have a single function to perform both abstract evaluation and the collection of
@@ -1217,8 +1218,7 @@ functions:
       case NDState(Let(x, App(f, ae), e), env, bstore, konts, time, ndk) => ...
         drive_step(NDState(body, new_env, new_store, new_frames, new_time, new_ndk), new_seen)
       case NDState(ae, env, bstore, konts, time, ndk) if isAtomic(ae) => continue(nds, new_seen)
-    }
-  }
+    } }
 \end{lstlisting}
 
 The above code shows the skeleton of the @drive_step@.
@@ -1255,20 +1255,21 @@ holds the innermost context.
     ndk match {
       case Nil => seen
       case NDCont(Nil, _, _, _, _)::ndk =>
-        drive_step(NDState(ae, env, bstore, konts, time, ndk), seen)
+        /* drive_step() is equivalently replaced by ndcontinue() */
+        ndcontinue(NDState(ae, env, bstore, konts, time, ndk), seen)
       case NDCont(cls, argvs, bstore, time, frames)::ndk =>
-        val Clos(Lam(v, body), c_env) = cls.head
-        val baddr = allocBind(v, time);  val new_env = c_env + (v -> baddr)
-        val new_store = bstore.update(baddr, argvs)
+        val Clos(Lam(v, body), c_env) = cls.head;  val baddr = allocBind(v, time)
+        val new_env = c_env + (v -> baddr);  val new_store = bstore.update(baddr, argvs)
         val new_ndk = NDCont(cls.tail, argvs, bstore, time, frames)::ndk
         drive_step(NDState(body, new_env, new_store, frames, time, new_ndk, seen))
     } }
 \end{lstlisting}
 
-Function @ndcontinue@ is identical to the dispatching logic in @continue@ when @konts@ is empty.
+Function @ndcontinue@ is identical to the dispatching logic in @continue@ when @konts@ is empty,
+except that the first application of @drive_step@ is reduced to @ndcontinue@ (we can safely do this because 
+@ae@ is atomic and @knots@ is empty).
 When @ndk@ is empty, the current set of explored states @seen@ is returned, after which the analysis terminates.
 Otherwise, a new @NDState@ is constructed depending on the status of the closures set.
-% first call to drive_step can be replaced with continue. ae is atomic, konts is empty.
 
 The purpose of disentanglement is to reveal the defunctionalized form of our AAM.
 Functions @continue@ and @ndcontinue@ that dispatch different data types representing
@@ -1377,9 +1378,8 @@ current meta-continuation @mcontinue@.
 \begin{lstlisting}
   def makeMCont(cls: List[Clos]): MCont =
     if (cls.isEmpty) mcontinue else { (config, seen) =>
-      val Clos(Lam(v, body), c_env) = cls.head
-      val baddr = allocBind(v, new_time);  val new_env = c_env + (v -> baddr)
-      val new_store = store.update(baddr, argvs)
+      val Clos(Lam(v, body), c_env) = cls.head;  val baddr = allocBind(v, new_time)
+      val new_env = c_env + (v -> baddr);  val new_store = store.update(baddr, argvs)
       aeval(Config(body, new_env, new_store, new_time), seen, new_cont, makeMCont(cls.tail)) }
   val new_mcont: MCont = makeMCont(closures.tail)
 \end{lstlisting}
@@ -1409,6 +1409,8 @@ further present several other transformations toward a big-step abstract
 definitional interpreter:
 
 \begin{itemize}
+  \item The function @aeval@ is simplified by introducing and using a nondeterministic
+    operator @nd@ which makes @aeval@ only uses one layer of continuation.
   \item The components of the configuration are lifted as arguments of the evaluation
     function.
   \item The refunctionalized AAM collects all possible configurations, but our final target is an
@@ -1419,13 +1421,70 @@ definitional interpreter:
     is a mapping from configurations to sets of final values. The caching algorithm
     ensures termination of the analysis, as well as performs a sound over-approximation
     of all possible values and reachable paths.
-  \item The function @aeval@ is simplified by introducing and using a nondeterministic
-    operator @nd@ which makes @aeval@ only uses one layer of continuation.
 \end{itemize}
 
 We begin discussing these changes separately, and finally see how they work together.
 
+\subsubsection{Nondeterminism Abstraction}
+
+We observe that in the refunctionalized AAM, @makeMCont@ is invoked with the tail part of
+the closure set, and actually repeats the code that creates the new environment and
+store for the body expression of a closure.
+Based on this observation, we present a nondeterministic operator that abstracts this pattern:
+
+\begin{lstlisting}
+  type Ans = Set[Config]
+  def nd[T](ts: Iterable[T], acc: Ans, k: (T, Ans) => Ans): Ans =
+    if (ts.isEmpty) acc else nd(ts.tail, acc ++ k(ts.head, acc), k)
+\end{lstlisting}
+
+As a matter of convenience, we name the return type of the abstract interpreter to be @Ans@,
+which is @Set[Config]@ for the moment.
+Given a collection of elements of type @T@, an initial accumulator of type @Ans@, and a function
+@k@ that works on elements of type @T@, @nd@ chooses an element in the collection and applies @k@
+to it iteratively, and accumulates the values that returned from @k@ when recurring on the rest 
+of the collection. Eventually, @nd@ returns the accumulated value @acc@ when there is no element
+in the collection. The latest accumulated value @acc@ is exposed to @k@ when applied.
+
+Now we may refactor the function @aeval@ to one layer of continuation by using 
+the @nd@ operator.
+The use of two layers of continuations will be unchained to two functions, in that each of them 
+has one continuation.
+
+\begin{lstlisting}
+  type Cont = (Config, Ans) => Ans
+  def aeval(config: Config, seen: Ans, continue: Cont): Ans = { ...  e match {
+    case Let(x, App(f, ae), e) =>
+      val closures = atomicEval(f, env, store).toList.asInstanceOf[List[Clos]]
+      nd[Storable](closures, new_seen, { case (Clos(Lam(v, body), c_env), seen) =>
+        val baddr = allocBind(v, new_time);      val new_env = c_env + (v -> baddr)
+        val argvs = atomicEval(ae, env, store);  val new_store = store.update(baddr, argvs)
+        aeval(Config(body, new_env, new_store, new_time), seen, { case (config, seen) =>
+          val Config(ae, env_, store, time) = config;  val new_time = config.tick
+          val baddr = allocBind(x, new_time);  val new_env = env + (x -> baddr)
+          val new_store = store.update(baddr, atomicEval(ae, env_, store))
+          aeval(Config(e, new_env, new_store, new_time), seen, continue) }) })
+    case ae if isAtomic(ae) => continue(config, new_seen) } }
+\end{lstlisting}
+
+The circular meta-continuation is abstracted by the @nd@ operator, and only one continuation
+remains at the level of @aeval@. 
+When encountering a set of possible closures, we apply @nd@ on the set with the latest explored
+configurations and an anonymous function that works on each closure. The beginning part 
+(before calling @aeval@) of this anonymous function is essentially abstracted from @makeMCont@, 
+which constructs new environment and store for the closure being evaluated.
+Then we apply @aeval@ on the body expression of the closure with a continuation, 
+which is inlined from @new_cont@ and will invoke @aeval@ on @e@ with the current continuation of the @let@ expression.
+
+As we can see, by using the @nd@ operator, the evaluation function can be simplified to a 
+single-layer continuation-passing style.
+The only continuation of @aeval@ plays the same role as the one in a concrete CPS interpreter.
+
 \subsubsection{Values}
+
+Up to now, the abstract interpreter still collects and returns a set of configurations.
+But our target, the abstract definitional interpreters, should return a set of final \textit{values}
+instead of collected configurations; the intermediate values are simply discarded.
 To properly represent final values, we introduce the case class @VS@ which
 contains a set of storable values, a timestamp, and a store.
 
@@ -1440,7 +1499,7 @@ Since the whole computation is potentially nondeterministic, the type of the fin
 values is a collection @Set[VS]@.
 
 \subsubsection{Cache-Passing Style}
-% why cache? problem of set of states.
+
 Recall that the latent assumption of the work-list algorithm in classical AAM is that
 if we have seen a state @s@, it means we also have seen all the successors of state @s@.
 The caching algorithm we adopt here replays the same assumption, but in a big-step
@@ -1466,9 +1525,9 @@ Once we have evaluated a term to some values, we update the @out@ cache. In the 
 iteration, we will use the @out@ cache from the previous iteration as the @in@ cache.
 The iteration terminates when the @out@ cache is identical to the @in@ cache.
 
-We can now transform our abstract interpreter into cache-passing style. We begin by defining the
+We can now transform our abstract interpreter into cache-passing style. We begin by redefining the
 return type @Ans@ as a case class which contains a @VS@ set and a cache. @Ans@ also implements
-its own accumulating operation @++@ which defines as an union of @Set[VS]@s and a join of caches.
+its own accumulating operation @++@ which defines as a union of @Set[VS]@s and a join of caches.
 The join operation of caches is defined as joining its two store components.
 
 \begin{lstlisting}
@@ -1476,12 +1535,20 @@ The join operation of caches is defined as joining its two store components.
     def ++(ans: Ans): Ans = Ans(vss ++ ans.vss, cache.join(ans.cache)) }
 \end{lstlisting}
 
-As previously mentioned, the components of configurations are lifted as arguments to
-@aeval@. Given the cache and the simplified one-layer continuation (as we will see later),
-the shape of function @aeval@ now looks as follows:
+Accordingly, the @nd@ operator is slightly changed to cache-passing style. 
+The argument of type @Ans@ in the continuation @k@ is replaced by an argument of type @Cache@;
+every time when we apply @k@, the latest cache @acc.cache@ is provided.
 
 \begin{lstlisting}
-  type Cont = Ans => Ans
+  def nd[T](ts: Iterable[T], acc: Ans, k: (T, Cache) => Ans): Ans =
+    if (ts.isEmpty) acc else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
+\end{lstlisting}
+
+As previously mentioned, the components of configurations are lifted as arguments to
+@aeval@. Given the cache and the simplified one-layer continuation, the shape of function 
+@aeval@ now looks as follows:
+
+\begin{lstlisting}
   def aeval(e: Expr, env: Env, store: BStore, time: Time, cache: Cache, continue: Cont): Ans = {
     val config = Config(e, env, store, time);  val new_time = config.tick
     if (cache.outContains(config)) continue(Ans(cache.outGet(config), cache))
@@ -1505,26 +1572,6 @@ In the initial iteration, we first conservatively assume that all computations c
 and if not, we update its values in the cache after the evaluation. In terms of partial orders and
 lattices, it is the case that starts the Kleene iteration from the bottom of the lattice.
 The @out@ cache of this iteration will be used as the @in@ cache for the next iteration.
-
-\subsubsection{Nondeterminism Abstraction}
-
-We observe that in the refunctionalized AAM, @makeMCont@ is invoked with the tail part of
-the closure set, and actually repeats the code that creates the new environment and
-store for the body expression of a closure.
-Based on this observation, we present a nondeterministic operator that abstracts this pattern:
-
-\begin{lstlisting}
-  def nd[T](ts: Iterable[T], acc: Ans, k: (T, Cache) => Ans): Ans =
-    if (ts.isEmpty) acc else nd(ts.tail, acc ++ k(ts.head, acc.cache), k)
-\end{lstlisting}
-
-Given a collection of elements of type @T@, an initial accumulator of
-type @Ans@, and a function @k@ that works on elements of type @T@, @nd@
-chooses an element in
-the collection and applies @k@ to it iteratively, and accumulates the values that
-returned from @k@ when recurring on the rest of the collection. Eventually, @nd@
-returns the accumulated value @acc@ when there is no element in the collection.
-The latest accumulated cache @acc.cache@ is exposed to @k@ when applied.
 
 \subsubsection{Putting Them Together}
 
@@ -1597,13 +1644,8 @@ has over-approximated the concrete evaluations, and thus the result can be retur
 Otherwise, we install the latest @out@ cache to the @in@ cache position when initializing
 the next iteration; in the meantime, an empty cache will be used as the @out@ cache.
 
-Now, as we can see, by using the @nd@ operator which abstracts over the meta-continuation,
-the evaluation function can be simplified to a single-layer continuation-passing style.
-The use of two layers of continuations are unchained to two functions,
-in that each of them has one continuation.
-The only continuation of @aeval@ plays the same role as the one in a
-concrete CPS interpreter.
-Furthermore, we add a cache along with the abstract interpreter and the @nd@ operator.
+Now, we have a big-step abstract interpreter written in plain continuation-passing style which
+utilizes the @nd@ operator and guarantees termination by caching.
 
 \subsection{Pushdown Control-Flow Analysis, Revisited} \label{pdcfarevisit}
 
