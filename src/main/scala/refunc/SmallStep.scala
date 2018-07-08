@@ -44,7 +44,7 @@ object SmallStep {
   def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
     case Nil => seen
     case hd::tl if seen.contains(hd) => drive(tl, seen)
-    case hd::tl => drive(step(hd).toList ++ tl, seen + hd)
+    case hd::tl => drive(step(hd) ++ tl, seen + hd)
   }
 
   def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())

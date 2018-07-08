@@ -12,7 +12,7 @@
 %% Journal information
 %% Supplied to authors by publisher for camera-ready submission;
 %% use defaults for review submission.
-\setcopyright{acmlicensed} %TODO
+\setcopyright{rightsretained}
 \acmPrice{}
 \acmDOI{10.1145/3236800}
 \acmYear{2018}
@@ -917,7 +917,7 @@ up to the current execution point.
   def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
     case Nil => seen
     case hd::tl if seen.contains(hd) => drive(tl, seen)
-    case hd::tl => drive(step(hd).toList ++ tl, seen + hd)
+    case hd::tl => drive(step(hd) ++ tl, seen + hd)
   }
   def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
 \end{lstlisting}
@@ -998,7 +998,7 @@ recursive functions:
                                (let ([z (f1 1)]) z))
 \end{lstlisting}
 
-Function @f1@ and @f2@ mutually invoke each other, so the frames of @f1@ and @f@ will be
+Function @f1@ and @f2@ mutually invoke each other, so the frames of @f1@ and @f2@ will be
 alternately pushed onto the top of the current stack. However, no two existing stack
 components are identical in the state space. One can decide the reachability of a state
 through Dyck state graph \cite{earl2010pushdown, earl2012introspective}, but simply
@@ -1265,7 +1265,7 @@ holds the innermost context.
     } }
 \end{lstlisting}
 
-Function @ndcontinue@ is identical to the dispatching logic in @continue@ when @konts@ is empty,
+Function @ndcontinue@ is identical to the foregoing dispatching logic of meta-continuations when @konts@ is empty,
 except that the first application of @drive_step@ is reduced to @ndcontinue@ (we can safely do this because 
 @ae@ is atomic and @knots@ is empty).
 When @ndk@ is empty, the current set of explored states @seen@ is returned, after which the analysis terminates.
@@ -1474,7 +1474,7 @@ configurations and an anonymous function that works on each closure. The beginni
 (before calling @aeval@) of this anonymous function is essentially abstracted from @makeMCont@, 
 which constructs new environment and store for the closure being evaluated.
 Then we apply @aeval@ on the body expression of the closure with a continuation, 
-which is inlined from @new_cont@ and will invoke @aeval@ on @e@ with the current continuation of the @let@ expression.
+which is inlined from @new_cont@ and will apply @aeval@ to @e@ with the current continuation of the @let@ expression.
 
 As we can see, by using the @nd@ operator, the evaluation function can be simplified to a 
 single-layer continuation-passing style.
