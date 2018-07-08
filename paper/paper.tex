@@ -907,8 +907,7 @@ the stack. By doing so, we recover the call structure as the same as at run-time
 (so-called pushdown control-flow analysis), but since the stack is unbounded,
 the state space is potentially infinite.
 
-The pushdown AAM with an unbounded stack is also described by \citeauthor{van2012systematic}
-\cite{van2012systematic}.
+The pushdown AAM with an unbounded stack is also described by \citet{van2012systematic}.
 We show it here is to maintain consistency of abstract semantics during
 transformations -- since the eventual abstract definitional interpreters simply inherit
 a precise control-flow from their defining language, we also would like to start from a
@@ -953,7 +952,7 @@ For each closure in the set, a new frame is constructed and pushed onto the stac
 The code for handling the second case (atomic expressions) is the same as the concrete CESK machine. \\
 
 \textit{Note on Termination.}
-Unfortunately, even though other components in the states are finite, this version of AAM with an unbounded
+Unfortunately, even though other components in the state are finite, this version of AAM with an unbounded
 stack may still diverge when analyzing some programs.
 This is because the unbounded stack can grow to an arbitrary depth which implies that the state
 space is possibly infinite; the analysis may therefore not terminate for all programs if we
@@ -1128,7 +1127,7 @@ the @step@ function in AAM is the list constructor used in a lazy way, and here 
 into an explicit data types representing continuation.
 The inverse transformation of this step is to apply \citeauthor{10.1007/3-540-15975-4_33}'s
 technique that converts the data types representing meta-continuations (failure continuations)
-back to lazy list representation, where the elements in the list are plain machine states.
+back to a lazy list representation, where the elements in the list are plain machine states.
 
 \section{Lightweight Fusion} \label{fusing}
 
@@ -1160,7 +1159,7 @@ initial set of states reached, we can define the entrance function @analyze@ as 
   def analyze(e: Expr): Set[State] = drive_step(inject(e), Set())
 \end{lstlisting}
 
-With fusing complete, our AAM appears similar to a ``big-step'' interpreter, although it
+With fusion complete, our AAM appears similar to a ``big-step'' interpreter, although it
 still has the machine state representation inside. The inverse transformation of this step
 would be splitting the work-list algorithm apart to an individual function.
 
@@ -1252,8 +1251,8 @@ to higher-order functions, and associates the dispatching logic of continuations
 proper higher-order functions.
 After this transformation, we will obtain an abstract interpreter written in extended
 continuation-passing style~\cite{Danvy:1990:AC:91556.91622}.
-This transformation can be also regarded as making the control flows of the defined
-language be part of the control flows of the meta-language.
+This transformation can be also regarded as expressing the control flow of the defined
+language through control flow of the defining language.
 In this section, we first present a direct refunctionalization of the continuations.
 Next, we adopt a caching algorithm to obtain a computable analysis~\cite{darais2017abstracting},
 and further prepare the interpreter for transformation to direct-style at a later point.
@@ -1367,7 +1366,7 @@ cases where @konts@ is empty and @konts@ and @ndk@ are both empty, respectively.
 We have now completely refunctionalized an abstract abstract machine; the two layers
 of continuations are represented by higher-order functions. The inverse transformation
 of this step is known as \textit{de}functionalization, which converts the higher-order functions
-representing continuations back to first-order data
+representing continuations to first-order data
 types~\cite{Danvy:2001:DW:773184.773202, Danvy:2008:DIP:1411204.1411206}.
 
 \subsection{Simplification and Caching Fixed-Points}
@@ -1622,7 +1621,7 @@ analysis through refunctionalization and caching. In this section, we revisit
 the pushdown control-flow problem and examine what we have done to overcome it. \\
 
 \textit{The Problem with Return-flows.}
-Pushdown control-flow is a property in the analysis that precisely models the run-time
+Pushdown control-flow is a property of the analysis that precisely models the run-time
 call structure of the analyzed program. A pushdown control-flow analysis provides an
 as-exact-as-runtime return-flow when analyzing a program, but traditional
 control-flow analysis collapses the state space into a finite space and
@@ -1653,7 +1652,7 @@ still share the same continuation and $1$-CFA does not increase the ability to s
 return-flows. \\
 
 \textit{Call/Return Matching through Refunctionalization and Caching.}
-The refunctionalized AAM with caching has the perfect match on return-flows even though
+The refunctionalized AAM with caching precisely matches return-flows even though
 we do not have a stack model. The higher-order functions representing continuations
 already connect all the executions in order.
 
@@ -1688,7 +1687,7 @@ To obtain a definitional abstract interpreter in direct-style, we have multiple 
     This transformation is the left-inverse of the CPS transform \cite{DBLP:journals/scp/Danvy94, DBLP:conf/lfp/DanvyL92}.
   \item In fact, we may also just use the same caching algorithm but with side effects such as
     assignments and mutations to update the cache, and then achieve the same definitional
-    interpreter with pushdown control-flows. \Citet{friedman-ai}, in a tutorial on abstract
+    interpreter with pushdown control-flow. \Citet{friedman-ai}, in a tutorial on abstract
     interpreters, use this style to model caches and updates.
     In this case, nondeterminism can be easily handled via @for@ comprehensions.
 \end{itemize}
@@ -1808,13 +1807,12 @@ counterparts.
 As a form of generalized closure conversion,
 defunctionalization is widely used in compilation and analysis \cite{pottier2006polymorphic,
 Eisenberg:2014:PFT:2633357.2633361, fourtounis2014modular, 10.1007/3-540-46425-5_4, consel1993tour}.
-Refunctionalization~\cite{Danvy:2006:RW:2171265.2171268} as a
+Refunctionalization as a
 left inverse of defunctionalization, was introduced
-by \citeauthor{Danvy:2006:RW:2171265.2171268,DANVY2009534}.
+by \citet{Danvy:2006:RW:2171265.2171268,DANVY2009534}.
 
 \Citet{Ager:2003:FCE:888251.888254} observed that defunctionalization and refunctionalization
-can be used to show the functional correspondence between interpreters and abstract machines
-\cite{Ager:2003:FCE:888251.888254}. A number of independently designed small-step semantic artifacts can
+can be used to show the functional correspondence between interpreters and abstract machines. A number of independently designed small-step semantic artifacts can
 be obtained by closure-converting, CPS-transforming, and then defunctionalizing their big-step counterparts,
 and vice versa by refunctionalizing \cite{DANVY2009534}.
 Such semantic artifacts include the SECD machine \cite{10.1007/11431664_4, Ager:2003:FCE:888251.888254, DanvySECDJ},
@@ -1848,22 +1846,20 @@ Dyck word recognizer, Dijkstra's shunting-yard algorithm, and even Quicksort
 
 \textit{Lightweight Fusion.}
 Lightweight fusion as one of the transformation in our paper was presented by
-\citeauthor{Ohori:2007:LFF:1190216.1190241} \cite{Ohori:2007:LFF:1190216.1190241}.
-As shown by \citeauthor{DANVY2008100}, lightweight fusion can be used to show the
-equivalence between small-step and big-step abstract machines \cite{DANVY2008100}.\\
+\citet{Ohori:2007:LFF:1190216.1190241}.
+As shown by \citet{DANVY2008100}, lightweight fusion can be used to show the
+equivalence between small-step and big-step abstract machines.\\
 
 \textit{Abstract Interpretation and Control-Flow Analysis.}
-\citeauthor{cousot1977abstract} discovered abstract interpretation as a sound approach to
-approximate a program's run-time behavior \cite{cousot1977abstract}. Control-flow analysis
-is one instance of abstract interpretation on higher-order functional programs that can be traced to
-Jones \cite{jones1981flow}. \Citet{Shivers:1988:CFA:53990.54007,Shivers:1991:SSC:115865.115884}
+\Citet{cousot1977abstract} discovered abstract interpretation as a sound approach to
+approximate a program's run-time behavior. Control-flow analysis
+is one instance of abstract interpretation on higher-order functional programs that can be traced to \citet{jones1981flow}. \Citet{Shivers:1988:CFA:53990.54007,Shivers:1991:SSC:115865.115884}
 introduced $k$-CFA which uses $k$ recent calling contexts as program contours that
 differentiate values from different contexts.
 A recent formulation of control-flow analysis is the abstracting abstract machines
 methodology \cite{van2012systematic, van2010abstracting} which forms the starting point
-of this paper. Modern programming languages such as Java \cite{might2010resolving} and
-Racket \cite{Tobin-Hochstadt:2012:HSE:2384616.2384655} can also be modeled by the abstracting
-abstract machines approach. \\
+of this paper. The AAM approach has been successfully applied to programming languages such as Java \cite{might2010resolving} and
+Racket \cite{Tobin-Hochstadt:2012:HSE:2384616.2384655}. \\
 
 \textit{Pushdown Control-Flow Analysis.}
 There have been significant efforts to achieve precise call/return matching
