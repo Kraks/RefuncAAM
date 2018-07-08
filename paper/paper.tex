@@ -788,7 +788,7 @@ If the expression is simply a @lambda@ term, the returned set is a singleton.
 \end{lstlisting}
 
 The structure of function @step@ is similar to the concrete CESK machine,
-except the nondeterminism which makes @step@ return a list of reachable successor states.
+except the nondeterminism which makes @step@ return a set of reachable successor states.
 We have two cases to consider (code shown below):
 
 \begin{itemize}
@@ -798,7 +798,7 @@ We have two cases to consider (code shown below):
     concrete CESK machine, with an important difference: the continuation is allocated on
     the store @kstore@, so a new continuation address @new_kaddr@ must be constructed and
     a new frame @Frame(x, e, env)@ paired with the current continuation address @kaddr@ is
-    merged into @new_kaddr@. Finally, a list of successor states is generated.
+    merged into @new_kaddr@. Finally, a set of successor states is generated.
 
   \item In the second case, an atomic expression @ae@ sits on the control position of the
     state. Here, the values of @ae@ is being returned to its caller.
@@ -812,11 +812,11 @@ We have two cases to consider (code shown below):
 \end{itemize}
 
 \begin{lstlisting}
-  def step(s: State): List[State] = {
+  def step(s: State): Set[State] = {
     val new_time = s.tick
     s match {
       case State(Let(x, App(f, ae), e), env, bstore, kstore, kaddr, time) =>
-        val closures = atomicEval(f, env, bstore).toList
+        val closures = atomicEval(f, env, bstore)
         for (Clos(Lam(v, body), env_c) <- closures) yield {
           val baddr = allocBind(v, new_time)
           val new_env = env_c + (v -> baddr)
@@ -826,8 +826,7 @@ We have two cases to consider (code shown below):
           State(body, new_env, new_bstore, new_kstore, new_kaddr, new_time)
         }
       case State(ae, env, bstore, kstore, kaddr, time) if isAtomic(ae) =>
-        val conts = kstore(kaddr).toList
-        for (Cont(Frame(x, e, env_f), f_kaddr) <- conts) yield {
+        for (Cont(Frame(x, e, env_f), f_kaddr) <- kstore(kaddr)) yield {
           val baddr = allocBind(x, new_time)
           val new_env = env_f + (x -> baddr)
           val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
@@ -887,7 +886,7 @@ up to the current execution point.
   def drive(todo: List[State], seen: Set[State]): Set[State] = todo match {
     case Nil => seen
     case hd::tl if seen.contains(hd) => drive(tl, seen)
-    case hd::tl => drive(step(hd) ++ tl, seen + hd)
+    case hd::tl => drive(step(hd).toList ++ tl, seen + hd)
   }
   def analyze(e: Expr): Set[State] = drive(List(inject(e)), Set())
 \end{lstlisting}
@@ -925,16 +924,15 @@ the halt. The other components remain unchanged as in the Section \ref{aam}.
   case class State(e: Expr, env: Env, bstore: BStore, konts: List[Frame], time: Time)
 \end{lstlisting}
 
-The state transition function @step@ shown below is still
-nondeterministic, but only when dereferencing the callee @f@ from the
-function application @App(f, ae)@.
+The state transition function @step@ shown below is still nondeterministic, but only when 
+dereferencing the callee @f@ from the function application @App(f, ae)@.
 
 \begin{lstlisting}
-  def step(s: State): List[State] = {
+  def step(s: State): Set[State] = {
     val new_time = s.tick
     s match {
       case State(Let(x, App(f, ae), e), env, bstore, konts, time) if isAtomic(ae) =>
-        for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore).toList) yield {
+        for (Clos(Lam(v, body), env_c) <- atomicEval(f, env, bstore)) yield {
           val frame = Frame(x, e, env)
           val baddr = allocBind(v, new_time);  val new_env = env_c + (v -> baddr)
           val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
@@ -942,11 +940,11 @@ function application @App(f, ae)@.
         }
       case State(ae, env, bstore, konts, time) if isAtomic(ae) =>
         konts match {
-          case Nil => List()
+          case Nil => Set()
           case Frame(x, e, env_f)::konts =>
             val baddr = allocBind(x, new_time);  val new_env = env_f + (x -> baddr)
             val new_store = bstore.update(baddr, atomicEval(ae, env, bstore))
-            List(State(e, new_env, new_store, konts, new_time))
+            Set(State(e, new_env, new_store, konts, new_time))
         } } }
 \end{lstlisting}
 
