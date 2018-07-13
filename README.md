@@ -2,7 +2,7 @@
 
 This directory contains the artifact for the ICFP '18 submission "Refunctionalization of Abstract Abstract Machines (Functional Pearl)".
 
-Link: https://github.com/Kraks/RefuncAAM
+[PDF](http://continuation.passing.style/research/papers/icfp18_refunc.pdf)
 
 ## Abstract
 
