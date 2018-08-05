@@ -1867,8 +1867,11 @@ based on small-step abstract abstract machines~\cite{vardoulakis2010cfa2, earl20
 gilray2016pushdown, johnson2015abstracting}.
 
 CFA2 is the first solution that solves the return-flow problem~\cite{vardoulakis2010cfa2},
-but CFA2 has several limitations: it only works on continuation-passing style programs, and
-does not support polyvariant analysis, in addition to having an exponential time complexity.
+which is formulated as a monovariant analysis on programs written in continuation-passing style.
+The original presentation of CFA2 has an exponential runtime complexity, 
+and several improvements are proposed by \citet{vardoulakis-diss12} afterwards.
+But implementing CFA2 is considered requiring significant engineering efforts.
+
 Pushdown control-flow analysis (PDCFA) is a mechanism which maintains this precision through
 the use of a Dyke state graph representing all possible stacks contained within the unbounded-stack
 machine \cite{earl2012introspective, earl2010pushdown}. Similar to PDCFA, abstracting abstract
