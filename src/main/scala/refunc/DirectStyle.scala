@@ -89,7 +89,7 @@ object DirectStyleSideEff {
     if (cache.outContains(config)) {
       return Ans(cache.outGet(config), cache)
     }
-    
+
     /* Use mutation to update the cache every time. */
     var new_cache = cache.outUpdate(config, cache.inGet(config))
     val new_time = config.tick
@@ -146,5 +146,46 @@ object DirectStyleSideEff {
     }
     iter(Cache.mtCache)
   }
+}
+
+object DirectNoCache {
+  type Ans = Set[Config]
+
+  def inject(e: Expr, env: Env = Map(),
+             store: Store[BAddr, Storable] = Store[BAddr, Storable](Map())): Config =
+    Config(e, env, store, List())
+
+  def nd[T](ts: Iterable[T], acc: Ans, k: ((T, Ans)) => Ans): Ans = {
+    if (ts.isEmpty) acc
+    else nd(ts.tail, acc ++ k(ts.head, acc), k)
+  }
+
+  def choices[T](ts: Iterable[T], acc: Ans): (T, Ans) @cps[Ans] = shift {
+    f: (((T, Ans)) => Ans) => nd(ts, acc, f)
+  }
+
+  def aeval(config: Config, seen: Ans): (Config, Ans) @cps[Ans] = {
+    val Config(e, env, store, _) = config
+    val new_time = config.tick
+    val new_seen = if (seen.contains(config)) seen else seen+config
+    e match {
+      case Let(x, App(f, ae), e) if isAtomic(f) && isAtomic(ae) =>
+        val closures = atomicEval(f, env, store).toList.asInstanceOf[List[Clos]]
+        val (Clos(Lam(v, body), c_env), clsseen) = choices[Storable](closures, new_seen)
+        val vbaddr = allocBind(v, new_time)
+        val new_env = c_env + (v -> vbaddr)
+        val argvs = atomicEval(ae, env, store)
+        val new_store = store.update(vbaddr, argvs)
+        val (config_*, seen_*) = aeval(Config(body, new_env, new_store, new_time), clsseen)
+        val Config(bdae, env_, store_*, _) = config_*
+        val new_time_* = config.tick
+        val baddr = allocBind(x, new_time)
+        val new_env_* = env + (x -> baddr)
+        val new_store_* = store_*.update(baddr, atomicEval(bdae, env_, store_*))
+        aeval(Config(e, new_env_*, new_store_*, new_time_*), seen_*)
+      case ae if isAtomic(ae) => (config, new_seen)
+    }
+  }
+
 }
 
