@@ -98,6 +98,7 @@ object ANFAAM {
   case class Ans(vss: Set[VS], cache: Cache) {
     def ++(ans: Ans): Ans = {
       Ans(vss ++ ans.vss, cache.join(ans.cache))
+      //Ans(vss ++ ans.vss, ans.cache) //If cache is always monotonic
     }
   }
 
